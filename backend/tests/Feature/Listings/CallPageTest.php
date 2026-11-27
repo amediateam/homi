@@ -3,16 +3,18 @@
 use App\Models\User;
 use App\Services\Listings\CallLinkService;
 use Illuminate\Log\Events\MessageLogged;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Sleep;
 use Illuminate\Testing\TestResponse;
 use Laravel\Pennant\Feature;
 use Laravel\Sanctum\Sanctum;
-use Laravel\Telescope\EntryType;
-use Laravel\Telescope\IncomingEntry;
+use Laravel\Telescope\Contracts\EntriesRepository;
 use Laravel\Telescope\Telescope;
+use Laravel\Telescope\Watchers\RequestWatcher;
 use Tests\Support\LegacyFixtures;
 use Tests\Support\LegacyListingsHttp;
 
@@ -39,7 +41,7 @@ function assertCallPageHeaders(TestResponse $response): void
     expect($response->headers->get('X-Robots-Tag'))->toBe('noindex')
         ->and($response->headers->get('Cache-Control'))->toBe('no-store, private')
         ->and($response->headers->get('Referrer-Policy'))->toBe('no-referrer')
-        ->and($response->headers->get('Content-Security-Policy'))->toBe("default-src 'none'; style-src 'unsafe-inline'")
+        ->and($response->headers->get('Content-Security-Policy'))->toBe("default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
         ->and($response->headers->get('X-Content-Type-Options'))->toBe('nosniff')
         ->and($response->headers->get('Content-Type'))->toBe('text/html; charset=UTF-8')
         ->and($response->headers->has('Set-Cookie'))->toBeFalse()
@@ -182,11 +184,46 @@ it('serves the page without a session: no cookie, no CSRF token', function (): v
 
 it('keeps no Telescope entry of a call page, whatever the environment records', function (): void {
     config(['telescope.record_all' => true]);
-    $keeps = fn (IncomingEntry $entry): bool => collect(Telescope::$filterUsing)->every(fn (callable $filter): bool => $filter($entry));
+    (new RequestWatcher(['size_limit' => 64]))->register(app());
+    $path = callPagePath(100001);
+    $expired = callPagePath(100002);
 
-    expect($keeps(IncomingEntry::make(['uri' => '/call/abc.def', 'response_status' => 200])->type(EntryType::REQUEST)))->toBeFalse()
-        ->and($keeps(IncomingEntry::make(['uri' => '/call/abc.def', 'response_status' => 503])->type(EntryType::REQUEST)))->toBeFalse()
-        ->and($keeps(IncomingEntry::make(['uri' => '/api/v1/reference', 'response_status' => 200])->type(EntryType::REQUEST)))->toBeTrue();
+    Telescope::startRecording(loadMonitoredTags: false);
+
+    try {
+        $this->get($path)->assertOk();
+        $this->get('/call/'.str_repeat('a', 40))->assertNotFound();
+        $this->travel(661)->seconds();
+        $this->get($expired)->assertStatus(410);
+        $this->getJson('/api/v1/reference')->assertOk();
+
+        Telescope::store(app(EntriesRepository::class));
+    } finally {
+        Telescope::stopRecording();
+        Telescope::flushEntries();
+    }
+
+    $stored = DB::table('telescope_entries')->pluck('content')->implode("\n");
+    $uris = DB::table('telescope_entries')->where('type', 'request')->pluck('content')->map(fn (string $content): mixed => json_decode($content, true)['uri'] ?? null)->all();
+
+    expect($uris)->toBe(['/api/v1/reference'])
+        ->and($stored)->not->toContain(substr($path, strlen('/call/')))
+        ->and($stored)->not->toContain(substr($expired, strlen('/call/')))
+        ->and($stored)->not->toContain('000000067')
+        ->and($stored)->not->toContain('/call/');
+});
+
+it('counts a forged X-Forwarded-For in the bucket of the address that connected while no proxy is trusted', function (): void {
+    config(['trustedproxy.proxies' => null]);
+    $path = callPagePath(100001);
+    $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.10']);
+
+    for ($page = 1; $page <= 30; $page++) {
+        $this->get($path, ['X-Forwarded-For' => "198.51.100.{$page}"])->assertOk();
+    }
+
+    $this->get($path, ['X-Forwarded-For' => '198.51.100.99'])->assertStatus(429);
+    $this->get($path, ['X-Forwarded-For' => '192.0.2.7, 198.51.100.1'])->assertStatus(429);
 });
 
 it('opens a link issued through the legacy driver with the legacy number, on the drivers of the token\'s user', function (): void {
@@ -215,12 +252,42 @@ it('opens a link issued through the legacy driver with the legacy number, on the
         ->and($page)->not->toContain('000000067')
         ->and(LegacyListingsHttp::sent('/api/listings/100001'))->toHaveCount(1);
 
-    // The card's caches have expired: the page reads the preview and the card again, and still answers.
+    // The card's caches have expired: the page reads the card once again (its title comes from that read), and still
+    // answers.
     $this->travel(61)->seconds();
     expect((string) $this->get($path)->assertOk()->getContent())->toContain('href="tel:+998001234567"')
-        ->and(LegacyListingsHttp::sent('/api/listings/100001'))->toHaveCount(3);
+        ->and(LegacyListingsHttp::sent('/api/listings/100001'))->toHaveCount(2)
+        ->and(array_map(LegacyListingsHttp::query(...), LegacyListingsHttp::sent('/api/listings/100001')))->toBe(['', '']);
 
     $serialised = json_encode($lines->getArrayCopy(), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
     expect($serialised)->not->toContain(substr($path, strlen('/call/')))
         ->and($serialised)->not->toContain('001234567');
+});
+
+it('reads a cold page with one card request, made as a user\'s call, and takes its title from that read', function (): void {
+    LegacyListingsHttp::fake();
+    Sleep::fake();
+    config(['legacy.media.public_url' => LegacyFixtures::MEDIA, 'legacy.rate.per_second' => 5]);
+    $user = User::factory()->create();
+
+    foreach (['card', 'contact'] as $method) {
+        Feature::globally()->activate("source.listings.{$method}", ['users' => [$user->id => 'legacy']]);
+    }
+
+    $path = callPagePath(100001, 'en', $user);
+
+    // The background share of this second is spent: a background call would be refused at once, a user's call is not.
+    Cache::put('legacy:out:bg:'.intdiv((int) now()->getPreciseTimestamp(3), 1000), 100, 2);
+
+    $page = (string) $this->get($path)->assertOk()->getContent();
+    $sent = LegacyListingsHttp::sent('/api/listings/100001');
+
+    expect($page)->toContain('href="tel:+998001234567"')
+        ->and($page)->toContain('<html lang="en">')
+        ->and($sent)->toHaveCount(1)
+        ->and(LegacyListingsHttp::query($sent[0]))->toBe('')
+        ->and(Cache::get('legacy:out:bg:'.intdiv((int) now()->getPreciseTimestamp(3), 1000)))->toBe(100);
+
+    $this->get($path)->assertOk();
+    expect(LegacyListingsHttp::sent('/api/listings/100001'))->toHaveCount(1);
 });

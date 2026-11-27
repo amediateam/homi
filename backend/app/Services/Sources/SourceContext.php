@@ -7,7 +7,9 @@ use Illuminate\Http\Request;
 use InvalidArgumentException;
 
 /**
- * Who asks and in which language and currency: every source method receives it (ADR-0017, `25` §4.1).
+ * Who asks and in which language and currency: every source method receives it (ADR-0017, `25` §4.1). A context
+ * without a user is HOMI's own: a source reads nothing personal for it, and its legacy calls are background calls
+ * (`LegacyCall::$background`), unless `foreground` says a person waits for the answer (`foreground()`).
  */
 final readonly class SourceContext
 {
@@ -24,6 +26,7 @@ final readonly class SourceContext
         public string $currency,
         public ?User $user = null,
         public ?string $scenario = null,
+        public bool $foreground = false,
     ) {
         if (! in_array($locale, self::LOCALES, true)) {
             throw new InvalidArgumentException("Unsupported locale \"{$locale}\".");
@@ -63,5 +66,15 @@ final readonly class SourceContext
     public static function system(string $locale = 'ru'): self
     {
         return new self($locale, 'USD');
+    }
+
+    /**
+     * Context of a page a person waits for without a session (HOMI's call page, WP-43): like `system()` no user and no
+     * scenario, so nothing personal is read and no overlay applies, but its legacy calls are made as a user's are —
+     * waiting up to `legacy.rate.max_wait_ms` for the outbound limiter instead of taking only the background share.
+     */
+    public static function foreground(string $locale): self
+    {
+        return new self($locale, 'USD', foreground: true);
     }
 }

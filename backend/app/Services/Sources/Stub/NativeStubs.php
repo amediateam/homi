@@ -8,6 +8,7 @@ use App\Exceptions\Identity\InvalidInitData;
 use App\Exceptions\Identity\InvalidInitDataReason;
 use App\Exceptions\Listings\ShareFailed;
 use App\Exceptions\Listings\TranslationNotNeeded;
+use App\Exceptions\Sources\SourceUnavailable;
 use App\Http\Requests\Api\V1\Auth\TelegramSignInRequest;
 use App\Http\Requests\Api\V1\UpdateSettingsRequest;
 use App\Http\Resources\Api\V1\ContactResource;
@@ -37,10 +38,9 @@ use LogicException;
  * controller, and it answers the envelope of `ApiController::sourced()` with `meta.source = stub`.
  *
  * WP-40 moved here: sign-in (every value signs in the one stub user, nothing is verified, the token is not capped),
- * `GET /me`, `GET /settings` and `PATCH /settings`. WP-43 moved here `POST /listings/{number}/contact`: the contact of
- * the method's driver as it answered before (on the stub driver the stub's number and its link
- * `{APP_URL}/call/stub-token-<number>`), with `meta.source` that driver — no disclosure quota, no HOMI call link, no
- * `ContactDisclosed`; `POST /listings/{number}/translation`: the translation of the method's driver, uncached and
+ * `GET /me`, `GET /settings` and `PATCH /settings`. WP-43 moved here `POST /listings/{number}/contact`: on the stub
+ * driver the stub's number and its link `{APP_URL}/call/stub-token-<number>` as it answered before, `meta.source =
+ * stub` — no disclosure quota, no HOMI call link, no `ContactDisclosed` — and `503` on any other driver; `POST /listings/{number}/translation`: the translation of the method's driver, uncached and
  * without the limit of misses, `ru` answering `422`; and `POST /listings/{number}/share`: `stub-prepared-<number>`,
  * valid an hour, for a listing the card source knows, the scenario `share_failed` answering `502` — no Bot API call.
  */
@@ -138,14 +138,20 @@ final readonly class NativeStubs
     }
 
     /**
-     * `POST /listings/{number}/contact` as WP-12 answered it (the controller body before WP-43): the contact of the
-     * driver of `source.listings.contact`, nothing counted.
+     * `POST /listings/{number}/contact` as WP-12 answered it (the controller body before WP-43): the contact of the stub
+     * driver of `source.listings.contact`, nothing counted. On any other driver it is `503 source_unavailable`, as
+     * every other driver answered before WP-43: an uncounted answer from a real source would hand out a raw number with
+     * no quota and blank link fields.
      */
     public function contact(Request $request, SourceManager $sources): JsonResponse
     {
         $number = $request->route('number');
         $context = SourceContext::fromRequest($request);
         $resolved = $sources->listings('source.listings.contact', $context);
+
+        if ($resolved->driver !== SourceDriver::Stub) {
+            throw new SourceUnavailable;
+        }
 
         return $this->sourced(new ContactResource($resolved->source->contact(is_numeric($number) ? (int) $number : 0, $context)), $resolved->driver);
     }

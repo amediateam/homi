@@ -8,10 +8,11 @@ use App\Services\Listings\ContactDisclosure;
 use Illuminate\Support\Facades\DB;
 
 /*
- * WP-43, SEC-REQ-028: the flag of the disclosure quota is an upsert on `access_grants`, written by whichever request
- * passes the hard limit. Ten child processes (each with its own `array` cache, so each passes the limit) flag one user
- * who has no row, at once: one row must remain, `admitted` via `open` and flagged, and no write may fail. A block of
- * an operator racing the flags must stay a block: the flag never writes `state` or `admitted_via` of a row.
+ * WP-43, SEC-REQ-028: the flag of the disclosure quota marks an existing `access_grants` row only (`flagged_at`,
+ * `flag_reason`), written by whichever request passes the hard limit; it never creates a row and never writes `state`
+ * or `admitted_via`, so it cannot let anyone in. Child processes (each with its own `array` cache, so each passes the
+ * limit) flag one user at once: a user without a row keeps none, an existing row keeps its state and admission and is
+ * flagged, no write fails, and a block of an operator racing the flags stays a block.
  */
 
 /** A child that asks for two listings with a hard limit of 1, so it flags the user. */
@@ -33,33 +34,44 @@ function flagTask(int $id, float $startAt): Closure
     };
 }
 
-it('keeps one admitted, flagged row when ten requests flag a user without one at once', function (): void {
-    $id = User::factory()->create()->id;
-    $startAt = microtime(true) + 2.0;
+/** @return list<Closure(): bool> */
+function flagTasks(int $id, int $count, float $startAt): array
+{
     $tasks = [];
 
-    for ($task = 0; $task < 10; $task++) {
+    for ($task = 0; $task < $count; $task++) {
         $tasks[] = flagTask($id, $startAt);
     }
 
-    expect(concurrently($tasks))->toBe(array_fill(0, 10, true));
+    return $tasks;
+}
+
+it('writes no row when ten requests flag a user without one at once', function (): void {
+    $id = User::factory()->create()->id;
+
+    expect(concurrently(flagTasks($id, 10, microtime(true) + 2.0)))->toBe(array_fill(0, 10, true))
+        ->and(DB::table('access_grants')->count())->toBe(0);
+});
+
+it('flags an existing row when ten requests flag it at once, keeping its state and how it was admitted', function (): void {
+    $id = User::factory()->create()->id;
+    AccessGrant::query()->create(['user_id' => $id, 'state' => AccessGrantState::Admitted, 'admitted_via' => AdmittedVia::Invite]);
+
+    expect(concurrently(flagTasks($id, 10, microtime(true) + 2.0)))->toBe(array_fill(0, 10, true));
 
     $grant = AccessGrant::query()->sole();
     expect($grant->user_id)->toBe($id)
         ->and($grant->state)->toBe(AccessGrantState::Admitted)
-        ->and($grant->admitted_via)->toBe(AdmittedVia::Open)
+        ->and($grant->admitted_via)->toBe(AdmittedVia::Invite)
         ->and($grant->flag_reason)->toBe('contact_quota')
         ->and($grant->flagged_at)->not->toBeNull();
 });
 
-it('keeps an operator\'s block that races the flags, and flags it', function (): void {
+it('keeps an operator\'s block that races the flags of an admitted row, and flags it', function (): void {
     $id = User::factory()->create()->id;
+    AccessGrant::query()->create(['user_id' => $id, 'state' => AccessGrantState::Admitted, 'admitted_via' => AdmittedVia::Open]);
     $startAt = microtime(true) + 2.0;
-    $tasks = [];
-
-    for ($task = 0; $task < 6; $task++) {
-        $tasks[] = flagTask($id, $startAt);
-    }
+    $tasks = flagTasks($id, 6, $startAt);
 
     $tasks[] = static function () use ($id, $startAt): bool {
         if ($startAt > microtime(true)) {
@@ -80,6 +92,7 @@ it('keeps an operator\'s block that races the flags, and flags it', function ():
 
     $grant = AccessGrant::query()->sole();
     expect($grant->state)->toBe(AccessGrantState::Blocked)
+        ->and($grant->admitted_via)->toBe(AdmittedVia::Open)
         ->and($grant->flag_reason)->toBe('contact_quota')
         ->and($grant->flagged_at)->not->toBeNull()
         ->and(DB::table('access_grants')->count())->toBe(1);

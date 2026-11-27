@@ -6,6 +6,7 @@ use App\Exceptions\Sources\SourceUnavailable;
 use App\Models\User;
 use App\Services\Sources\SourceContext;
 use Carbon\CarbonImmutable;
+use Exception;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
@@ -16,9 +17,12 @@ use JsonException;
 /**
  * HOMI's call links (WP-43, variant A; KV-BE-037, SEC-REQ-026): `<call page base>/call/<token>`, where the token is
  * the base64url of `{"n": number, "u": user id, "l": locale, "x": expiry}`, a dot, and the base64url of the
- * HMAC-SHA-256 of that encoded payload under `contacts.call_link_signing_key`. Stateless: no table. The token never
- * holds the phone number; the call page reads it from the source on every visit, so a withdrawn listing is `404` at
- * once even with a valid token, and a token for one listing can never show another.
+ * HMAC-SHA-256 of `PURPOSE` followed by that encoded payload under `contacts.call_link_signing_key`, so a MAC made
+ * with the same key for another purpose is never a call link. Stateless: no table. The token never holds the phone
+ * number; the call page reads it from the source on every visit, so a withdrawn listing is `404` at once even with a
+ * valid token, and a token for one listing can never show another. The payload is readable: whoever holds a link
+ * (a forwarded one too) sees the internal user id (`u`, which selects the user's drivers on the page) and the
+ * listing number.
  *
  * - `issue()` signs with the current key; a link is valid `contacts.call_link_ttl` seconds (600) and is not
  *   single-use (Q-API-042): the client fetches a new one two minutes early (API-009).
@@ -27,7 +31,8 @@ use JsonException;
  *   or not (`CallLinkClaims::expired()`, with 60 s of skew), and `null` for anything else.
  * - A key shorter than `MIN_SECRET_BYTES` is no key. Without one, in `local` and `testing` a key derived from
  *   `app.key` is used, so the services run without env; elsewhere `issue()` is `SourceUnavailable` (`503`) with a
- *   warning at most once a minute — never a link signed with a weak key — and `verify()` accepts nothing.
+ *   warning at most once a minute (each time while the cache cannot count that) — never a link signed with a weak
+ *   key, never a `500` — and `verify()` accepts nothing.
  *
  * The token and the keys never reach a log line or an exception message.
  */
@@ -35,6 +40,9 @@ final class CallLinkService
 {
     /** The shortest signing key used. */
     public const int MIN_SECRET_BYTES = 32;
+
+    /** What the MAC covers before the payload: the purpose and version of the token. */
+    public const string PURPOSE = 'call-link.v1.';
 
     /** The longest token read; a real one is about 130 characters. */
     public const int MAX_TOKEN_LENGTH = 512;
@@ -56,9 +64,7 @@ final class CallLinkService
         $secret = self::currentSecret();
 
         if ($secret === null) {
-            if (Cache::add('listings:once:call_link_key', 1, 60)) {
-                Log::warning('CALL_LINK_SIGNING_KEY is blank or shorter than 32 bytes: no call link is issued.');
-            }
+            self::warnNoKey();
 
             throw new SourceUnavailable('No call link can be issued.');
         }
@@ -149,9 +155,23 @@ final class CallLinkService
         return is_string($secret) && strlen($secret) >= self::MIN_SECRET_BYTES ? $secret : null;
     }
 
+    /** The warning about the missing key, at most once a minute while the cache can count that, else each time. */
+    private static function warnNoKey(): void
+    {
+        try {
+            $warn = Cache::add('listings:once:call_link_key', 1, 60);
+        } catch (Exception) {
+            $warn = true;
+        }
+
+        if ($warn) {
+            Log::warning('CALL_LINK_SIGNING_KEY is blank or shorter than 32 bytes: no call link is issued.');
+        }
+    }
+
     private static function sign(string $payload, #[\SensitiveParameter] string $secret): string
     {
-        return self::encode(hash_hmac('sha256', $payload, $secret, true));
+        return self::encode(hash_hmac('sha256', self::PURPOSE.$payload, $secret, true));
     }
 
     private static function encode(string $bytes): string

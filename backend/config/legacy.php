@@ -32,7 +32,10 @@
 |   point 7): `phone` — the raw number in the card (variant A: HOMI issues its own call link), `link` — only a call
 |   link (variant B: `GET /api/listings/{id}/call`), `auto` (default) — decided per card: a phone that reads as one
 |   number is variant A, else a call link variant B, else no contact; any other value is `auto`. `link_ttl`: seconds
-|   a legacy call link is answered as valid (`expires_at` of variant B).
+|   a legacy call link is answered as valid (`expires_at` of variant B). `link_hosts` (`LEGACY_CONTACT_LINK_HOSTS`,
+|   comma-separated, lower-cased): the hosts besides that of `base_url` an absolute call link of variant B may point
+|   to, compared exactly; blank means only the host of `base_url`. A relative link is joined to the origin of
+|   `base_url`.
 | - `translation` (WP-43): how `POST /api/listings/{id}/translate` names the target language under the service key
 |   (WP-02 point 8, open): `via` (`LEGACY_TRANSLATION_VIA`) `locale` (default) — the language selector of every call
 |   (`locale` above), `query` or `body` — the legacy code (`uz_Latn`, `en`) under `name` (`LEGACY_TRANSLATION_NAME`,
@@ -73,6 +76,7 @@ $backgroundWait = $value('LEGACY_PREVIEWS_BACKGROUND_WAIT_MS', 2000);
 $previewsDeadline = $value('LEGACY_PREVIEWS_DEADLINE_MS', null);
 $fillWait = $value('LEGACY_CACHE_FILL_WAIT_MS', 1000);
 $contactMode = strtolower(trim((string) $value('LEGACY_CONTACT_MODE', 'auto')));
+$contactLinkHosts = (string) $value('LEGACY_CONTACT_LINK_HOSTS', '');
 $translationVia = strtolower(trim((string) $value('LEGACY_TRANSLATION_VIA', 'locale')));
 
 return [
@@ -140,6 +144,7 @@ return [
     'contact' => [
         'mode' => in_array($contactMode, ['auto', 'phone', 'link'], true) ? $contactMode : 'auto',
         'link_ttl' => 600,
+        'link_hosts' => array_values(array_filter(array_map(fn (string $host): string => strtolower(trim($host)), explode(',', $contactLinkHosts)), fn (string $host): bool => $host !== '')),
     ],
 
     'translation' => [

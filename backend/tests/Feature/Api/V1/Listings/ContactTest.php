@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\Access\AccessGrantState;
+use App\Enums\Access\AdmittedVia;
 use App\Events\Listings\ContactDisclosed;
 use App\Events\Listings\ContactQuotaExceeded;
 use App\Models\AccessGrant;
@@ -177,16 +179,138 @@ it('variant B passes an absolute https link on and answers 503 for anything else
         $response->assertJsonPath('code', 'source_unavailable');
     }
 })->with([
-    'absolute https' => ['https://kvadro.invalid/call/abc?e=1795132800', 200],
+    'absolute https on legacy\'s host' => ['https://legacy.test/call/abc?e=1795132800', 200],
+    'legacy\'s host in capitals' => ['https://LEGACY.Test/call/abc', 200],
     'http' => ['http://kvadro.invalid/call/abc', 503],
     'protocol-relative' => ['//kvadro.invalid/call/abc', 503],
     'a script' => ['javascript:alert(1)', 503],
     'with a space' => ['/call/a b', 503],
+    'a backslash after the host' => ['https://attacker.example\\@legacy.test/x', 503],
+    'a backslash in a path' => ['/\\attacker.example/x', 503],
+    'a user before legacy\'s host' => ['https://attacker.example@legacy.test/x', 503],
+    'a user and a password' => ['https://u:p@legacy.test/x', 503],
     'empty' => ['', 503],
     'not a string' => [42, 503],
     'missing' => [null, 503],
     'too long' => ['/call/'.str_repeat('a', 2050), 503],
 ]);
+
+it('variant B refuses a link to any host but legacy\'s and those of legacy.contact.link_hosts: 404, a warning without the address', function (string $url): void {
+    onLegacyContact();
+    Event::fake([ContactDisclosed::class]);
+    LegacyListingsHttp::answer(fn (Request $request): ?PromiseInterface => str_ends_with(LegacyListingsHttp::path($request), '/call') ? Factory::response(['url' => $url]) : null);
+
+    $lines = contactLogLines(fn () => contactOf(100002)->assertNotFound()->assertJsonPath('code', 'contact_unavailable'));
+    $serialised = json_encode($lines, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+    $warnings = array_values(array_filter($lines, fn (array $line): bool => $line['level'] === 'warning'));
+
+    expect($warnings)->toHaveCount(1)
+        ->and(array_diff_key($warnings[0]['context'], ['request_id' => true]))->toBe(['path' => '/api/listings/{n}/call', 'has_host' => true])
+        ->and($serialised)->not->toContain((string) parse_url($url, PHP_URL_HOST))
+        ->and($serialised)->not->toContain('/x');
+    Event::assertNotDispatched(ContactDisclosed::class);
+})->with([
+    'another host' => ['https://attacker.example/x'],
+    'a host ending in legacy\'s' => ['https://evillegacy.test/x'],
+    'a subdomain of legacy\'s host' => ['https://call.legacy.test/x'],
+    'legacy\'s host as a subdomain' => ['https://legacy.test.attacker.example/x'],
+    'legacy\'s host with a trailing dot' => ['https://legacy.test./x'],
+]);
+
+it('variant B passes a link to a host of legacy.contact.link_hosts, compared lower-cased and exactly', function (): void {
+    onLegacyContact();
+    config(['legacy.contact.link_hosts' => ['calls.kvadro.invalid']]);
+    $url = 'https://Calls.Kvadro.Invalid/call/abc?e=1795132800';
+    LegacyListingsHttp::answer(fn (Request $request): ?PromiseInterface => str_ends_with(LegacyListingsHttp::path($request), '/call') ? Factory::response(['url' => $url]) : null);
+
+    contactOf(100002)->assertOk()->assertJsonPath('data.call_url', $url);
+
+    LegacyListingsHttp::answer(fn (Request $request): ?PromiseInterface => str_ends_with(LegacyListingsHttp::path($request), '/call') ? Factory::response(['url' => 'https://kvadro.invalid/call/abc']) : null);
+    contactOf(100002)->assertNotFound()->assertJsonPath('code', 'contact_unavailable');
+});
+
+it('variant B joins a relative link to the origin of legacy.base_url, never to its path', function (string $base, string $expected): void {
+    onLegacyContact();
+    $this->getJson('/api/v1/listings/100002')->assertOk();
+
+    config(['legacy.base_url' => $base]);
+    Http::fake(['legacy.test:8443/*' => Http::response(['url' => '/call/abc?e=1'])]);
+    LegacyListingsHttp::answer(fn (Request $request): ?PromiseInterface => str_ends_with(LegacyListingsHttp::path($request), '/call') ? Factory::response(['url' => '/call/abc?e=1']) : null);
+
+    contactOf(100002)->assertOk()->assertJsonPath('data.call_url', $expected);
+})->with([
+    'a path' => ['https://legacy.test/v2', 'https://legacy.test/call/abc?e=1'],
+    'a port and a path' => ['https://legacy.test:8443/api/', 'https://legacy.test:8443/call/abc?e=1'],
+]);
+
+it('variant B answers legacy\'s phone_display only when it reads as one number', function (?string $display, ?string $answered): void {
+    onLegacyContact();
+    $card = array_replace(LegacyFixtures::golden('listing.link_only'), ['phone_display' => $display]);
+    LegacyListingsHttp::answer(fn (Request $request): ?PromiseInterface => LegacyListingsHttp::path($request) === '/api/listings/100002' && LegacyListingsHttp::query($request) === '' ? Factory::response($card) : null);
+
+    contactOf(100002)->assertOk()->assertJsonPath('data.phone', null)->assertJsonPath('data.phone_display', $answered);
+})->with([
+    'one number' => ['+998 90 123-45-67', '+998 90 123-45-67'],
+    'hours with digits' => ['звонить с 9 до 18', null],
+    'two numbers' => ['+998 90 123-45-67, +998 91 765-43-21', null],
+    'a part of a number' => ['…45-67', null],
+    'none' => [null, null],
+]);
+
+it('keeps no phone in the contact entry under the mode link, and still asks legacy\'s link for a card with only a phone', function (): void {
+    config(['legacy.contact.mode' => 'link']);
+    onLegacyContact();
+    $card = array_replace(LegacyFixtures::golden('listing.rent_apartment'), ['call_url' => null]);
+    LegacyListingsHttp::answer(fn (Request $request): ?PromiseInterface => LegacyListingsHttp::path($request) === '/api/listings/100001' && LegacyListingsHttp::query($request) === '' ? Factory::response($card) : null);
+
+    $this->getJson('/api/v1/listings/100001')->assertOk()->assertJsonPath('data.contact.has_phone', true);
+
+    expect(json_decode(Crypt::decryptString(Cache::get('legacy:v1:listings:contact:100001')), true))->toBe(['p' => null, 'd' => '+998 00 123-45-67', 'l' => true]);
+    contactOf(100001)->assertOk()->assertJsonPath('data.phone', null)->assertJsonPath('data.call_url', LegacyListingsHttp::BASE.'/call/fixture-call-token?e=1795132800');
+    expect(LegacyListingsHttp::sent('/api/listings/100001/call'))->toHaveCount(1);
+});
+
+it('asks the quota before legacy\'s call link: a refused request costs no call request', function (): void {
+    onLegacyContact();
+    config(['contacts.soft_limit' => 1, 'contacts.hard_limit' => null]);
+
+    contactOf(100001)->assertOk();
+    contactOf(100002)->assertNotFound()->assertJsonPath('code', 'contact_unavailable');
+
+    expect(LegacyListingsHttp::sent('/api/listings/100002/call'))->toBe([])
+        ->and(LegacyListingsHttp::sent('/api/listings/100002'))->toHaveCount(1);
+});
+
+it('answers a listing legacy has withdrawn 404 contact_unavailable at once, though its contact entry was fresh', function (): void {
+    onLegacyContact();
+    Event::fake([ContactDisclosed::class]);
+
+    $this->getJson('/api/v1/listings/100001', ['Accept-Language' => 'ru'])->assertOk();
+    $this->travel(30)->seconds();
+    $this->getJson('/api/v1/listings/100001', ['Accept-Language' => 'en'])->assertOk();
+    $this->travel(31)->seconds();
+    LegacyListingsHttp::answer(fn (Request $request): ?PromiseInterface => LegacyListingsHttp::path($request) === '/api/listings/100001' ? Factory::response(['detail' => 'Not found.'], 404) : null);
+    $this->getJson('/api/v1/listings/100001', ['Accept-Language' => 'ru'])->assertNotFound();
+
+    contactOf(100001, ['Accept-Language' => 'ru'])->assertNotFound()->assertJsonPath('code', 'contact_unavailable');
+    expect(LegacyListingsHttp::sent('/api/listings/100001'))->toHaveCount(3);
+    Event::assertNotDispatched(ContactDisclosed::class);
+});
+
+it('forgets the contact entry of a listing legacy has withdrawn, also when gone numbers are not remembered', function (): void {
+    config(['legacy.cache.not_found' => 0]);
+    onLegacyContact();
+
+    $this->getJson('/api/v1/listings/100001', ['Accept-Language' => 'ru'])->assertOk();
+    $this->travel(30)->seconds();
+    $this->getJson('/api/v1/listings/100001', ['Accept-Language' => 'en'])->assertOk();
+    $this->travel(31)->seconds();
+    LegacyListingsHttp::answer(fn (Request $request): ?PromiseInterface => LegacyListingsHttp::path($request) === '/api/listings/100001' ? Factory::response(['detail' => 'Not found.'], 404) : null);
+    $this->getJson('/api/v1/listings/100001', ['Accept-Language' => 'ru'])->assertNotFound();
+
+    expect(Cache::has('legacy:v1:listings:contact:100001'))->toBeFalse();
+    contactOf(100001, ['Accept-Language' => 'ru'])->assertNotFound()->assertJsonPath('code', 'not_found');
+});
 
 it('variant B answers 503 when legacy fails and 404 contact_unavailable when legacy has no link, dispatching nothing', function (int $legacyStatus, int $status, string $code): void {
     onLegacyContact();
@@ -235,6 +359,7 @@ it('decides the variant per card under the configured mode', function (string $m
 it('refuses past the soft limit, flags once past the hard one, and counts a listing answered again once (stub driver)', function (): void {
     config(['contacts.soft_limit' => 3, 'contacts.hard_limit' => 5]);
     Event::fake([ContactDisclosed::class, ContactQuotaExceeded::class]);
+    AccessGrant::query()->create(['user_id' => $this->user->id, 'state' => AccessGrantState::Admitted, 'admitted_via' => AdmittedVia::Invite]);
 
     foreach ([100001, 100002, 100003] as $number) {
         contactOf($number)->assertOk()->assertJsonPath('data.phone', sprintf('+998000000%03d', $number === 100001 ? 67 : $number - 100000));
@@ -242,10 +367,10 @@ it('refuses past the soft limit, flags once past the hard one, and counts a list
 
     contactOf(100004)->assertNotFound()->assertJsonPath('code', 'contact_unavailable');
     contactOf(100005)->assertNotFound();
-    expect(AccessGrant::query()->count())->toBe(0);
+    expect(AccessGrant::query()->sole()->flagged_at)->toBeNull();
 
     contactOf(100006)->assertNotFound()->assertJsonPath('code', 'contact_unavailable');
-    expect(AccessGrant::query()->sole()->flag_reason)->toBe('contact_quota');
+    expect(AccessGrant::query()->sole()->only(['state', 'admitted_via', 'flag_reason']))->toBe(['state' => AccessGrantState::Admitted, 'admitted_via' => AdmittedVia::Invite, 'flag_reason' => 'contact_quota']);
     Event::assertDispatchedTimes(ContactQuotaExceeded::class, 1);
 
     contactOf(100001)->assertOk()->assertJsonPath('data.phone', '+998000000067');
@@ -296,6 +421,28 @@ it('answers contact_unavailable, never a 500, when the quota\'s cache store fail
     contactOf(100001)->assertNotFound()->assertJsonPath('code', 'contact_unavailable');
 });
 
+it('answers 503 source_unavailable while native stubs are on and the contact is on another driver: never the raw number', function (): void {
+    onLegacyContact();
+    config(['sources.native_stubs' => true, 'contacts.soft_limit' => 1, 'contacts.hard_limit' => 1]);
+
+    contactOf(100001)->assertStatus(503)->assertJsonPath('code', 'source_unavailable')->assertJsonMissingPath('data');
+
+    expect(LegacyListingsHttp::sent('/api/listings/100001'))->toBe([])
+        ->and(Cache::has(ContactDisclosure::key($this->user)))->toBeFalse();
+});
+
+it('answers 503, never a 500, when no call link can be signed outside local and testing and the cache of the warning fails', function (): void {
+    config(['contacts.call_link_signing_key' => '']);
+    FailingCacheStore::install('listings:once');
+    $this->app->instance('env', 'production');
+
+    try {
+        contactOf(100001)->assertStatus(503)->assertJsonPath('code', 'source_unavailable');
+    } finally {
+        $this->app->instance('env', 'testing');
+    }
+});
+
 it('writes no phone number, call token or link of either variant into a log line', function (): void {
     onLegacyContact();
     config(['contacts.soft_limit' => 1, 'contacts.hard_limit' => 1]);
@@ -308,6 +455,8 @@ it('writes no phone number, call token or link of either variant into a log line
         $tokens[] = contactOf(100002)->assertOk()->json('data.call_url');
         LegacyListingsHttp::answer(fn (Request $request): ?PromiseInterface => str_ends_with(LegacyListingsHttp::path($request), '/call') ? Factory::response(['url' => 'http://kvadro.invalid/call/secret-fixture']) : null);
         contactOf(100002)->assertStatus(503);
+        LegacyListingsHttp::answer(fn (Request $request): ?PromiseInterface => str_ends_with(LegacyListingsHttp::path($request), '/call') ? Factory::response(['url' => 'https://kvadro.invalid/call/secret-fixture']) : null);
+        contactOf(100002)->assertNotFound()->assertJsonPath('code', 'contact_unavailable');
     });
     $serialised = json_encode($lines, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 

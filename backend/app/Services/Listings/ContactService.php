@@ -15,12 +15,15 @@ use InvalidArgumentException;
  * (channel `app`) and the bot's «Показать номер» (`bot`, WP-53). Reading a card asks nothing here and discloses
  * nothing: the card only says whether a number exists (`contact.has_phone`). In this order:
  *
- * 1. the source's contact (`ListingSource::contact()` of `source.listings.contact`): no phone and no link is `404
- *    contact_unavailable`, an unknown listing `404 not_found`, a source that cannot answer `503`;
- * 2. `ContactDisclosure::decide()`: refused is `404 contact_unavailable`;
- * 3. the answer — variant A (the source has the number): HOMI's call link (`CallLinkService`), valid
- *    `contacts.call_link_ttl` s, with the number in E.164 and its display; variant B (only a link): the source's link,
- *    `phone: null`;
+ * 1. whether the source has a contact (`ListingSource::hasContact()` of `source.listings.contact`: legacy reads its
+ *    contact entry, else the card, never the call link): none is `404 contact_unavailable`, an unknown listing `404
+ *    not_found`, a source that cannot answer `503`;
+ * 2. `ContactDisclosure::decide()`: refused is `404 contact_unavailable`, and costs no call-link request;
+ * 3. the source's contact (`ListingSource::contact()`; variant B asks legacy for its link now) and the answer —
+ *    variant A (the source has the number): HOMI's call link (`CallLinkService`), valid `contacts.call_link_ttl` s,
+ *    with the number in E.164 and its display; variant B (only a link): the source's link, `phone: null`. A listing
+ *    whose link then fails (`404`, a host HOMI does not allow, `503`) has used its place of the day's quota and
+ *    raises no event;
  * 4. `ContactDisclosure::record()`;
  * 5. `ContactDisclosed` (user id, listing number, channel).
  *
@@ -52,13 +55,15 @@ final readonly class ContactService
             throw new InvalidArgumentException("Unknown contact channel \"{$channel}\".");
         }
 
-        $found = $this->sources->listings('source.listings.contact', $context)->source->contact($number, $context);
+        $source = $this->sources->listings('source.listings.contact', $context)->source;
 
-        if ($found->phone === null && trim($found->callUrl) === '') {
+        if (! $source->hasContact($number, $context) || ! $this->disclosure->decide($user, $number)) {
             throw new ContactUnavailable;
         }
 
-        if (! $this->disclosure->decide($user, $number)) {
+        $found = $source->contact($number, $context);
+
+        if ($found->phone === null && trim($found->callUrl) === '') {
             throw new ContactUnavailable;
         }
 

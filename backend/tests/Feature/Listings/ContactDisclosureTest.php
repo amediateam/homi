@@ -2,10 +2,12 @@
 
 use App\Enums\Access\AccessGrantState;
 use App\Enums\Access\AdmittedVia;
+use App\Enums\AccessState;
 use App\Events\Listings\ContactQuotaExceeded;
 use App\Exceptions\Listings\ContactUnavailable;
 use App\Models\AccessGrant;
 use App\Models\User;
+use App\Services\Access\AccessGate;
 use App\Services\Listings\ContactDisclosure;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Cache;
@@ -64,10 +66,11 @@ function quotaLogLines(callable $run): array
 it('answers the first soft-limit listings, refuses the next ones and flags the account once past the hard limit', function (): void {
     Event::fake([ContactQuotaExceeded::class]);
     $user = User::factory()->telegram()->create();
+    AccessGrant::query()->create(['user_id' => $user->id, 'state' => AccessGrantState::Admitted, 'admitted_via' => AdmittedVia::Open]);
 
     expect(askFor($user, 101, 102, 103))->toBe([101 => true, 102 => true, 103 => true])
         ->and(askFor($user, 104, 105))->toBe([104 => false, 105 => false])
-        ->and(AccessGrant::query()->count())->toBe(0);
+        ->and(AccessGrant::query()->sole()->flagged_at)->toBeNull();
     Event::assertNotDispatched(ContactQuotaExceeded::class);
 
     expect(askFor($user, 106))->toBe([106 => false]);
@@ -137,18 +140,55 @@ it('refuses nothing and stores nothing while both limits are blank', function ()
 });
 
 it('flags without refusing when only the hard limit is set, and refuses without flagging when only the soft one is', function (): void {
+    Event::fake([ContactQuotaExceeded::class]);
     config(['contacts.soft_limit' => null, 'contacts.hard_limit' => 2]);
-    $flagged = User::factory()->create();
+    [$flagged, $refused] = User::factory()->count(2)->create()->all();
+
+    foreach ([$flagged, $refused] as $user) {
+        AccessGrant::query()->create(['user_id' => $user->id, 'state' => AccessGrantState::Admitted, 'admitted_via' => AdmittedVia::Invite]);
+    }
 
     expect(array_unique(askFor($flagged, 1, 2, 3)))->toBe([1 => true])
-        ->and(AccessGrant::query()->sole()->user_id)->toBe($flagged->id);
+        ->and(AccessGrant::query()->whereNotNull('flagged_at')->pluck('user_id')->all())->toBe([$flagged->id]);
 
     config(['contacts.soft_limit' => 1, 'contacts.hard_limit' => null]);
-    $refused = User::factory()->create();
 
     expect(askFor($refused, 1, 2, 3, 4, 5, 6, 7))->toBe([1 => true, 2 => false, 3 => false, 4 => false, 5 => false, 6 => false, 7 => false])
-        ->and(AccessGrant::query()->count())->toBe(1);
+        ->and(AccessGrant::query()->whereNotNull('flagged_at')->pluck('user_id')->all())->toBe([$flagged->id]);
+    Event::assertDispatchedTimes(ContactQuotaExceeded::class, 1);
 });
+
+it('never writes a grant for a user without one: the warning and the event still tell the operator, once a day', function (): void {
+    Event::fake([ContactQuotaExceeded::class]);
+    $user = User::factory()->create();
+
+    $lines = quotaLogLines(fn () => askFor($user, 1, 2, 3, 4, 5, 6, 7, 8));
+
+    expect(AccessGrant::query()->count())->toBe(0)
+        ->and($lines)->toHaveCount(1)
+        ->and($lines[0]['context'])->toBe(['user_id' => $user->id, 'asked' => 6, 'stored' => false]);
+    Event::assertDispatchedTimes(ContactQuotaExceeded::class, 1);
+    Event::assertDispatched(ContactQuotaExceeded::class, fn (ContactQuotaExceeded $event): bool => $event->userId === $user->id && $event->asked === 6);
+});
+
+it('never lets a flagged user in where he was not let in before', function (string $mode, array $owners, AccessState $before, AccessState $after): void {
+    config(['access.mode' => $mode, 'access.owner_telegram_ids' => $owners, 'access.max_seats' => null]);
+    $user = User::factory()->telegram()->create(['telegram_user_id' => 279058397]);
+    $gate = app(AccessGate::class);
+
+    expect($gate->decide($user)->state)->toBe($before);
+
+    askFor($user, 1, 2, 3, 4, 5, 6);
+    config(['access.mode' => 'private', 'access.owner_telegram_ids' => []]);
+    $gate->forget($user);
+
+    expect($gate->decide($user)->state)->toBe($after)
+        ->and(AccessGrant::query()->count())->toBe(0);
+})->with([
+    'an owner, later off the list' => ['private', ['279058397'], AccessState::Granted, AccessState::Private],
+    'open mode, later private' => ['open', [], AccessState::Granted, AccessState::Private],
+    'invite mode (the bot reaches no gate)' => ['invite', [], AccessState::Invite, AccessState::Private],
+]);
 
 it('keeps a counter per user', function (): void {
     [$first, $second] = User::factory()->count(2)->create()->all();
@@ -178,13 +218,14 @@ it('flags an existing grant without changing its state or how it was admitted', 
 
 it('logs the flag with the internal user id only: no phone number, no Telegram id', function (): void {
     $user = User::factory()->telegram()->create(['telegram_user_id' => 279058397]);
+    AccessGrant::query()->create(['user_id' => $user->id, 'state' => AccessGrantState::Admitted, 'admitted_via' => AdmittedVia::Owner]);
 
     $lines = quotaLogLines(fn () => askFor($user, 1, 2, 3, 4, 5, 6));
     $serialised = json_encode($lines, JSON_THROW_ON_ERROR);
 
     expect($lines)->toHaveCount(1)
         ->and($lines[0]['level'])->toBe('warning')
-        ->and($lines[0]['context'])->toBe(['user_id' => $user->id, 'asked' => 6])
+        ->and($lines[0]['context'])->toBe(['user_id' => $user->id, 'asked' => 6, 'stored' => true])
         ->and($serialised)->not->toContain('279058397')
         ->and($serialised)->not->toContain('+998');
 });

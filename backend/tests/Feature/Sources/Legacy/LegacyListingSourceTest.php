@@ -412,6 +412,7 @@ function sharedCaches(): array
         'map' => [fn (): mixed => legacyListings()->map(defaultFilters(), userContext()), fn (): string => $filtersKey('map', true), '/api/map'],
         'flow' => [fn (): mixed => legacyListings()->flow(defaultFilters(), userContext()), fn (): string => $filtersKey('flow', true), '/api/feed/flow'],
         'count' => [fn (): mixed => legacyListings()->count(defaultFilters(), userContext()), fn (): string => $filtersKey('count', false), '/api/feed/count'],
+        'contact (WP-43)' => [fn (): mixed => legacyListings()->contact(100001, userContext()), fn (): string => 'legacy:v1:listings:contact:100001', '/api/listings/100001'],
     ];
 }
 

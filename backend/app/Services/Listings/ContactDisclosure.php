@@ -2,13 +2,10 @@
 
 namespace App\Services\Listings;
 
-use App\Enums\Access\AccessGrantState;
-use App\Enums\Access\AdmittedVia;
 use App\Events\Listings\ContactQuotaExceeded;
 use App\Exceptions\Listings\ContactUnavailable;
 use App\Models\AccessGrant;
 use App\Models\User;
-use App\Services\Access\AccessGate;
 use Carbon\CarbonImmutable;
 use Exception;
 use Illuminate\Support\Facades\Cache;
@@ -32,10 +29,13 @@ use Throwable;
  *   listings are answered, later ones refused, and asking on is what reaches the hard limit. A listing whose answer
  *   failed after `decide()` (a `503`) stays counted as asked for.
  * - `record()` confirms a disclosure (it marks the listing answered; a number reserved by `decide()` counts once).
- * - Above `contacts.hard_limit` listings asked for, once per day: `access_grants.flagged_at` and `flag_reason =
- *   'contact_quota'` are written (an upsert that never touches `state` or `admitted_via` of an existing row; a missing
- *   row — open mode without seats — is created `admitted` via `open`), a warning names the internal user id only, and
- *   `ContactQuotaExceeded` is dispatched. Blocking stays an operator action (`access:block`).
+ * - Above `contacts.hard_limit` listings asked for, once per day: an existing `access_grants` row gets `flagged_at`
+ *   and `flag_reason = 'contact_quota'` (an update of those two columns only: never `state`, `admitted_via` or a seat,
+ *   so the flag can never create or widen access); a user without a row (open mode without seats, an owner of the
+ *   list, the bot's users) gets none — the flag is then not stored anywhere, because a place for it needs a migration.
+ *   Either way a warning names the internal user id only, with `stored` saying whether a row was flagged, and
+ *   `ContactQuotaExceeded` is dispatched, so the operator learns of it. Blocking stays an operator action
+ *   (`access:block`).
  * - Both limits `null`: the quota is off, and nothing is read or written.
  * - The cache store or its lock failing: fail closed (`decide()` refuses, `record()` throws `ContactUnavailable`), with
  *   a warning at most once a minute while the store can still count that; never a `500`.
@@ -50,8 +50,6 @@ final class ContactDisclosure
     private const int LOCK_SECONDS = 5;
 
     private const int LOCK_WAIT_SECONDS = 2;
-
-    public function __construct(private readonly AccessGate $gate) {}
 
     /** Whether the user may be given the number of the listing now; a refusal is counted. */
     public function decide(User $user, int $number): bool
@@ -162,41 +160,33 @@ final class ContactDisclosure
     }
 
     /**
-     * Marks the account for an operator, once per day (the day's entry remembers it); decides nothing. A failed write
-     * is reported and does not change the answer.
+     * Marks the account for an operator, once per day (the day's entry remembers it); decides nothing, and the access
+     * gate reads neither column. A failed write is reported, does not change the answer, and is `stored: false`.
      */
     private function flag(User $user, int $asked): void
     {
         $now = CarbonImmutable::now();
 
         try {
-            self::writeFlag($user, $now);
+            $stored = self::writeFlag($user, $now);
         } catch (Throwable $failure) {
             report($failure);
-
-            return;
+            $stored = false;
         }
 
-        $this->gate->forget($user);
-        Log::warning('A user passed the hard limit of contact disclosures today.', ['user_id' => $user->id, 'asked' => $asked]);
+        Log::warning('A user passed the hard limit of contact disclosures today.', ['user_id' => $user->id, 'asked' => $asked, 'stored' => $stored]);
         ContactQuotaExceeded::dispatch($user->id, $asked, $now->setTimezone(self::TIMEZONE)->format('Y-m-d'));
     }
 
-    /** An upsert: a missing row is created, an existing one keeps its state and the way it was admitted. */
-    private static function writeFlag(User $user, CarbonImmutable $now): void
+    /**
+     * The flag on the user's existing grant: an update of `flagged_at` and `flag_reason` only, so no row is created
+     * and no state, admission or seat changes.
+     *
+     * @return bool whether a row was flagged
+     */
+    private static function writeFlag(User $user, CarbonImmutable $now): bool
     {
-
-        AccessGrant::query()->upsert(
-            [[
-                'user_id' => $user->id,
-                'state' => AccessGrantState::Admitted->value,
-                'admitted_via' => AdmittedVia::Open->value,
-                'flagged_at' => $now,
-                'flag_reason' => self::FLAG_REASON,
-            ]],
-            ['user_id'],
-            ['flagged_at', 'flag_reason'],
-        );
+        return AccessGrant::query()->whereKey($user->id)->update(['flagged_at' => $now, 'flag_reason' => self::FLAG_REASON]) > 0;
     }
 
     /** A warning about the failing store, at most once a minute while the store can still count that. */

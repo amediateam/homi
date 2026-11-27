@@ -8,6 +8,7 @@ use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Tests\Support\FailingCacheStore;
 
 /*
  * WP-43, KV-BE-037, SEC-REQ-026: HOMI's signed call links. A link of 600 s is valid until 660 s after it was issued
@@ -113,7 +114,7 @@ it('refuses an altered payload, an altered signature and anything that is not a 
 
 it('refuses a correctly signed payload that is not exactly what it issues', function (array $claims): void {
     $payload = encodedClaims($claims);
-    $signature = rtrim(strtr(base64_encode(hash_hmac('sha256', $payload, CALL_KEY, true)), '+/', '-_'), '=');
+    $signature = rtrim(strtr(base64_encode(hash_hmac('sha256', 'call-link.v1.'.$payload, CALL_KEY, true)), '+/', '-_'), '=');
 
     expect(callLinks()->verify("{$payload}.{$signature}"))->toBeNull();
 })->with([
@@ -124,6 +125,16 @@ it('refuses a correctly signed payload that is not exactly what it issues', func
     'an unknown locale' => [['n' => 1, 'u' => 1, 'l' => 'de', 'x' => 1795770600]],
     'a nested value' => [['n' => 1, 'u' => 1, 'l' => ['ru'], 'x' => 1795770600]],
 ]);
+
+it('signs the payload under the purpose call-link.v1, so a MAC of the bare payload under the same key is refused', function (): void {
+    $token = tokenOf(callLinks()->issue(User::factory()->create(), 100001, 'ru')->url);
+    [$payload, $signature] = explode('.', $token);
+    $bare = rtrim(strtr(base64_encode(hash_hmac('sha256', $payload, CALL_KEY, true)), '+/', '-_'), '=');
+
+    expect($signature)->toBe(rtrim(strtr(base64_encode(hash_hmac('sha256', 'call-link.v1.'.$payload, CALL_KEY, true)), '+/', '-_'), '='))
+        ->and(callLinks()->verify("{$payload}.{$bare}"))->toBeNull()
+        ->and(callLinks()->verify($token))->not->toBeNull();
+});
 
 it('accepts a token of the previous key while it is set, and only then', function (): void {
     $token = tokenOf(callLinks()->issue(User::factory()->create(), 100001, 'ru')->url);
@@ -145,7 +156,7 @@ it('uses a key derived from the application key in local and testing when the co
     [$payload, $signature] = explode('.', $token);
     $derived = hash_hmac('sha256', 'homi-call-link', config('app.key'));
 
-    expect($signature)->toBe(rtrim(strtr(base64_encode(hash_hmac('sha256', $payload, $derived, true)), '+/', '-_'), '='))
+    expect($signature)->toBe(rtrim(strtr(base64_encode(hash_hmac('sha256', 'call-link.v1.'.$payload, $derived, true)), '+/', '-_'), '='))
         ->and(callLinks()->verify($token))->not->toBeNull();
 
     config(['contacts.call_link_signing_key' => CALL_KEY]);
@@ -175,6 +186,26 @@ it('issues no link outside local and testing without a key: 503, one warning a m
         $this->app->instance('env', 'testing');
     }
 })->with(['production', 'staging']);
+
+it('issues no link without a key and never a 500, also when the cache of its warning fails', function (): void {
+    config(['contacts.call_link_signing_key' => '']);
+    FailingCacheStore::install('listings:once');
+    $this->app->instance('env', 'production');
+    $lines = new ArrayObject;
+    Log::listen(function (MessageLogged $entry) use ($lines): void {
+        $lines[] = $entry;
+    });
+
+    try {
+        expect(fn () => callLinks()->issue(User::factory()->create(), 100001, 'ru'))->toThrow(SourceUnavailable::class)
+            ->and(fn () => callLinks()->issue(User::factory()->create(), 100001, 'ru'))->toThrow(SourceUnavailable::class);
+    } finally {
+        $this->app->instance('env', 'testing');
+    }
+
+    expect($lines)->toHaveCount(2)
+        ->and($lines[0]->level)->toBe('warning');
+});
 
 it('refuses to issue a link for a number below 1 or a locale HOMI does not serve', function (int $number, string $locale): void {
     expect(fn () => callLinks()->issue(User::factory()->create(), $number, $locale))->toThrow(InvalidArgumentException::class);

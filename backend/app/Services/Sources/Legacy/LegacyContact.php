@@ -18,7 +18,8 @@ use InvalidArgumentException;
  * | `phone` | `phone`                               | `null`                            | `null`  |
  * | `link`  | `link`                                | `link`                            | `null`  |
  *
- * `toArray()` is what the encrypted contact entry of `LegacyListingSource` holds; it never enters a log line.
+ * `toArray()` is what the encrypted contact entry of `LegacyListingSource` holds (as `kept()` gives it for the mode);
+ * it never enters a log line.
  */
 final readonly class LegacyContact
 {
@@ -76,6 +77,16 @@ final readonly class LegacyContact
         return ['p' => $this->phone, 'd' => $this->display, 'l' => $this->hasLink];
     }
 
+    /**
+     * What the contact entry keeps under a mode of `legacy.contact.mode` (data minimisation): under `link` no phone,
+     * since variant B never answers one, and `hasLink` then says whether legacy can give a call link at all (a phone or
+     * a link in the card), so the entry decides the variant as the card did; under any other mode the contact as read.
+     */
+    public function kept(string $mode): self
+    {
+        return $mode === self::LINK ? new self(null, $this->display, $this->phone !== null || $this->hasLink) : $this;
+    }
+
     /** `PHONE` (variant A), `LINK` (variant B) or `null` (no contact) under a mode of `legacy.contact.mode`. */
     public function variant(string $mode): ?string
     {
@@ -94,6 +105,15 @@ final readonly class LegacyContact
         }
 
         return $this->display !== null && AuthorKey::e164($this->display) === $this->phone ? $this->display : self::format($this->phone);
+    }
+
+    /**
+     * The display of variant B: legacy's `phone_display` only when `AuthorKey::e164()` reads it as one number, else
+     * `null`, so a link-only answer never carries other digits (hours, a part of a number, two numbers).
+     */
+    public function linkDisplay(): ?string
+    {
+        return AuthorKey::e164($this->display) !== null ? $this->display : null;
     }
 
     /** HOMI's form of an E.164 number: `+998 90 123-45-67` for an Uzbek one, else the number as it is. */

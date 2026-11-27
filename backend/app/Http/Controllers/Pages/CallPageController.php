@@ -27,11 +27,15 @@ use Illuminate\Http\Response;
  * | the listing source cannot answer                            | `503` `call/unavailable`                       |
  * | more than 30 pages a minute from one address (`call-page`)  | `429` `call/unavailable`                       |
  *
- * The title comes from `ListingSource::preview()` and the number from `ListingSource::contact()` on every visit (the
- * caches make this cheap), so a withdrawn listing is `404` at once and a token for one listing never shows another.
- * Both are read with a system context in the token's language; the drivers are chosen for the token's user, so the
- * page reads the source the link was issued from. Every answer carries `HEADERS`. The page is rendered to a string,
- * so no view data (the number) reaches Telescope's request entry, which `TelescopeServiceProvider` drops anyway.
+ * The number comes from `ListingSource::contact()` and then the title from `ListingSource::preview()` on every visit,
+ * so a withdrawn listing is `404` at once and a token for one listing never shows another; in that order a cold page
+ * costs legacy one card read (the contact entry's refill caches the card, whose preview the title then reads). Both
+ * are read in `SourceContext::foreground()` of the token's language: no user and no scenario, as a system context —
+ * the page applies no overlay, records no view and reads nothing personal — but a person waits, so its legacy calls
+ * wait for the outbound limiter as a user's do instead of taking only the background share. The drivers are chosen
+ * for the token's user, so the page reads the source the link was issued from. Every answer carries `HEADERS`. The
+ * page is rendered to a string, so no view data (the number) reaches Telescope's request entry, which
+ * `TelescopeServiceProvider` drops anyway.
  */
 class CallPageController extends Controller
 {
@@ -40,7 +44,7 @@ class CallPageController extends Controller
         'X-Robots-Tag' => 'noindex',
         'Cache-Control' => 'no-store',
         'Referrer-Policy' => 'no-referrer',
-        'Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'",
+        'Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
         'X-Content-Type-Options' => 'nosniff',
     ];
 
@@ -82,11 +86,11 @@ class CallPageController extends Controller
         }
 
         $drivers = new SourceContext($claims->locale, 'USD', $user);
-        $system = SourceContext::system($claims->locale);
+        $page = SourceContext::foreground($claims->locale);
 
         try {
-            $listing = $sources->listings('source.listings.card', $drivers)->source->preview($claims->number, $system);
-            $contact = $sources->listings('source.listings.contact', $drivers)->source->contact($claims->number, $system);
+            $contact = $sources->listings('source.listings.contact', $drivers)->source->contact($claims->number, $page);
+            $listing = $sources->listings('source.listings.card', $drivers)->source->preview($claims->number, $page);
         } catch (SourceNotFound|ContactUnavailable) {
             return self::page('call.missing', 404, $claims->locale);
         } catch (ApiException) {

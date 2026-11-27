@@ -61,6 +61,15 @@ interface ListingSource
     public function previews(array $numbers, SourceContext $context): array;
 
     /**
+     * Whether `contact()` would have a contact to give (WP-43): learnt from what the source already knows of the
+     * listing (legacy: the contact entry, else one card read), never by asking for a call link, and not a disclosure.
+     * `ContactService::disclose()` asks it before the quota, so a refused request costs no call-link request.
+     *
+     * @throws SourceNotFound|SourceUnavailable
+     */
+    public function hasContact(int $number, SourceContext $context): bool;
+
+    /**
      * The author's contact (WP-43, Q-API-062). With `phone` the source has the number (variant A): its `callUrl` and
      * `expiresAt` may be blank, and `ContactService` answers HOMI's own call link. Without, `callUrl` is the source's
      * call link (variant B). Called only by `ContactService::disclose()`, which counts every answer as a disclosure,
