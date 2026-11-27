@@ -197,6 +197,34 @@ it('cuts the reads the deadline leaves unanswered, without a retry and without c
         ->and(Cache::has('legacy:breaker:open_until'))->toBeFalse();
 });
 
+it('ends every pooled request by the deadline: a later round gets a shorter timeout and connect timeout (L4)', function (): void {
+    config(['legacy.previews.deadline_ms' => 3000, 'legacy.previews.concurrency' => 2, 'legacy.rate.per_second' => 1000]);
+    $timeouts = new ArrayObject;
+    LegacyListingsHttp::fake(function (Request $request, array $options) use ($timeouts): mixed {
+        $timeouts[] = [$options['timeout'] ?? null, $options['connect_timeout'] ?? null];
+        CarbonImmutable::setTestNow(now()->addMilliseconds(1000));
+
+        return null;
+    });
+
+    expect(array_keys(pooledSource()->previews(feedNumbers(4), poolUser())))->toBe(feedNumbers(4))
+        ->and($timeouts->getArrayCopy())->toBe([[3.0, 3.0], [3.0, 3.0], [1.0, 1.0], [1.0, 1.0]]);
+});
+
+it('keeps the configured timeouts while the deadline is further away than one timeout', function (): void {
+    config(['legacy.rate.per_second' => 1000]);
+    $timeouts = new ArrayObject;
+    LegacyListingsHttp::fake(function (Request $request, array $options) use ($timeouts): mixed {
+        $timeouts[] = [$options['timeout'] ?? null, $options['connect_timeout'] ?? null];
+
+        return null;
+    });
+
+    pooledSource()->previews(feedNumbers(2), poolUser());
+
+    expect($timeouts->getArrayCopy())->toEqual([[15, 5], [15, 5]]);
+});
+
 it('gives the previews a deadline of their wait and one HTTP timeout unless the environment sets one', function (): void {
     $config = legacyConfigWith(...);
 

@@ -13,30 +13,31 @@ use Illuminate\Support\Facades\Http;
  * legacy's answers: by default every request is answered as `LegacyFakeServer` answers it from the golden fixtures.
  *
  * Laravel matches fakes in the order they were registered (WP-42 brief, rule 3), so a test registers this one fake
- * once and changes the answers through `answer()`: an override that returns `null` lets the fixtures answer. A class,
- * not Pest functions: global helper names of the test files collide.
+ * once and changes the answers through `answer()`: an override that returns `null` lets the fixtures answer. An
+ * override may take the request's Guzzle options as a second argument (`timeout`, `connect_timeout`). A class, not Pest
+ * functions: global helper names of the test files collide.
  */
 final class LegacyListingsHttp
 {
     public const string BASE = 'https://legacy.test';
 
-    /** @var (Closure(Request): (PromiseInterface|null))|null */
+    /** @var (Closure(Request, array<string, mixed>): (PromiseInterface|null))|null */
     private static ?Closure $override = null;
 
-    /** @param  (Closure(Request): (PromiseInterface|null))|null  $override */
+    /** @param  (Closure(Request, array<string, mixed>): (PromiseInterface|null))|null  $override */
     public static function fake(?Closure $override = null): void
     {
         config(['legacy.fake' => false, 'legacy.base_url' => self::BASE, 'legacy.service_key' => 'listings-test-key']);
         self::$override = $override;
 
-        Http::fake(['legacy.test/*' => function (Request $request): PromiseInterface {
-            $answer = self::$override === null ? null : (self::$override)($request);
+        Http::fake(['legacy.test/*' => function (Request $request, array $options = []): PromiseInterface {
+            $answer = self::$override === null ? null : (self::$override)($request, $options);
 
             return $answer ?? app(LegacyFakeServer::class)->answer($request);
         }]);
     }
 
-    /** @param  (Closure(Request): (PromiseInterface|null))|null  $override */
+    /** @param  (Closure(Request, array<string, mixed>): (PromiseInterface|null))|null  $override */
     public static function answer(?Closure $override): void
     {
         self::$override = $override;
