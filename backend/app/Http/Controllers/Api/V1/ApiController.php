@@ -129,6 +129,20 @@ abstract class ApiController extends Controller
     }
 
     /**
+     * The signed-in HOMI user of a personal method (WP-44): anything else is `401`, which every bearer route documents
+     * already; unlike `appUser()` it adds no `403` to the OpenAPI document, so the WP-13 contracts keep their shape. A
+     * collector token never carries the app abilities those routes check first.
+     *
+     * @throws AuthenticationException
+     */
+    protected function signedInUser(Request $request): User
+    {
+        $user = $request->user();
+
+        return $user instanceof User ? $user : throw new AuthenticationException;
+    }
+
+    /**
      * The signed-in HOMI user of a Mini App method. A collector (`Source`) token never carries the app abilities; one
      * that reached such a method anyway is refused as `403 forbidden`.
      *

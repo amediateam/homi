@@ -3,7 +3,6 @@
 namespace App\Services\Personal;
 
 use App\Exceptions\Sources\SourceNotFound;
-use App\Exceptions\Sources\SourceUnavailable;
 use App\Jobs\Listings\ResolveListingRef;
 use App\Models\ListingRef;
 use App\Services\Listings\ListingPointer;
@@ -34,7 +33,10 @@ final readonly class ListingResolver
 
     public function __construct(private SourceManager $sources) {}
 
-    /** @throws SourceNotFound|SourceUnavailable */
+    /**
+     * The pointer of the listing a write names; `SourceNotFound` (`404`) or `SourceUnavailable` (`503`) from step 2 —
+     * named here, not as `@throws` tags, which the OpenAPI export would read as answers of the calling method.
+     */
     public function resolve(int $number, SourceContext $context): ListingPointer
     {
         if ($number < 1) {
