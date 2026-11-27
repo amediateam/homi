@@ -148,6 +148,8 @@ return [
                 '/^listing-opens:/',
                 '/^access:decision:/',
                 '/^auth:/',
+                // WP-43: the day's set of listings a user asked a contact for (`contact:<id>:<day>`) and its lock.
+                '/^contact:/',
             ],
             'groups' => [
                 '/^job-exceptions:.*/' => 'job-exceptions:*',
