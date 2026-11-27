@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\BlockedAuthor;
 use App\Models\Favorite;
 use App\Models\ListingRef;
 use App\Models\User;
@@ -20,8 +21,8 @@ use Tests\Support\LegacyListingsHttp;
 /*
  * WP-44, step 4: favourites in HOMI's table (task `KV-BE-038`). `PUT` and `DELETE` set a target state, so a repeat
  * changes nothing; the list pages by row id, newest first, 20 by default (DEC-53), its items from the card source's
- * previews in row order — a number the source no longer knows (`404`) is left out and marked gone, anything else it
- * cannot give answers `503` (brief decision 12). The stub driver answers here; the legacy fixtures where channel and
+ * previews in row order — a number the source no longer knows (`404`) is left out (legacy marks it gone itself, the
+ * pager never does), anything else it cannot give answers `503` (brief decision 12). The stub driver answers here; the legacy fixtures where channel and
  * post or a definite `404` matter.
  */
 
@@ -205,7 +206,7 @@ it('refuses a limit outside 1 … 50', function (): void {
     $this->getJson('/api/v1/favorites?limit=51')->assertStatus(422)->assertJsonValidationErrors(['limit']);
 });
 
-it('skips a listing the source no longer knows, marks it gone, and keeps the cursor of a page one shorter', function (): void {
+it('skips a listing the card source leaves out, without marking it gone, and keeps the cursor of a page one shorter', function (): void {
     $numbers = stubCatalogueNumbers(21);
     favouriteInOrder($this->user, [...array_slice($numbers, 0, 10), 123456, ...array_slice($numbers, 10)]);
     ListingRef::factory()->create(['listing_number' => 123456]);
@@ -215,8 +216,29 @@ it('skips a listing the source no longer knows, marks it gone, and keeps the cur
     expect($first->json('data'))->toHaveCount(19)
         ->and(favouriteNumbersOf($first))->not->toContain(123456)
         ->and($first->json('meta.next_cursor'))->toBeString()
-        ->and(ListingRef::query()->find(123456)?->gone_at)->not->toBeNull()
+        ->and(ListingRef::query()->find(123456)?->gone_at)->toBeNull()
         ->and(Favorite::query()->where('listing_number', 123456)->exists())->toBeTrue();
+});
+
+it('never marks a listing gone for everyone because one user\'s card driver leaves it out (review A, F1)', function (): void {
+    $attacker = User::factory()->create();
+    $key = 'phone:'.str_repeat('b', 32);
+    ListingRef::factory()->ofAuthor($key)->create(['listing_number' => 5550001]);
+    BlockedAuthor::factory()->for($this->user)->create(['author_key' => $key, 'kind' => 'phone', 'label' => '+998 ** *** ** 11']);
+    // The operator's split rule: legacy for everyone, the stub for one named account.
+    Feature::globally()->activate('source.listings.card', ['everyone' => 'legacy', 'users' => [(string) $attacker->id => 'stub']]);
+    $before = $this->getJson('/api/v1/hidden')->assertOk()->json('data.authors.0.count');
+
+    Sanctum::actingAs($attacker, ['app:read', 'app:write']);
+    $this->putJson('/api/v1/favorites/5550001')->assertOk();
+    $page = $this->getJson('/api/v1/favorites')->assertOk();
+
+    Sanctum::actingAs($this->user, ['app:read', 'app:write']);
+
+    expect(favouriteNumbersOf($page))->toBe([])
+        ->and(ListingRef::query()->find(5550001)?->gone_at)->toBeNull()
+        ->and($before)->toBe(1)
+        ->and($this->getJson('/api/v1/hidden')->assertOk()->json('data.authors.0.count'))->toBe(1);
 });
 
 it('answers 503 for the whole page while the source cannot give it', function (): void {
@@ -231,7 +253,7 @@ it('shows a favourite of a listing merged later under its survivor', function ()
     expect(favouriteNumbersOf($this->getJson('/api/v1/favorites')->assertOk()))->toBe([100001]);
 });
 
-it('leaves out an item legacy answered 404 for and marks it gone, but answers 503 when one preview fails otherwise (decision 12)', function (): void {
+it('leaves out an item legacy answered 404 for, which legacy itself marks gone, but answers 503 when one preview fails otherwise (decision 12)', function (): void {
     onLegacyFavourites();
     favouriteInOrder($this->user, [100001, 123456, 100004]);
     ListingRef::factory()->create(['listing_number' => 123456]);

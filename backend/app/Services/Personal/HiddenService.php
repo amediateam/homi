@@ -69,8 +69,8 @@ final readonly class HiddenService
 
     /**
      * «Скрытое»: the hidden listings of every reason, newest first, at most `OVERVIEW_LISTINGS`, as previews in row order
-     * (a number the source no longer knows is left out and marked gone, `PersonalListPager`; a source that cannot give
-     * them is `SourceUnavailable`, `503`), and every blocked author, newest first, with the live listings `listing_refs`
+     * (a number the card source leaves out is left out, `PersonalListPager`; a source that cannot give them is
+     * `SourceUnavailable`, `503`), and every blocked author, newest first, with the live listings `listing_refs`
      * files under its key (`0` once none is left) — three reads, however long the lists.
      */
     public function overview(User $user, SourceContext $context): HiddenOverview

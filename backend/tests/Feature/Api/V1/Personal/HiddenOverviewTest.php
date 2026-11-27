@@ -8,9 +8,13 @@ use App\Models\ListingRef;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Sleep;
+use Laravel\Pennant\Feature;
 use Laravel\Sanctum\Sanctum;
 use Tests\Support\ContractShapes;
 use Tests\Support\JsonShape;
+use Tests\Support\LegacyFixtures;
+use Tests\Support\LegacyListingsHttp;
 
 /*
  * WP-44, step 6: «Скрытое» (task `KV-BE-042`, BR-API-099): `GET /hidden` answers the caller's hidden listings — every
@@ -21,6 +25,8 @@ use Tests\Support\JsonShape;
 
 beforeEach(function (): void {
     Http::preventStrayRequests();
+    Sleep::fake();
+    config(['legacy.media.public_url' => LegacyFixtures::MEDIA, 'legacy.rate.per_second' => 1000]);
     $this->user = User::factory()->create();
     Sanctum::actingAs($this->user, ['app:read', 'app:write']);
 });
@@ -78,12 +84,12 @@ it('lists the hidden listings of every reason, newest first, and the blocked aut
         ]);
 });
 
-it('leaves out a hidden listing the source no longer knows and marks it gone', function (): void {
+it('leaves out a hidden listing the card source leaves out, without marking it gone', function (): void {
     hideInOrder($this->user, [100012, 123456]);
     ListingRef::factory()->create(['listing_number' => 123456]);
 
     expect(array_column($this->getJson('/api/v1/hidden')->assertOk()->json('data.listings'), 'number'))->toBe([100012])
-        ->and(ListingRef::query()->find(123456)?->gone_at)->not->toBeNull();
+        ->and(ListingRef::query()->find(123456)?->gone_at)->toBeNull();
 });
 
 it('answers 503 while the source cannot give the hidden listings', function (): void {
@@ -112,10 +118,21 @@ it('answers at most the 200 newest hidden listings', function (): void {
     ], $numbers));
     ListingRef::query()->insert(array_map(fn (int $number): array => ['listing_number' => $number, 'first_seen_at' => now(), 'last_seen_at' => now()], $numbers));
 
+    // The card source asked is legacy's, so the numbers it was asked for are the card reads legacy received.
+    LegacyListingsHttp::fake();
+    Feature::globally()->activate('source.listings.card', ['everyone' => 'legacy']);
+
     $this->getJson('/api/v1/hidden')->assertOk();
 
-    expect(ListingRef::query()->whereNotNull('gone_at')->count())->toBe(200)
-        ->and(ListingRef::query()->whereNull('gone_at')->orderBy('listing_number')->pluck('listing_number')->all())->toBe(range(300001, 300005));
+    $asked = [];
+    foreach (Http::recorded() as [$request]) {
+        if (preg_match('#^/api/listings/(\d+)$#', LegacyListingsHttp::path($request), $match) === 1) {
+            $asked[] = (int) $match[1];
+        }
+    }
+    sort($asked);
+
+    expect($asked)->toBe(range(300006, 300205));
 });
 
 it('clears the hidden listings and the blocked authors of the caller only, with 204, twice', function (): void {

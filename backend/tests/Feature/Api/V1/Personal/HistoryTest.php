@@ -136,13 +136,13 @@ it('ends the list quietly on a cursor it did not give, favourites\' among them',
     'a time that is not whole' => 'n1.'.rtrim(strtr(base64_encode('[1.5,3]'), '+/', '-_'), '='),
 ]);
 
-it('skips a listing the source no longer knows and marks it gone', function (): void {
+it('skips a listing the card source leaves out, without marking it gone', function (): void {
     ListingView::factory()->for($this->user)->create(['listing_number' => 100012, 'last_viewed_at' => now()->subMinutes(2)]);
     ListingView::factory()->for($this->user)->create(['listing_number' => 123456, 'last_viewed_at' => now()->subMinute()]);
     ListingRef::factory()->create(['listing_number' => 123456]);
 
     expect(historyNumbersOf($this->getJson('/api/v1/history')->assertOk()))->toBe([100012])
-        ->and(ListingRef::query()->find(123456)?->gone_at)->not->toBeNull();
+        ->and(ListingRef::query()->find(123456)?->gone_at)->toBeNull();
 });
 
 it('answers 503 while the source cannot give the page', function (): void {
