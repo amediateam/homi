@@ -8,7 +8,9 @@ use Carbon\CarbonImmutable;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -40,6 +42,12 @@ use Laravel\Sanctum\HasApiTokens;
  * @property CarbonImmutable|null $updated_at
  * @property-read UserSetting|null $settings
  * @property-read AccessGrant|null $accessGrant
+ * @property-read Collection<int, Favorite> $favorites
+ * @property-read Collection<int, ListingView> $listingViews
+ * @property-read Collection<int, HiddenListing> $hiddenListings
+ * @property-read Collection<int, BlockedAuthor> $blockedAuthors
+ * @property-read Collection<int, ListingVote> $listingVotes
+ * @property-read Collection<int, FoundAnswer> $foundAnswers
  */
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
@@ -91,6 +99,67 @@ class User extends Authenticatable
     public function accessGrant(): HasOne
     {
         return $this->hasOne(AccessGrant::class);
+    }
+
+    /**
+     * The user's favourites (WP-44); written only through `App\Services\Personal\FavoriteService`.
+     *
+     * @return HasMany<Favorite, $this>
+     */
+    public function favorites(): HasMany
+    {
+        return $this->hasMany(Favorite::class);
+    }
+
+    /**
+     * The user's view history (WP-42); written only by `App\Services\Listings\ViewRecorder`.
+     *
+     * @return HasMany<ListingView, $this>
+     */
+    public function listingViews(): HasMany
+    {
+        return $this->hasMany(ListingView::class);
+    }
+
+    /**
+     * The listings the user hid (WP-44); written only through `App\Services\Personal\HiddenService`.
+     *
+     * @return HasMany<HiddenListing, $this>
+     */
+    public function hiddenListings(): HasMany
+    {
+        return $this->hasMany(HiddenListing::class);
+    }
+
+    /**
+     * The authors the user blocked (WP-44); an entry is looked up only through this relation (SEC-REQ-014), so a
+     * foreign id is not found like an unknown one.
+     *
+     * @return HasMany<BlockedAuthor, $this>
+     */
+    public function blockedAuthors(): HasMany
+    {
+        return $this->hasMany(BlockedAuthor::class);
+    }
+
+    /**
+     * The user's reports (WP-44); written only through `App\Services\Personal\VoteService`.
+     *
+     * @return HasMany<ListingVote, $this>
+     */
+    public function listingVotes(): HasMany
+    {
+        return $this->hasMany(ListingVote::class);
+    }
+
+    /**
+     * The user's answers to «Нашли жильё?» (WP-44).
+     *
+     * @return HasMany<FoundAnswer, $this>
+     */
+    public function foundAnswers(): HasMany
+    {
+        return $this->hasMany(FoundAnswer::class);
     }
 
     /**
