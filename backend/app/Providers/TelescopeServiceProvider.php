@@ -24,7 +24,7 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
         $isLocal = $this->app->environment('local');
 
         Telescope::filter(function (IncomingEntry $entry) use ($isLocal): bool {
-            if (self::isLegacyCall($entry)) {
+            if (self::isLegacyCall($entry) || self::isCallPage($entry)) {
                 return false;
             }
 
@@ -56,6 +56,17 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
 
         // Guzzle writes the request's host in lower case; the configured one may not be.
         return is_string($host) && is_string($legacy) && strtolower($host) === strtolower($legacy);
+    }
+
+    /**
+     * A request of HOMI's call page (WP-43, `GET /call/{token}`): never kept, in any environment. Its address holds the
+     * call token, a credential for the author's number, and its answer shows that number (SEC-REQ-026, SEC-REQ-047).
+     */
+    private static function isCallPage(IncomingEntry $entry): bool
+    {
+        $uri = $entry->content['uri'] ?? null;
+
+        return $entry->type === EntryType::REQUEST && is_string($uri) && str_starts_with((string) parse_url($uri, PHP_URL_PATH), '/call/');
     }
 
     /**

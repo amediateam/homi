@@ -2,12 +2,14 @@
 
 namespace App\Providers;
 
+use App\Http\Controllers\Pages\CallPageController;
 use App\Http\DashboardAccess;
 use App\Http\OpenApi\ApiErrorSchema;
 use App\Http\OpenApi\RelativeServer;
 use App\Models\User;
 use App\Services\Access\RateLimits;
 use App\Services\Identity\TelegramInitDataVerifier;
+use App\Services\Sources\SourceContext;
 use Carbon\CarbonImmutable;
 use Dedoc\Scramble\Scramble;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -131,6 +133,12 @@ class AppServiceProvider extends ServiceProvider
 
         // Collector pushes: generous per token, still bounded (ADR-0009 §2).
         RateLimiter::for('intake', fn (Request $request): Limit => Limit::perMinute(600)->by($this->actorKey($request)));
+
+        // HOMI's call page (WP-43): opened from the external browser without a session, so counted per address; the
+        // excess gets the page's own `429`, with its headers.
+        RateLimiter::for('call-page', fn (Request $request): Limit => Limit::perMinute(30)
+            ->by((string) $request->ip())
+            ->response(fn (Request $request, array $headers): Response => CallPageController::page('call.unavailable', 429, SourceContext::localeOf($request), headers: $headers)));
 
         // Telegram delivers from a handful of IPs; the limit only guards against floods.
         RateLimiter::for('telegram-webhook', fn (Request $request): Limit => Limit::perMinute(3000)->by((string) $request->ip()));
