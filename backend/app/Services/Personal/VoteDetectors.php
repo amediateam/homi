@@ -17,12 +17,14 @@ use Laravel\Pennant\Feature;
  * them.
  *
  * A switch writes one `source_flag_changes` row — WP-10's audit of the source rules, whose columns fit (brief decision
- * 16: no table of its own) — and a `notice` log line; neither holds personal data. A change made any other way — a
- * direct `Feature::…->activate()`, `pennant:purge` — is audited by `RecordSourceFlagChange` with actor `unknown`; it
- * skips the event of this class's own switch (`isWriting()`, so the class is a singleton), so a switch is audited once.
- * The stored value is read once outside the transaction, which stores the default row if it is missing: inside a
- * PostgreSQL transaction Pennant's retry of a lost insert would abort it. On PostgreSQL the change runs behind an
- * advisory lock per feature, so the old value of the audit is right.
+ * 16: no table of its own), with who and why — and a `notice` log line of the feature, the old and new value and the
+ * audit row's id only: the operator's free text of `--by` and `--reason` stays in the row, as a reason that quotes a
+ * complaint may carry a phone number (SEC-REQ-047). A change made any other way — a direct `Feature::…->activate()`,
+ * `pennant:purge` — is audited by `RecordSourceFlagChange` with actor `unknown`; it skips the event of this class's own
+ * switch (`isWriting()`, so the class is a singleton), so a switch is audited once. The stored value is read once
+ * outside the transaction, which stores the default row if it is missing: inside a PostgreSQL transaction Pennant's
+ * retry of a lost insert would abort it. On PostgreSQL the change runs behind an advisory lock per feature, so the old
+ * value of the audit is right.
  *
  * "Off" survives a purge: while Pennant stores no value — never switched, or its value purged or forgotten — a
  * detector resolves to the latest value its audit rows give it (`defaultValue()`; the audit is append-only), and
@@ -108,7 +110,7 @@ final class VoteDetectors
                 'environment' => $this->app->environment(),
             ]);
 
-            Log::notice('Vote detector switched.', ['feature' => $feature, 'old' => $old, 'new' => $on, 'actor' => $actor, 'reason' => $reason]);
+            Log::notice('Vote detector switched.', ['feature' => $feature, 'old' => $old, 'new' => $on, 'audit_row' => $row->id]);
 
             return $row;
         });

@@ -683,23 +683,20 @@ it('forgets the cached realtor keys when a recount marks or unmarks an author', 
     expect($data->realtorAuthorKeys())->toBe([]);
 });
 
-it('switches a detector with who and why: a Pennant value, an audit row and a notice without personal data', function (): void {
-    $logged = [];
-    Event::listen(MessageLogged::class, function (MessageLogged $message) use (&$logged): void {
-        $logged[] = [$message->level, $message->message, $message->context];
-    });
-
-    $this->artisan('votes:detector', ['detector' => 'realtor', 'state' => 'off', '--by' => 'ops', '--reason' => 'abuse check'])
+it('switches a detector with who and why: a Pennant value, an audit row and a notice of the feature, the values and the row only', function (): void {
+    $reason = 'complaint of +998 90 123 45 67 about a realtor';
+    $logged = logsOf(fn () => $this->artisan('votes:detector', ['detector' => 'realtor', 'state' => 'off', '--by' => 'ops-duty-anna', '--reason' => $reason])
         ->expectsOutputToContain('votes.realtor-detector')
-        ->assertSuccessful();
+        ->assertSuccessful());
 
     $row = SourceFlagChange::query()->sole();
     expect(Feature::globally()->value(VoteDetectors::REALTOR))->toBeFalse()
         ->and(app(VoteDetectors::class)->realtorOn())->toBeFalse()
         ->and(app(VoteDetectors::class)->rentedOn())->toBeTrue()
         ->and([$row->feature, $row->old_rule, $row->new_rule, $row->actor, $row->reason, $row->environment])
-        ->toBe([VoteDetectors::REALTOR, true, false, 'ops', 'abuse check', 'testing'])
-        ->and($logged)->toBe([['notice', 'Vote detector switched.', ['feature' => VoteDetectors::REALTOR, 'old' => true, 'new' => false, 'actor' => 'ops', 'reason' => 'abuse check']]]);
+        ->toBe([VoteDetectors::REALTOR, true, false, 'ops-duty-anna', $reason, 'testing'])
+        ->and($logged)->toBe([['notice', 'Vote detector switched.', ['feature' => VoteDetectors::REALTOR, 'old' => true, 'new' => false, 'audit_row' => $row->id]]])
+        ->and(json_encode($logged))->not->toContain('anna')->not->toContain('complaint')->not->toContain('45 67');
 
     $this->artisan('votes:detector', ['detector' => 'realtor', 'state' => 'on', '--by' => 'ops', '--reason' => 'checked'])->assertSuccessful();
 
