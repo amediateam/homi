@@ -5,6 +5,11 @@ use App\Http\Controllers\Api\V1\Listings\ListingContactController;
 use App\Http\Controllers\Api\V1\Listings\ListingShareController;
 use App\Http\Controllers\Api\V1\Listings\ListingTranslationController;
 use App\Http\Controllers\Api\V1\MeController;
+use App\Http\Controllers\Api\V1\Personal\BlockedAuthorController;
+use App\Http\Controllers\Api\V1\Personal\FavoriteController;
+use App\Http\Controllers\Api\V1\Personal\HiddenController;
+use App\Http\Controllers\Api\V1\Personal\HiddenListingController;
+use App\Http\Controllers\Api\V1\Personal\HistoryController;
 use App\Http\Controllers\Api\V1\ReferenceController;
 use App\Http\Controllers\Api\V1\SettingsController;
 use App\Http\Resources\Api\V1\MeResource;
@@ -39,6 +44,25 @@ dataset('native stub routes', [
     'listing share' => ['POST', '/api/v1/listings/100001/share', [], ListingShareController::class, '__invoke'],
 ]);
 
+/*
+ * WP-44 (brief decision 10): the personal lists of WP-13 answer their stub bodies too, with the status of the stub —
+ * `200` with `meta.source = stub`, or an empty `204`.
+ */
+dataset('native stub routes of the personal lists', [
+    'favourites' => ['GET', '/api/v1/favorites', FavoriteController::class, 'index', 200],
+    'set a favourite' => ['PUT', '/api/v1/favorites/100012', FavoriteController::class, 'update', 200],
+    'unset a favourite' => ['DELETE', '/api/v1/favorites/100012', FavoriteController::class, 'destroy', 200],
+    'history' => ['GET', '/api/v1/history', HistoryController::class, 'index', 200],
+    'clear the history' => ['DELETE', '/api/v1/history', HistoryController::class, 'destroy', 204],
+    'hide a listing' => ['PUT', '/api/v1/hidden/listings/100012', HiddenListingController::class, 'update', 204],
+    'unhide a listing' => ['DELETE', '/api/v1/hidden/listings/100012', HiddenListingController::class, 'destroy', 204],
+    'block an author' => ['PUT', '/api/v1/listings/100001/blocked-author', BlockedAuthorController::class, 'update', 200],
+    'unblock an author by listing' => ['DELETE', '/api/v1/listings/100001/blocked-author', BlockedAuthorController::class, 'destroy', 204],
+    'the hidden overview' => ['GET', '/api/v1/hidden', HiddenController::class, 'index', 200],
+    'remove a blocked author' => ['DELETE', '/api/v1/hidden/authors/01JD0000000000000000000011', HiddenController::class, 'destroyAuthor', 204],
+    'clear the hidden lists' => ['DELETE', '/api/v1/hidden', HiddenController::class, 'destroy', 204],
+]);
+
 function actAsNativeStubUser(array $abilities = ['app:read', 'app:write']): void
 {
     Sanctum::actingAs(User::factory()->create(), $abilities);
@@ -58,6 +82,30 @@ it('lets the request reach the controller while the switch is off', function (st
 
     $this->json($method, $uri, $body)->assertOk()->assertExactJson(['answered_by' => 'controller']);
 })->with('native stub routes');
+
+it('answers a personal list from its stub body and never reaches the controller while the switch is on', function (string $method, string $uri, string $controller, string $action, int $status): void {
+    actAsNativeStubUser();
+    config(['sources.native_stubs' => true]);
+    $this->mock($controller, fn (MockInterface $mock) => $mock->shouldReceive($action)->never());
+
+    $response = $this->json($method, $uri)->assertStatus($status);
+
+    if ($status === 200) {
+        $response->assertJsonPath('success', true)->assertJsonPath('meta.source', 'stub');
+    } else {
+        expect($response->getContent())->toBe('');
+    }
+})->with('native stub routes of the personal lists');
+
+it('lets a personal list reach its controller while the switch is off', function (string $method, string $uri, string $controller, string $action, int $status): void {
+    actAsNativeStubUser();
+    $answer = $status === 200
+        ? response()->json(['answered_by' => 'controller'])->header('X-Answered-By', 'controller')
+        : response()->noContent()->header('X-Answered-By', 'controller');
+    $this->mock($controller, fn (MockInterface $mock) => $mock->shouldReceive($action)->once()->andReturn($answer));
+
+    $this->json($method, $uri)->assertStatus($status)->assertHeader('X-Answered-By', 'controller');
+})->with('native stub routes of the personal lists');
 
 it('lets a route outside the map reach its controller while the switch is on', function (): void {
     config(['sources.native_stubs' => true]);
@@ -160,7 +208,13 @@ it('validates the form request of a stub as the controller did', function (): vo
 it('names only registered routes in its map', function (): void {
     $stubs = app(NativeStubs::class);
 
-    expect($stubs->routes())->toBe(['api.v1.auth.telegram', 'api.v1.me.show', 'api.v1.settings.show', 'api.v1.settings.update', 'api.v1.listings.contact', 'api.v1.listings.translation', 'api.v1.listings.share']);
+    expect($stubs->routes())->toBe([
+        'api.v1.auth.telegram', 'api.v1.me.show', 'api.v1.settings.show', 'api.v1.settings.update', 'api.v1.listings.contact',
+        'api.v1.listings.translation', 'api.v1.listings.share', 'api.v1.favorites.index', 'api.v1.favorites.update',
+        'api.v1.favorites.destroy', 'api.v1.history.index', 'api.v1.history.destroy', 'api.v1.hidden.listings.update',
+        'api.v1.hidden.listings.destroy', 'api.v1.listings.blocked-author.update', 'api.v1.listings.blocked-author.destroy',
+        'api.v1.hidden.index', 'api.v1.hidden.authors.destroy', 'api.v1.hidden.destroy',
+    ]);
     foreach ($stubs->routes() as $name) {
         expect(Route::has($name))->toBeTrue()->and($stubs->answers($name))->toBeTrue();
     }

@@ -8,16 +8,25 @@ use App\Exceptions\Identity\InvalidInitData;
 use App\Exceptions\Identity\InvalidInitDataReason;
 use App\Exceptions\Listings\ShareFailed;
 use App\Exceptions\Listings\TranslationNotNeeded;
+use App\Exceptions\Sources\SourceNotFound;
 use App\Exceptions\Sources\SourceUnavailable;
 use App\Http\Requests\Api\V1\Auth\TelegramSignInRequest;
+use App\Http\Requests\Api\V1\Personal\ListPersonalRequest;
 use App\Http\Requests\Api\V1\UpdateSettingsRequest;
+use App\Http\Resources\Api\V1\BlockedAuthorResultResource;
 use App\Http\Resources\Api\V1\ContactResource;
+use App\Http\Resources\Api\V1\FavoriteStateResource;
+use App\Http\Resources\Api\V1\HiddenOverviewResource;
+use App\Http\Resources\Api\V1\ListingPreviewResource;
 use App\Http\Resources\Api\V1\MeResource;
 use App\Http\Resources\Api\V1\PreparedShareResource;
 use App\Http\Resources\Api\V1\SessionResource;
 use App\Http\Resources\Api\V1\SettingsResource;
 use App\Http\Resources\Api\V1\TranslationResource;
 use App\Services\Identity\TokenIssuer;
+use App\Services\Personal\BlockedAuthor;
+use App\Services\Personal\HiddenOverview;
+use App\Services\Sources\Data\ListingSummary;
 use App\Services\Sources\SourceContext;
 use App\Services\Sources\SourceManager;
 use App\Services\Telegram\PreparedShare;
@@ -25,7 +34,9 @@ use Illuminate\Contracts\Container\Container;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Http\Resources\Json\ResourceCollection;
 use LogicException;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * The stub answers of the native methods whose controllers stage C has replaced (WP-40, `25` §9): while
@@ -43,6 +54,11 @@ use LogicException;
  * stub` — no disclosure quota, no HOMI call link, no `ContactDisclosed` — and `503` on any other driver; `POST /listings/{number}/translation`: the translation of the method's driver, uncached and
  * without the limit of misses, `ru` answering `422`; and `POST /listings/{number}/share`: `stub-prepared-<number>`,
  * valid an hour, for a listing the card source knows, the scenario `share_failed` answering `502` — no Bot API call.
+ *
+ * WP-44 moved here the personal lists of WP-13 (brief decision 10): favourites, history, hidden listings, blocked
+ * authors and the hidden overview answer the fixtures of `favorites/`, `history/` and `hidden/` and store nothing, so
+ * the end-to-end suite stays stateless (a write never changes a list, a clear never empties one) — and no query
+ * touches HOMI's personal tables while the switch is on.
  */
 final readonly class NativeStubs
 {
@@ -81,6 +97,18 @@ final readonly class NativeStubs
         'api.v1.listings.contact' => 'contact',
         'api.v1.listings.translation' => 'translation',
         'api.v1.listings.share' => 'share',
+        'api.v1.favorites.index' => 'favorites',
+        'api.v1.favorites.update' => 'setFavorite',
+        'api.v1.favorites.destroy' => 'unsetFavorite',
+        'api.v1.history.index' => 'history',
+        'api.v1.history.destroy' => 'clearHistory',
+        'api.v1.hidden.listings.update' => 'hideListing',
+        'api.v1.hidden.listings.destroy' => 'unhideListing',
+        'api.v1.listings.blocked-author.update' => 'blockAuthor',
+        'api.v1.listings.blocked-author.destroy' => 'unblockAuthor',
+        'api.v1.hidden.index' => 'hidden',
+        'api.v1.hidden.authors.destroy' => 'removeBlockedAuthor',
+        'api.v1.hidden.destroy' => 'clearHidden',
     ];
 
     public function __construct(private Container $container) {}
@@ -96,12 +124,15 @@ final readonly class NativeStubs
         return isset(self::ROUTES[$route]);
     }
 
-    /** The stub answer of the route; its dependencies (the form request among them) are resolved by the container. */
-    public function answer(string $route): JsonResponse
+    /**
+     * The stub answer of the route: JSON, or an empty `204` where the method answers one; its dependencies (the form
+     * request among them) are resolved by the container.
+     */
+    public function answer(string $route): Response
     {
         $answer = $this->container->call([$this, self::ROUTES[$route]]);
 
-        return $answer instanceof JsonResponse ? $answer : throw new LogicException("The stub of {$route} gave no JSON answer.");
+        return $answer instanceof Response ? $answer : throw new LogicException("The stub of {$route} gave no answer.");
     }
 
     /** `POST /auth/telegram` on stubs (WP-11): any valid body signs in the stub user; a real token of 24 hours. */
@@ -186,6 +217,166 @@ final readonly class NativeStubs
         $share = new PreparedShare("stub-prepared-{$listing->number}", now()->addHour()->toIso8601String());
 
         return $this->sourced(new PreparedShareResource($share));
+    }
+
+    /**
+     * `GET /favorites` on stubs (WP-13): previews of `favorites/default.json`, newest first, each with `favorite: true`,
+     * paged like the feed (DEC-53); scenario `empty`. Stateless: a write never changes the list.
+     */
+    public function favorites(ListPersonalRequest $request, StubResponder $stubs, StubListingRefs $refs): JsonResponse
+    {
+        $context = $stubs->check($request);
+        $numbers = $refs->numbers($context->scenario === 'empty' ? 'favorites/empty' : 'favorites/default');
+        [$items, $next] = $refs->page($numbers, $request->cursor(), $request->limit(), $context);
+        $items = array_map(fn (ListingSummary $item): ListingSummary => $item->withFlags(favorite: true), $items);
+
+        return $this->cursorPage(ListingPreviewResource::collection($items), $next);
+    }
+
+    /** `PUT /favorites/{number}` on stubs (WP-13): idempotent; the listing must exist (`404`), or be checkable (`503`). */
+    public function setFavorite(Request $request, StubResponder $stubs, StubListingRefs $refs): JsonResponse
+    {
+        $context = $stubs->check($request);
+        $refs->preview(self::positive($request), $context);
+
+        return $this->sourced(new FavoriteStateResource(true));
+    }
+
+    /** `DELETE /favorites/{number}` on stubs (WP-13): idempotent, never `404` for a listing that was not a favourite. */
+    public function unsetFavorite(Request $request, StubResponder $stubs): JsonResponse
+    {
+        $stubs->check($request);
+        self::positive($request);
+
+        return $this->sourced(new FavoriteStateResource(false));
+    }
+
+    /** `GET /history` on stubs (WP-13): previews by last view, newest first, each with `viewed: true`; scenario `empty`. */
+    public function history(ListPersonalRequest $request, StubResponder $stubs, StubListingRefs $refs): JsonResponse
+    {
+        $context = $stubs->check($request);
+        $numbers = $refs->numbers($context->scenario === 'empty' ? 'history/empty' : 'history/default');
+        [$items, $next] = $refs->page($numbers, $request->cursor(), $request->limit(), $context);
+        $items = array_map(fn (ListingSummary $item): ListingSummary => $item->withFlags(viewed: true), $items);
+
+        return $this->cursorPage(ListingPreviewResource::collection($items), $next);
+    }
+
+    /** `DELETE /history` on stubs (WP-13): `204`, idempotent; nothing is cleared. */
+    public function clearHistory(Request $request, StubResponder $stubs): Response
+    {
+        $stubs->check($request);
+
+        return response()->noContent();
+    }
+
+    /** `PUT /hidden/listings/{number}` on stubs (WP-13): the listing must exist; `204`. */
+    public function hideListing(Request $request, StubResponder $stubs, StubListingRefs $refs): Response
+    {
+        $context = $stubs->check($request);
+        $refs->preview(self::positive($request), $context);
+
+        return response()->noContent();
+    }
+
+    /** `DELETE /hidden/listings/{number}` on stubs (WP-13): `204` without looking the listing up. */
+    public function unhideListing(Request $request, StubResponder $stubs): Response
+    {
+        $stubs->check($request);
+        self::positive($request);
+
+        return response()->noContent();
+    }
+
+    /**
+     * `PUT /listings/{number}/blocked-author` on stubs (WP-13): the author is the card's `author` (`404 not_found` when
+     * the listing has none); the entry id and the author's other listings come from `hidden/blocked_author.json`.
+     */
+    public function blockAuthor(Request $request, StubResponder $stubs, SourceManager $sources, StubListingRefs $refs): JsonResponse
+    {
+        $context = $stubs->check($request);
+        $card = $sources->listings('source.listings.card', $context)->source->details(self::positive($request), $context);
+
+        if ($card->authorKind === null || $card->authorLabel === null) {
+            throw new SourceNotFound('The listing has no author.');
+        }
+
+        $entry = new BlockedAuthor(
+            id: $refs->entryId('hidden/blocked_author'),
+            kind: $card->authorKind,
+            label: $card->authorLabel,
+            count: (int) $card->authorCount,
+            listingNumbers: $refs->numbers('hidden/blocked_author', 'listing_numbers'),
+        );
+
+        return $this->sourced(new BlockedAuthorResultResource($entry));
+    }
+
+    /** `DELETE /listings/{number}/blocked-author` on stubs (WP-13): the undo by listing, `204`. */
+    public function unblockAuthor(Request $request, StubResponder $stubs): Response
+    {
+        $stubs->check($request);
+        self::positive($request);
+
+        return response()->noContent();
+    }
+
+    /** `GET /hidden` on stubs (WP-13): `hidden/default.json`, scenario `empty`. */
+    public function hidden(Request $request, StubResponder $stubs, StubListingRefs $refs): JsonResponse
+    {
+        $context = $stubs->check($request);
+        $fixture = $context->scenario === 'empty' ? 'hidden/empty' : 'hidden/default';
+        $overview = new HiddenOverview(
+            $refs->previews($refs->numbers($fixture, 'listings'), $context),
+            $refs->blockedAuthors($fixture),
+        );
+
+        return $this->sourced(new HiddenOverviewResource($overview));
+    }
+
+    /**
+     * `DELETE /hidden/authors/{id}` on stubs (WP-13): `204` for an entry id of `hidden/default.json`; any other id
+     * answers like a missing one, `404 not_found` (SEC-REQ-014).
+     */
+    public function removeBlockedAuthor(Request $request, StubResponder $stubs, StubListingRefs $refs): Response
+    {
+        $stubs->check($request);
+        $id = $request->route('id');
+
+        foreach ($refs->blockedAuthors('hidden/default') as $author) {
+            if (is_string($id) && $author->id === strtoupper($id)) {
+                return response()->noContent();
+            }
+        }
+
+        throw new SourceNotFound('Blocked author not found.');
+    }
+
+    /** `DELETE /hidden` on stubs (WP-13): `204`; nothing is cleared. */
+    public function clearHidden(Request $request, StubResponder $stubs): Response
+    {
+        $stubs->check($request);
+
+        return response()->noContent();
+    }
+
+    /** The positive listing number of the route, else `404 not_found`. */
+    private static function positive(Request $request): int
+    {
+        $number = $request->route('number');
+        $number = is_numeric($number) ? (int) $number : 0;
+
+        return $number > 0 ? $number : throw new SourceNotFound('Listing not found.');
+    }
+
+    /** The envelope of `ApiController::cursorPage()` for a stub list. */
+    private function cursorPage(ResourceCollection $items, ?string $nextCursor): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'data' => $items,
+            'meta' => ['next_cursor' => $nextCursor, 'source' => SourceDriver::Stub],
+        ]);
     }
 
     /** The envelope of `ApiController::sourced()` for a stub answer without extra meta. */

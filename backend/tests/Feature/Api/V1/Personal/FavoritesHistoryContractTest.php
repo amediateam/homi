@@ -1,11 +1,20 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 use Tests\Support\ContractShapes;
 use Tests\Support\JsonShape;
 
+/*
+ * The favourites and history of WP-13 as the native stubs answer them (WP-44, brief decision 10): while
+ * `sources.native_stubs` is on, `NativeStubs` answers the fixtures of `favorites/` and `history/` and stores nothing, as
+ * the end-to-end suite expects; `FavoritesTest` and `HistoryTest` cover the real lists.
+ */
+
 beforeEach(function (): void {
+    Http::preventStrayRequests();
+    config(['sources.native_stubs' => true]);
     Sanctum::actingAs(User::factory()->create(), ['app:read', 'app:write']);
 });
 
