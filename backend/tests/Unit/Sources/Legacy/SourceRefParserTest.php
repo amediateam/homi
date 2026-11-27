@@ -17,6 +17,10 @@ it('reads the channel and the post of a public post link', function (?string $ur
     'plain http' => ['http://t.me/stub_channel_a/4001', null],
     'a non-numeric post' => ['https://t.me/stub_channel_a/latest', null],
     'null' => [null, null],
+    'a channel with a number in it' => ['https://t.me/a998007654321/12', null],
+    'a channel with nine digits among separators' => ['https://t.me/ivan_998_00_765_43_21/3', null],
+    'a channel with nine digits among letters' => ['https://t.me/a1b2c3d4e5f6g7h8i9/3', null],
+    'a channel with eight digits' => ['https://t.me/stub_2024_1231/3', ['channel' => 'stub_2024_1231', 'post_id' => 3]],
 ]);
 
 it('takes the source of a card from original_url, else the first source link', function (array $card, ?array $ref): void {

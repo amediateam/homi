@@ -264,6 +264,32 @@ it('drops an author link that could carry a phone number from the original, the 
         ->and(json_encode($card))->not->toContain('765');
 });
 
+it('never shows a source handle or a history channel that could be a phone number: nine digits or more (L1)', function (): void {
+    $seen = Coercions::collect();
+    $card = LegacyFixtures::detailsTranslator()->translate(legacyCard(overrides: [
+        'sources' => [
+            ['handle' => '@998007654321', 'url' => 'https://t.me/stub_channel_a/4001'],
+            ['handle' => 'ivan_998_00_765_43_21', 'url' => 'https://t.me/stub_channel_a/4002'],
+            ['handle' => 'stub_2024_1231', 'url' => 'https://t.me/stub_channel_b/9'],
+        ],
+        'history' => [
+            ['at' => '2026-11-10T07:00:00+00:00', 'channel' => '@998007654321', 'url' => null, 'kind' => 'published', 'price_usd' => 648, 'change_pct' => null],
+            ['at' => '2026-11-11T07:00:00+00:00', 'channel' => '@stub_2024_1231', 'url' => null, 'kind' => 'published', 'price_usd' => 648, 'change_pct' => null],
+        ],
+    ]), $seen);
+
+    expect($card['sources'])->toBe([['handle' => 'stub_2024_1231', 'url' => 'https://t.me/stub_channel_b/9']])
+        ->and(array_column($card['price_history'], 'channel'))->toBe([null, 'stub_2024_1231'])
+        ->and($seen->keys())->toBe(['history.0.channel', 'sources.0.handle', 'sources.1.handle'])
+        ->and(json_encode($card))->not->toContain('765')->not->toContain('998007');
+});
+
+it('takes no source of a card from a post link whose channel could be a phone number', function (): void {
+    $card = translatedCard(['original_url' => 'https://t.me/a1b2c3d4e5f6g7h8i9/12', 'sources' => [['handle' => 'stub_channel_b', 'url' => 'https://t.me/stub_channel_b/9']]]);
+
+    expect($card['source_ref'])->toBe(['channel' => 'stub_channel_b', 'post_id' => 9]);
+});
+
 it('counts the card\'s photos at most as the addresses it keeps, and 0 without a media base', function (): void {
     $legacy = legacyCard(overrides: ['photos_count' => 8, 'photos' => [...array_slice(legacyCard()['photos'], 0, 5), 'https://elsewhere.invalid/x.jpg']]);
 

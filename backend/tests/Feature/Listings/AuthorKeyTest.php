@@ -107,6 +107,10 @@ it('takes the source channel from the first source link when the card has no ori
     expect(AuthorKey::fromCard($card))->toEqual(new AuthorKey('source:other_channel', 'source'));
 });
 
+it('files no source key for a channel that could be a phone number (nine digits or more)', function (string $url): void {
+    expect(AuthorKey::fromCard(rawCard(['phone' => null, 'original_url' => $url, 'sources' => []])))->toBeNull();
+})->with(['https://t.me/a998007654321/12', 'https://t.me/ivan_998_00_765_43_21/3', 'https://t.me/a1b2c3d4e5f6g7h8i9/3']);
+
 it('files no author for a card with neither a phone nor a public post link', function (): void {
     expect(AuthorKey::fromCard(rawCard(['phone' => null, 'original_url' => null, 'sources' => []])))->toBeNull()
         ->and(AuthorKey::fromCard(rawCard(['phone' => null, 'original_url' => 'https://t.me/c/123/45', 'sources' => []])))->toBeNull()

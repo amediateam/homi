@@ -372,6 +372,25 @@ it('masks a number in the place, the landmark, a fact value and a nearby note, i
     }
 });
 
+it('files and shows no channel or handle that could be a phone number: the card, listing_refs and listing_views (L1)', function (): void {
+    $user = User::factory()->create();
+    Sanctum::actingAs($user, ['app:read']);
+    onLegacyListings();
+    $legacy = [...LegacyFixtures::golden('listing.rent_apartment'), 'phone' => null, 'phone_display' => null, 'original_url' => 'https://t.me/a1b2c3d4e5f6g7h8i9/12'];
+    $legacy['sources'] = [['handle' => '@998007654321', 'url' => 'https://t.me/a1b2c3d4e5f6g7h8i9/12']];
+    $legacy['history'][0]['channel'] = '@998007654321';
+    LegacyListingsHttp::fake(fn (Request $request): mixed => LegacyListingsHttp::path($request) === '/api/listings/100001' ? Http::response($legacy) : null);
+
+    $card = $this->getJson('/api/v1/listings/100001', ['Accept-Language' => 'ru'])->assertOk()->json('data');
+
+    expect($card['source_ref'])->toBeNull()
+        ->and($card['sources'])->toBe([])
+        ->and($card['price_history'][0]['channel'])->toBeNull()
+        ->and(json_encode($card))->not->toContain('998007654321')->not->toContain('a1b2c3d4e5f6g7h8i9');
+    $this->assertDatabaseHas('listing_refs', ['listing_number' => 100001, 'source_channel' => null, 'source_post_id' => null, 'author_key' => null]);
+    $this->assertDatabaseHas('listing_views', ['user_id' => $user->id, 'listing_number' => 100001, 'source_channel' => null, 'source_post_id' => null]);
+});
+
 it('serves a preview from the cached card, and caches the preview form beside it', function (): void {
     LegacyListingsHttp::fake();
 

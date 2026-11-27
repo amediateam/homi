@@ -36,6 +36,8 @@ use InvalidArgumentException;
  *   `price_history[].text`, `author.label`, `owner_label` and `owner.description` are masked here, as the data objects
  *   mask them (DEC-52), so the array a cache keeps holds no raw number. Labels, directory names (district, metro, a
  *   park's name) and formatted prices are the source's own and stay as sent.
+ * - A channel or author name that could be a phone number (nine digits or more, `LinkGuard::safeName()`) is never
+ *   shown: a `history[].channel` is `null`, a `sources[]` item with such a `handle` is left out, each noted.
  * - `history` → `price_history` (`channel` without `@`); `owner` → `owner_label`, without a label the tier already
  *   says (BR-API-189: «Проверенный хозяин…», «Хозяин — со слов объявления» and their uz and en texts); `market_code` →
  *   `market.code`; `original_text`, `original_url`, `post_deleted` → `original`; `nearby` keeps the first `park` and the
@@ -292,7 +294,7 @@ final class ListingDetailsTranslator
 
         foreach (LegacyValue::objects($card, 'history', $seen) as $index => $event) {
             $at = $seen?->at("history.{$index}.");
-            $channel = LegacyValue::string($event, 'channel', $at);
+            $channel = self::name(LegacyValue::string($event, 'channel', $at), 'channel', $at);
             $entry = [
                 'at' => $event['at'] ?? null,
                 'channel' => $channel === null ? null : ltrim($channel, '@'),
@@ -390,7 +392,7 @@ final class ListingDetailsTranslator
             if (LegacyValue::fits(ListingSourceLink::fromArray(...), $link, "sources.{$index}.", $seen) && is_string($link['url'])) {
                 $url = LinkGuard::safe($link['url']);
 
-                if ($url !== null) {
+                if ($url !== null && self::name($link['handle'], 'handle', $seen?->at("sources.{$index}.")) !== null) {
                     $links[] = ['handle' => $link['handle'], 'url' => $url];
                 }
             }
@@ -428,6 +430,22 @@ final class ListingDetailsTranslator
             'price_usd' => PriceParser::usdOf($card, 'price_usd', $seen),
             'price_per_m2' => LegacyValue::number($card, 'price_per_m2', $seen),
         ];
+    }
+
+    /** A channel or author name the card may show (`LinkGuard::safeName()`); one it may not is `null` and noted. */
+    private static function name(mixed $name, string $key, ?Coercions $seen): ?string
+    {
+        if (! is_string($name)) {
+            return null;
+        }
+
+        $safe = LinkGuard::safeName($name);
+
+        if ($safe === null) {
+            $seen?->note($key);
+        }
+
+        return $safe;
     }
 
     private static function masked(?string $text): ?string

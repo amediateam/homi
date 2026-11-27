@@ -137,6 +137,14 @@ it('marks every item legacy, with no type and no deal on a preview, and a deal f
         ->and(translatedItem(['deal_type' => 'rent'])['deal'])->toBeNull();
 });
 
+it('takes a source channel only when it could not be a phone number (L1)', function (string $url, ?array $ref): void {
+    expect(translatedItem(['original_url' => $url])['source_ref'])->toBe($ref);
+})->with([
+    'a public channel' => ['https://t.me/stub_channel_a/4001', ['channel' => 'stub_channel_a', 'post_id' => 4001]],
+    'a channel that holds a number' => ['https://t.me/a998007654321/12', null],
+    'nine digits among letters' => ['https://t.me/a1b2c3d4e5f6g7h8i9/3', null],
+]);
+
 it('reads the flags strictly and is_owner as true, false or null', function (): void {
     expect(translatedItem(['pets_ok' => 'yes', 'owner_verified' => 1, 'is_owner' => 'yes']))->toMatchArray(['pets_ok' => false, 'owner_verified' => false, 'is_owner' => null])
         ->and(translatedItem(['is_owner' => false])['is_owner'])->toBeFalse();

@@ -8,8 +8,10 @@ use App\Services\Sources\Data\SourceRef;
 /**
  * Where a legacy listing was published (`source_ref`, `25` §5, Q-API-063): the channel and post of a public Telegram
  * post link, `https://t.me/<channel>/<post id>` or `https://t.me/s/<channel>/<post id>`. A private link
- * (`t.me/c/<id>/…`), an invite or a link without a post id has none. The channel is lower-cased: Telegram's names are
- * case-insensitive, and the personal tables of WP-44 compare them. Pure.
+ * (`t.me/c/<id>/…`), an invite or a link without a post id has none, and neither has a channel whose name could be a
+ * phone number (nine digits or more, `LinkGuard::safeName()`), so no number reaches `source_ref`, `listing_refs`,
+ * `listing_views` or a `source:` author key. The channel is lower-cased: Telegram's names are case-insensitive, and the
+ * personal tables of WP-44 compare them. Pure.
  */
 final class SourceRefParser
 {
@@ -32,7 +34,7 @@ final class SourceRefParser
      */
     public static function parts(?string $url): ?array
     {
-        if ($url === null || preg_match(self::PATTERN, trim($url), $match) !== 1) {
+        if ($url === null || preg_match(self::PATTERN, trim($url), $match) !== 1 || LinkGuard::safeName($match[1]) === null) {
             return null;
         }
 
