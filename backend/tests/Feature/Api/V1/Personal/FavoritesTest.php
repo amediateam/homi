@@ -269,3 +269,20 @@ it('keeps the favourites of each user to that user', function (): void {
     expect(Favorite::query()->where('user_id', $other->id)->pluck('listing_number')->all())->toBe([100003])
         ->and(favouriteNumbersOf($this->getJson('/api/v1/favorites')->assertOk()))->toBe([100012]);
 });
+
+it('answers the 61st list write of a minute with 429, every list write in one bucket per user', function (): void {
+    $this->freezeTime();
+
+    foreach (range(1, 30) as $write) {
+        $this->putJson('/api/v1/favorites/100012')->assertOk();
+        $this->deleteJson('/api/v1/favorites/100012')->assertOk();
+    }
+
+    $this->putJson('/api/v1/favorites/100012')->assertTooManyRequests()->assertJsonPath('code', 'rate_limited');
+    $this->putJson('/api/v1/hidden/listings/100012')->assertTooManyRequests();
+
+    expect(Favorite::query()->count())->toBe(0);
+
+    $this->travel(61)->seconds();
+    $this->putJson('/api/v1/favorites/100012')->assertOk();
+});
