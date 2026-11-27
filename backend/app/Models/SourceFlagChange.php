@@ -10,7 +10,8 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * One change of a source feature rule (WP-10). `old_rule` is null when the change did not come through the
  * `sources:*` commands, because Pennant's events do not carry the previous value; `new_rule` is null when the
- * stored rule was deleted or purged.
+ * stored rule was deleted or purged. The kill switches of the vote detectors (WP-44, `votes:detector`) are audited
+ * here too: `feature` is `votes.rented-detector` or `votes.realtor-detector`, the two values are booleans.
  *
  * @property int $id
  * @property string $feature
