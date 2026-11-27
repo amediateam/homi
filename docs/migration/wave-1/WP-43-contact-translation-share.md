@@ -318,18 +318,23 @@ the defaults are `contact.mode = auto` and `translation.via = locale`.
   IPv6 one too, adds nothing), compared lower-cased and exactly, without user info or a backslash, at most 2 048 bytes,
   no control characters; a link without a port counts as 443, so `:0` and any other port are refused. It does not go
   through `LinkGuard` (the `?e=` of a signed link has ten digits). Another host or port → `404 contact_unavailable` and
-  a warning `{path, host}` naming the refused host only (no port, path, query or token), at most once a minute per
+  a warning `{path, host}` — `path` is legacy's endpoint template, the host lower-cased; never the link's port, path,
+  query or token — at most once a minute per
   host, so the production track can fill `LEGACY_CONTACT_LINK_HOSTS`; a host that is not a DNS name (a trailing dot
-  too) or holds a run of seven or more digits is logged as `{path, host_invalid: true}` under one fixed once-a-minute
-  key, so no run of a number's digits reaches a log or a cache key (a host whose digits are split by hyphens,
-  `998-90-123-45-67.example`, is still named: legacy's own answer, accepted as low). `phone_display` passes only when it reads as one
+  too) or has seven digits or more in all (a number split by hyphens or dots too) is logged as
+  `{path, host_invalid: true}` under one fixed once-a-minute key, so no number's digits reach a log or a cache key. A
+  port that is not digits only (`:443x`, `:+443`, which `parse_url()` reads as 443) is a contract error (`503`). `phone_display` passes only when it reads as one
   number, so a link-only answer never carries digits. The card can say `has_phone: true` while the contact answers
   `404` for a refused host.
 - **A withdrawn listing** answers `contact_unavailable` at once: `contact()` checks the gone marker first. Every
   `404` of a card also writes `legacy:v1:listings:withdrawn:<number>` — whatever `legacy.cache.not_found` says — for
   `legacy.cache.card` plus one fill's time (107 s with the defaults) before it drops the entry; while it lives `file()`
-  files nothing for the asked or the answered number and the entry, a pointer to a withdrawn survivor and a card's
-  contact are all refused, so a card read in flight during the `404` cannot re-file a usable phone. A listing
+  files nothing for the asked or the answered number and the entry (looked up again after a wait for the fill lock),
+  a pointer to a withdrawn survivor and the contact of a card read in flight under either number are all refused, so
+  a read in flight during the `404` neither files nor answers a phone. The marker and the drop of the entry come
+  before the write to `listing_refs`, so a failing write leaves no number. A listing legacy withdraws between
+  `hasContact()` and `contact()` keeps its reserved place in the day's set, as a failing variant B link does
+  (accepted: no number is given). A listing
   re-published within those 107 s answers `contact_unavailable` although its card may say `has_phone: true`.
 - **Native stubs** (decision of the integrator, the precedent of WP-42's overlay): while `sources.native_stubs` is on,
   `POST …/contact`, `…/translation` and `…/share` answer their stub fixtures exactly as WP-12 did (no quota, no token, no
@@ -422,14 +427,19 @@ the defaults are `contact.mode = auto` and `translation.via = locale`.
 `PreparedShare` moved to `App\Services\Telegram` as the list says.
 
 **Review.** One security review per stage by a `security-reviewer` subagent, each on a snapshot with its own probes.
-Stage A (contact, call links, the page): one medium (the quota flag widened access, AM-124), one medium-low (variant B
-link hosts), eight low, two info. Stage B (translation, share): one medium (a malformed Bot API address quoted the token
+Stage A (contact, call links, the page): two medium (the quota flag widened access, AM-124; the call token in nginx's
+access log and the duplicate headers — the go-live gate of "Handoff"), one medium-low (variant B link hosts), eight low,
+two info. Stage B (translation, share): one medium (a malformed Bot API address quoted the token
 in an exception, AM-127), six low, one info. The integrator added two points (a slow translator must not open the shared
-breaker; the warning names the refused host) and the nginx part (AM-126). A narrow re-review of every fix found 22 of 23
+breaker; the warning names the refused host) and found that a `try_files` in the nginx snippet would still log the
+token (AM-126). A narrow re-review of every fix found 22 of 23
 fixed and one partly, plus six low and one info (the call-page filter of Telescope by an encoded or doubled slash, the
 host in the warning, two trace arguments, the cache watcher, a withdrawn merged duplicate, the Bot API address's
-characters; the port of a variant B link). Every finding is fixed with a test that failed before its fix; the
-integrator re-ran every suite on the final commit.
+characters; the port of a variant B link). A last scoped read of that round's contact paths found five low and one
+info (a card read in flight under a withdrawn duplicate's number, the order of the withdrawal and `listing_refs`, the
+lookup after the fill lock, the digits of a logged host, a port that is not digits; the card cached before the
+refusal), fixed by the integrator; the reserved place of a listing withdrawn between the two reads is accepted. Every
+fixed finding has a test that failed before its fix; the integrator re-ran every suite on the final commit.
 
 ## Handoff
 
@@ -475,8 +485,9 @@ In review (#133, env keys #132). The development track needs nothing more for th
 4. **Name the public origin of the call page** (`APP_URL` of the API, `call_page_base` is config only) to the
    development track; the Mini App's link allow-list already holds the API host.
 5. When the operator answers WP-02 points 7 and 8: set `LEGACY_CONTACT_MODE`, `LEGACY_TRANSLATION_VIA` /
-   `LEGACY_TRANSLATION_NAME` accordingly, and `LEGACY_CONTACT_LINK_HOSTS` from the host the warning «refused link host»
-   names. If the operator sends only call links (variant B), its host must also enter the Mini App's link allow-list (a
+   `LEGACY_TRANSLATION_NAME` accordingly, and `LEGACY_CONTACT_LINK_HOSTS` from the host the warning «Legacy gave a call
+   link to a host HOMI does not allow» names (`host`, or `host:port` when the operator's links name a port other than
+   443 — the warning does not show the port; ask the operator). If the operator sends only call links (variant B), its host must also enter the Mini App's link allow-list (a
    frontend change).
 
 **For the next packages:**

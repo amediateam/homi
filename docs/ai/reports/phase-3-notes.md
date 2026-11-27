@@ -2242,5 +2242,5 @@ ASSUMPTION_MISMATCH AM-127 (2026-11-27):
   original message, accepts only a bare origin as the base address, and marks every token-bearing frame sensitive (a
   test walks every frame's arguments). WP-50 builds on this client.
 
-Reviews: one security review per stage (stage A: 1 medium, 1 medium-low, 8 low, 2 info; stage B: 1 medium, 6 low, 1 info), then a narrow re-review of the fixes (22 of 23 fixed, 1 partly; 6 low and 1 info more), all fixed with tests (list in the spec's "As built"). Next ids: AM-128, KI-73, DEC-112.
+Reviews: one security review per stage (stage A: 2 medium, 1 medium-low, 8 low, 2 info; stage B: 1 medium, 6 low, 1 info), then a narrow re-review of the fixes (22 of 23 fixed, 1 partly; 6 low and 1 info more) and a last read of the contact paths (5 low, 1 info; 1 low accepted), the rest fixed with tests (list in the spec's "As built"). Next ids: AM-128, KI-73, DEC-112.
 

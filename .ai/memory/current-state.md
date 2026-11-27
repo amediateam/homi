@@ -124,8 +124,8 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
     hour; an optional call that never moves the legacy breaker). **`POST …/share`** through `ShareService` and the new
     minimal `TelegramClient` (`savePreparedInlineMessage`; token never in an exception or log).
   - While `sources.native_stubs` is on, the three answer their fixtures as before.
-  - **Tests:** `php artisan test --compact` → 3 061 tests, 3 041 passed, 20 skipped; on PostgreSQL 3 061 passed; the Pgsql
-    suite 20 passed (on `8f6fc45`, the integrator's run).
+  - **Tests:** `php artisan test --compact` → 3 071 tests, 3 051 passed, 20 skipped; on PostgreSQL 3 071 passed; the Pgsql
+    suite 20 passed (on `9cfb247`, the integrator's run).
 
 ## Frontend (`frontend/`)
 - pnpm 11.24 workspace, Node 26, Next 16.4.5 × 3 apps on dev ports 3000/3001/3002, TypeScript ^6. `pnpm -r lint` and `pnpm -r typecheck` exit 0 (3 apps + 8 packages; on `fb4a2b2` of WP-23, merged in #68, and on `5fd06c9` of WP-24, merged in #71, where the packages are linted with the app's rules since #70).
