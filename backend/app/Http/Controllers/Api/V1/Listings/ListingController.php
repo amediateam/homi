@@ -10,17 +10,27 @@ use App\Http\Requests\Api\V1\Listings\ListingFeedRequest;
 use App\Http\Requests\Api\V1\Listings\ShowListingRequest;
 use App\Http\Resources\Api\V1\ListingDetailsResource;
 use App\Http\Resources\Api\V1\ListingPreviewResource;
+use App\Services\Listings\ListingOverlay;
+use App\Services\Listings\ViewRecorder;
 use App\Services\Sources\SourceContext;
 use App\Services\Sources\SourceManager;
 use Illuminate\Http\JsonResponse;
 
-/** The feed and the card of `/listings` (WP-12, API-004 and API-008). */
+/**
+ * The feed and the card of `/listings` (WP-12, API-004 and API-008). HOMI's overlay (WP-42) runs on the answer of every
+ * driver: the feed leaves out what the caller hid, blocked or HOMI's votes mark, and the flags are HOMI's; a full card
+ * read is recorded in the caller's view history (never a preview). Both are skipped while `sources.native_stubs` is on.
+ */
 class ListingController extends ApiController
 {
     /** `Retry-After` of the stub scenario `daily_limit`, in seconds. */
     private const int STUB_DAILY_RETRY_AFTER = 3600;
 
-    public function __construct(private readonly SourceManager $sources) {}
+    public function __construct(
+        private readonly SourceManager $sources,
+        private readonly ListingOverlay $overlay,
+        private readonly ViewRecorder $views,
+    ) {}
 
     /**
      * `GET /listings`: one page of previews; `meta.next_cursor` null ends the list. A page may hold fewer than
@@ -30,7 +40,8 @@ class ListingController extends ApiController
     {
         $context = SourceContext::fromRequest($request);
         $resolved = $this->sources->listings('source.listings.feed', $context);
-        $page = $resolved->source->feed($request->listingQuery(), $context);
+        $query = $request->listingQuery();
+        $page = $this->overlay->feed($resolved->source->feed($query, $context), $query->filters, $context);
         /** Scramble types the source's cursor as a plain string; `?? null` keeps the documented one nullable (WP-24). */
         $nextCursor = $page->nextCursor ?? null;
 
@@ -53,13 +64,19 @@ class ListingController extends ApiController
         $resolved = $this->sources->listings('source.listings.card', $context);
 
         if ($request->wantsPreview()) {
-            return $this->sourced(new ListingPreviewResource($resolved->source->preview($number, $context)), $resolved->driver);
+            return $this->sourced(new ListingPreviewResource($this->overlay->preview($resolved->source->preview($number, $context), $context)), $resolved->driver);
         }
 
         if ($resolved->driver === SourceDriver::Stub && $context->scenario === 'daily_limit') {
             throw new DailyLimitReached(self::STUB_DAILY_RETRY_AFTER);
         }
 
-        return $this->sourced(new ListingDetailsResource($resolved->source->details($number, $context)), $resolved->driver);
+        $card = $this->overlay->card($resolved->source->details($number, $context), $context);
+
+        if ($context->user !== null) {
+            $card = $this->views->record($context->user, $card);
+        }
+
+        return $this->sourced(new ListingDetailsResource($card), $resolved->driver);
     }
 }

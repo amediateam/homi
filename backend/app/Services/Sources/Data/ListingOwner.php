@@ -43,4 +43,16 @@ final readonly class ListingOwner
     {
         return clone ($this, ['entry' => $entry]);
     }
+
+    /** The same owner part as the caller's own listing (`$listingId`) or not (`null`). */
+    public function withMine(?string $listingId): self
+    {
+        return clone ($this, ['mine' => $listingId !== null, 'listingId' => $listingId]);
+    }
+
+    /** The same owner part without a tier: HOMI's realtor mark wins over the source's (the overlay of WP-42). */
+    public function withoutTier(): self
+    {
+        return clone ($this, ['tier' => null]);
+    }
 }

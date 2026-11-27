@@ -116,4 +116,10 @@ final readonly class ListingSummary
     {
         return clone ($this, ['favorite' => $favorite ?? $this->favorite, 'viewed' => $viewed ?? $this->viewed]);
     }
+
+    /** The same preview of an author HOMI's votes mark as a realtor (the overlay of WP-42, step 4): not an owner's. */
+    public function asRealtors(): self
+    {
+        return clone ($this, ['isOwner' => false]);
+    }
 }

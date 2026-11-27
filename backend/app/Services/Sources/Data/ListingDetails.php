@@ -107,4 +107,22 @@ final readonly class ListingDetails
     {
         return clone ($this, ['owner' => $this->owner->withEntry($entry)]);
     }
+
+    /** The same card with another preview part: HOMI's per-user flags and marks (the overlay of WP-42). */
+    public function withPreview(ListingSummary $preview): self
+    {
+        return clone ($this, ['preview' => $preview]);
+    }
+
+    /** The same card with another owner part (the overlay of WP-42). */
+    public function withOwner(ListingOwner $owner): self
+    {
+        return clone ($this, ['owner' => $owner]);
+    }
+
+    /** The same card with the caller's request and whether `POST …/contact` can give a number (the overlay of WP-42). */
+    public function withContactRequest(?ContactRequestState $request, bool $hasPhone): self
+    {
+        return clone ($this, ['contactRequest' => $request, 'hasPhone' => $hasPhone]);
+    }
 }
