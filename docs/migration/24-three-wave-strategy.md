@@ -171,7 +171,8 @@ legacy landing (`decisions/2026-11-20-landing-answers.md`); DEC-98 and DEC-99 on
 WP-81 (`decisions/2026-11-21-developer-answers.md`); DEC-100 … DEC-102 on 2026-11-22, asked by WP-33 and at the
 handoff of the development track (`decisions/2026-11-22-developer-answers.md`); DEC-103 on 2026-11-23, asked by part 4
 of WP-33 (`decisions/2026-11-23-developer-answers.md`); DEC-104 … DEC-108 on 2026-11-26, asked by WP-40, and DEC-109 on
-the same day, on how two development sessions share the queue (`decisions/2026-11-26-developer-answers.md`).
+the same day, on how two development sessions share the queue (`decisions/2026-11-26-developer-answers.md`); DEC-110
+on 2026-11-27, asked by WP-42 (`decisions/2026-11-27-developer-answers.md`).
 
 | ID | Decision | Answer | Still needs | Shapes |
 | -- | -------- | ------ | ----------- | ------ |
@@ -254,6 +255,7 @@ the same day, on how two development sessions share the queue (`decisions/2026-1
 | DEC-107 | What the daily cap counts (2026-11-26) | Distinct listings: 100 different full cards per user in 24 hours. Re-opening a card already counted in the window (favourites, «Повторить», Back) is free, also after the cap is reached; only a card answered `200` counts, so a missing listing or an error costs nothing. The window is 24 hours, not the calendar day (legacy: «За сутки открыто очень много объявлений», "in the past 24 hours"); as built it is fixed: it starts at the first counted card, lasts 24 hours and does not slide (WP-40 "As built"). «Разные объявления (Рекомендуется)» | — | WP-40 |
 | DEC-108 | Whether the end-to-end job runs on backend changes (2026-11-26) | Yes, on the backend's code: `backend/app`, `bootstrap`, `config`, `routes`, `database/migrations`, `resources/fixtures`, `composer.lock` and `.env.example` are paths of `frontend-e2e.yml`'s `pull_request` trigger, because the API the job boots comes from the PR's tree and, since WP-40, its boot checks, stub mode and gate decide whether the app works; a documentation-only PR does not run it. «Да, на код бэкенда (Рекомендуется)» | — | WP-40 |
 | DEC-109 | How two development sessions share the queue (2026-11-26) | The first session keeps the queue's order (WP-41 and the rest of stage C's backend); the second takes the package `.ai/memory/session-handoff.md` assigns to it — WP-62 first, frontend only — as an exception to rule 1, and asks the developer for the next one. Its prompt is `docs/handoff/second-developer-prompt.md`; it does not rewrite the session handoff (KI-20), merges `main` into its branch, and numbers as `docs/handoff/parallel-work.md` §5 says after checking the other session's open PRs. «да, обнови промпт под WP-62» | — | WP-41, WP-62, the queue |
+| DEC-110 | How long a page of previews may wait for the legacy limiter (2026-11-27) | Up to 4 s for the whole batch (`legacy.previews.max_wait_ms`), an exception to WP-41's 0.5 s for user calls, so a cold page of 20 personal-list cards loads at the default 5 calls a second; a number legacy answered `404` is left out, any other miss makes the call `503 source_unavailable` — no favourite vanishes silently. «Ждать до 4 с, без пропусков (Рекомендуется)» | The operator's real rate (Q-API-059) shortens the wait | WP-42, WP-44 |
 
 ### 8.2 Questions
 

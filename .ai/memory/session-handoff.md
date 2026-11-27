@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-26 (WP-41 legacy driver core in review on `feat/wp-41-legacy-driver`, env keys on `chore/wp-41-env-keys`; DEC-109: a second development session takes WP-62)
+updated: 2026-11-27 (WP-42 listings through legacy in review on `feat/wp-42-listings-legacy`, env keys on `chore/wp-42-env-keys`; WP-41 merged; DEC-110)
 source-of-truth: this session; overwritten every session — owned by the development track (KI-20)
 ---
 
@@ -10,35 +10,37 @@ Written for whoever continues the **development track**. The production track's 
 ## Developer's standing instruction
 - 2026-11-09 … 2026-11-23 (verbatim in earlier handoffs and `docs/migration/decisions/`): «Один пакет = одна ветка = один PR в main. В main напрямую не пушить.»; rule 6; no new dependencies, staging or production without the first developer; «задай все свои вопросы по одному и с вариантами ответа».
 - 2026-11-21, **in force** (rule 8 of `docs/migration/wave-1/README.md`): «мы достаточно детальный план разработки сделали! так что не нужно ждатьь моего одоброение надо без останоки по плану делать! Ели только вопросы не возникнуть!».
-- 2026-11-26: «Продолжим где остоновились ?»; on WP-40 «Беру я, начинаю сейчас»; «продолжай по плану»; «тебе самом сложно проверить .env делай сам не срашивай» (check env values with `php artisan config:show <key>`); «сливай #124 и #125 после зелёного CI»; on the second session «да, обнови промпт под WP-62» and «Может сюда перенесем …/homi.uz/docs эту …/homi-new-developer-prompt.md»; «сливай #127 после ревью»; «продолжай по плану WP-41». DEC-104 … DEC-109 (`docs/migration/decisions/2026-11-26-developer-answers.md`).
+- 2026-11-26: «тебе самом сложно проверить .env делай сам не срашивай» (check env values with `php artisan config:show <key>`); «продолжай по плану WP-41»; DEC-104 … DEC-109 (`docs/migration/decisions/2026-11-26-developer-answers.md`).
+- 2026-11-27: on #128/#129 «Сливай оба (Рекомендуется)»; on the previews' wait «Ждать до 4 с, без пропусков (Рекомендуется)» = DEC-110 (`docs/migration/decisions/2026-11-27-developer-answers.md`).
 
 ## State at handoff
-- `main` = `a93359d` (#127, DEC-109 and `docs/handoff/second-developer-prompt.md`). Open: the WP-41 PR (`feat/wp-41-legacy-driver`) and its env PR (`chore/wp-41-env-keys`, worktree `.worktrees/wp41-env` — remove it after the merge).
-- **Two development sessions (DEC-109).** This one: WP-41, then the rest of stage C's backend in queue order — **WP-42** next (listings through legacy; depends on WP-41), WP-44 after it (both backend). **The second session: WP-62** (frontend only), from `docs/handoff/second-developer-prompt.md`; it does not edit this file, merges `main` into its branch, and numbers as `parallel-work.md` §5 says. Read its state from its PR and the "Handoff" of its specification (`gh pr list`).
-- **WP-41 waits for the production track after its merge:** the key from the operator (WP-02), the env keys on staging, `legacy:ping` (spec "Handoff"). No flag changes.
-- Verify: from `backend/` `php artisan test --compact` (1 546 tests, 1 534 passed, 12 skipped) **and** on PostgreSQL as CI runs it: `DB_CONNECTION=pgsql DB_DATABASE=homi_test DB_HOST=127.0.0.1 DB_USERNAME=$USER DB_PASSWORD= php artisan test --compact` (1 546 passed); `vendor/bin/phpstan analyse` (0 errors); `composer openapi:check` after `migrate:fresh` on `homi_test` (no change).
+- `main` = `1096636` (#129; WP-41 merged as #128 `84a4387`). Open: the WP-42 PR #131 (`feat/wp-42-listings-legacy`, worktree `.worktrees/wp42`) and its env PR #130 (`chore/wp-42-env-keys`, worktree `.worktrees/wp42-env`); remove both worktrees after the merge.
+- **Two development sessions (DEC-109).** This one: WP-42, then **WP-43** (contact, translation, share; depends on WP-42) and WP-44 in queue order. **The second session: WP-62** (frontend only) from `docs/handoff/second-developer-prompt.md`; read its state from its PR (`gh pr list`).
+- **WP-42 waits for the production track after its merge**, in order: the two migrations (`listing_refs`, `listing_views`) **before the code serves** — staging and production run the overlay on stubs; `AUTHOR_KEY_SECRET`; the nginx photo location and `LEGACY_MEDIA_PUBLIC_URL` (spec "Handoff"). No flag changes.
+- Verify (from the worktree's `backend/`, no `.env` there): `APP_KEY=base64:$(php -r 'echo base64_encode(random_bytes(32));') php artisan test --compact` (2 731 tests, 2 714 passed, 17 skipped) **and** with `DB_CONNECTION=pgsql DB_DATABASE=homi_test DB_HOST=127.0.0.1 DB_USERNAME=$USER DB_PASSWORD=` (2 731 passed), `--testsuite=Pgsql --fail-on-skipped` (17 passed); `vendor/bin/phpstan analyse` (0 errors); `APP_ENV=testing APP_NAME=HOMI` + the pgsql variables: `migrate:fresh --force`, `composer openapi:check` (exit 0).
 
 ## Done this session
-- #127 merged `a93359d`: the second developer's prompt moved into the repository (English), DEC-109; `~/Documents/homi-new-developer-prompt.md` deleted (old version in the session scratchpad). Review: 3 medium + 5 low fixed, then one low and a nit of the narrow round, fixed (reported by a subagent, not re-run).
-- WP-41 built: client, limiter, breaker, fixture server, golden fixtures, translators, reference source, `legacy:ping`, boot check, Telescope filter. A code review and a security review of `6d365a4` found 2 high (the breaker inert on Redis — AM-119; an unmapped `RequestException` quoting the body) and mediums; all fixed with tests (the reviews are subagent reports; the fixes are verified by the suites above).
-- Step 8 of WP-41 could not run on the developer's database (4 migrations of `main` pending: `php artisan migrate:status`); the same path ran in `tinker` in `local` (fixtures through Redis).
+- WP-41 merged (#128, #129) after green CI; KI-63's pull test failed once on each (recorded) and passed on rerun.
+- WP-42 built in three stages by subagents (fixtures and translators; the source, cursor and preview pool; refs, overlay and views), each reviewed by an independent subagent, then a narrow review of all fixes: 3 high and 11 medium findings, all fixed with tests (list in the spec's "As built"). The integrator re-ran every suite above on `e804673` and the narrow review's masker probes (0 regressions against `main`'s masker, 0 idempotence failures, 540 KB in 0.01 s).
+- DEC-110 recorded; AM-120 … AM-123 in `docs/ai/reports/phase-3-notes.md` §AK; the API README lists the overlay and the legacy gaps.
+- Not run: step 9 of WP-42 (a walk of the Mini App on the fixtures) — the developer's database misses migrations.
 
 ## Waiting for the developer (do NOT start on your own)
-1. **The click on the permission prompt of `gh pr merge`** for every merge.
-2. **`php artisan migrate` on the local dev database** (`homi_db`, 4 pending migrations of WP-10 and WP-40) — the developer's database, not migrated by an agent.
-3. **One real `initData` of the dev bot** checked with `php <scratchpad>/wp40/check-initdata.php <file>` (pass/fail only).
-4. **Production track:** WP-40's needs; WP-41's key and env keys; the deploy carries #117, #119, #123.
-5. **Forwarding the prompt** `docs/handoff/second-developer-prompt.md` to the second developer; **CLAUDE.md** (tests on PostgreSQL in CI, the WP-40/41 sentences) and a pointer to the prompt in `HANDOFF.md` §7 / `setup.md`: shared-file PRs, proposed, not opened.
-6. **Dependabot #5, #57 … #60** and **`chore/php-8.6`**: only with the first developer.
+1. **The merge of #130 and #131** (asked with options when CI is green); the click on the permission prompt of `gh pr merge`.
+2. **`php artisan migrate` on the local dev database** (`homi_db`: 4 migrations of WP-10/WP-40 and the 2 of WP-42 after the merge) — the developer's database, not migrated by an agent. Locally `sources.native_stubs` is on, so the overlay does not touch the new tables until then.
+3. **The 7 new env keys in the local `backend/.env`** after #130 merges (`make dev-check` lists them missing; blank values are the defaults): `! printf '\nLEGACY_MEDIA_PUBLIC_URL=\nLEGACY_MEDIA_HOSTS=\nLEGACY_PREVIEWS_MAX_WAIT_MS=\nLEGACY_PREVIEWS_BACKGROUND_WAIT_MS=\nLEGACY_PREVIEWS_DEADLINE_MS=\nLEGACY_CACHE_FILL_WAIT_MS=\nAUTHOR_KEY_SECRET=\n' >> backend/.env`.
+4. **One real `initData` of the dev bot** checked with `php <scratchpad>/wp40/check-initdata.php <file>` (pass/fail only).
+5. **Production track:** WP-40's needs; WP-41's key and env keys; WP-42's migrations, secret and photo location.
+6. **Forwarding the prompt** `docs/handoff/second-developer-prompt.md`; **CLAUDE.md** (tests on PostgreSQL in CI, the WP-40/41/42 sentences) and a pointer to the prompt in `HANDOFF.md` §7 / `setup.md`: shared-file PRs, proposed, not opened.
+7. **Dependabot #5, #57 … #60** and **`chore/php-8.6`**: only with the first developer.
 
 ## Gotchas learned this session
-- **Redis returns a stored number as a numeric string** (the array store of the tests returns the int): read cache numbers with `is_numeric` + cast; `increment()` returns an int on both (AM-119).
-- **Laravel matches HTTP fakes in registration order:** a second `Http::fake()` in a test does not replace the first; drive one fake from a queue (`LegacyBreakerTest`). A fake that throws records no request.
-- `env()` returns `''` for a blank `.env.example` line, not the default: config files map blank to the default (AM-117).
-- CI's backend job runs the Feature suite on **PostgreSQL** (AM-113); the local PostgreSQL is on Asia/Tashkent and the `pgsql` connection sets UTC (AM-114); use `DB_HOST=127.0.0.1 DB_USERNAME=$USER DB_PASSWORD=` for `homi_test`.
-- Reading `backend/.env` is refused; read values with `php artisan config:show` (on a server `config:show legacy` would print the service key: use `legacy.auth`).
-- zsh does not split `$FILES`: stage named paths.
-- Next numbers: AM-120, KI-72, ADR 0021, DEC-110. The second session takes the next free numbers too (DEC-109): grep its open PRs before a push.
+- The cache refuses objects (`serializable_classes => false`): cache v1 arrays and rehydrate through `fromArray()` (AM-120); Redis returns numbers as strings (AM-119).
+- A masker regex fix is easy to make weaker than before: compare against a frozen copy of the old masker (`tests/Support/LegacyPhoneMaskerOfWp12.php`) over generated texts, not only against examples.
+- `ListingOverlay` is `scoped`: a test that rebinds `OverlayData` after it was resolved calls `app()->forgetScopedInstances()`; the router caches controllers, so take the overlay per call.
+- In a worktree `migrate:fresh` needs `APP_ENV=testing` (else it runs as production and refuses) and `openapi:check` needs `APP_NAME=HOMI` (else the title changes).
+- `$?` after `cmd | tail` is `tail`'s status: capture a command's exit code before piping.
+- Next numbers: AM-124, KI-73, ADR 0021, DEC-111. The second session takes the next free numbers too (DEC-109): grep its open PRs before a push.
 
 ## Active subagent work at handoff
 - None running.

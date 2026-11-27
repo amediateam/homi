@@ -231,6 +231,27 @@ window opens again for free, also after the limit; only a card answered `200` co
 nothing; the `preview=1` form is never counted or refused. The stub scenario `daily_limit` still answers it too, and
 the `preview=1` form answers as usual in that scenario.
 
+HOMI's own part of a listing answer (WP-42) is the same on every driver (the stub included, except while
+`SOURCES_NATIVE_STUBS` is on): `favorite` and `viewed` come from HOMI's data; hidden listings, listings of blocked
+authors and listings HOMI's votes mark as rented are removed from the feed and the map (a card opened directly is
+still answered); an author HOMI's votes mark as a realtor's gives `is_owner: false`, `owner_verified: false` and, on
+the card, `owner.tier: null` and `owner_label: null`, and is removed under `owner=owners` or `no_agents`. Count, the new-since count and flow are **not** overlaid, so a count
+may exceed what the user can scroll; the map's `total` and `with_point` are reduced by the removed points. A full
+card read records a view (history); `preview=1` never does. Besides the texts, `place`, `landmark`, `facts[].value`
+and `nearby[].note` are masked; a number inside a link in a text is masked like any other
+(`wa.me/+998 ** *** ** 21`), and a link that could carry a number otherwise keeps only its last two digits
+(`instagram.com/p/C********90/`). Numbers written with `/` or `,` between the digit groups are not recognised (KI-72).
+
+Through the `legacy` driver (WP-42), gaps HOMI cannot close until the operator sends more (Q-API-062): on previews
+`price.usd`, `posted.at`, `deal`, `type` and `source_ref` are `null`; on cards `type` is `null`, and `price.usd` /
+`posted.at` are `null` when legacy omits them; `district.code` is a match of the district name in the request
+locale, `null` without one. Blocked and realtor authors are recognised only for listings whose full card someone has
+opened in HOMI (the author key is filed then). A feed page may be shorter than `limit` — even empty with a cursor —
+when HOMI's exclusions shrink it: follow `next_cursor` until it is `null`. Photo addresses point at HOMI's media host
+(empty lists while it is not configured). A list of previews (favourites, history, radars) omits a listing legacy
+answers `404` for and answers `503 source_unavailable` when any other preview cannot be read within the wait of
+DEC-110; a retry then mostly answers from the card cache.
+
 Stub scenarios of the listing methods: `empty`, `few`, `page2_error` (feed); `new_none`, `new_one` (new-since);
 `map_cut` (map: the first half of the points, with `with_point` and `total` unchanged); `daily_limit` (the full
 card: `429 rate_limited`, `reason: "daily"`, `Retry-After: 3600`); `contact_unavailable`; `translation_unavailable`;

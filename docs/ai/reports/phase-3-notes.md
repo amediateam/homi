@@ -2131,3 +2131,66 @@ ASSUMPTION_MISMATCH AM-119 (2026-11-26):
 
 The two reviews of `6d365a4` (code and security) and their fixes are listed in the specification's "As built"
 ("Review"); nothing of medium or higher is open. Next ids: AM-120, KI-72, DEC-110.
+
+## AK. Development track, 2026-11-27 — WP-42
+
+WP-42 (listings through legacy: feed, count, new-since count, flow, map, card, previews; the overlay; `listing_refs`
+and `listing_views`; photo rewriting) on `feat/wp-42-listings-legacy` from `main` (`1096636`, WP-41 merged), taken in
+queue order by the first development session (DEC-109). Applied: the 17 listing golden fixtures and their fake-server
+routes; the translators with `LinkGuard`, `LegacyValue` and `DistrictMatcher`; `PhotoUrlRewriter`;
+`LegacyListingSource` with its caches, the feed cursor `LegacyFeedCursor` and the preview pool `LegacyClient::pool()`,
+bound as the `legacy` driver of the listing capability (the defaults stay `stub`); the migrations `listing_refs` and
+`listing_views`; `AuthorKey`, `ListingRefs`, `ListingOverlay` with the seams `OverlayData` / `OwnerOverlayData` and
+their null implementations, and `ViewRecorder`, wired into the listing controllers for every driver unless
+`sources.native_stubs` is on. The env keys go in a separate PR. Not applied: the nginx location for legacy photos, the
+values of `LEGACY_MEDIA_PUBLIC_URL` and `AUTHOR_KEY_SECRET` on the servers, the two migrations on production (the
+production track). Developer decision DEC-110 (2026-11-27): previews wait up to 4 s and never omit an item silently.
+The integrator's choices are in the specification's "As built".
+
+ASSUMPTION_MISMATCH AM-120 (2026-11-27):
+- **Assumption.** WP-42 "Translators": "The card cache stores the data object, so it holds no raw number."
+- **What was found.** The cache store refuses objects (`config/cache.php` `serializable_classes => false`), and Redis
+  returns a stored number as a numeric string (AM-119).
+- **Resolution.** Every listing cache holds the v1-shaped array of the built data object (masked, without the phone
+  keys and the per-user owner fields) and is rehydrated through `fromArray()`; an entry that no longer fits is dropped
+  and read again; numbers are read whether the store gives an int or a numeric string.
+
+ASSUMPTION_MISMATCH AM-121 (2026-11-27):
+- **Assumption.** WP-12: `PhoneMasker` masks every phone number of an author's text, and a link field needs no check
+  of its own.
+- **What was found.** Real post text reaches the masker through the legacy driver. Its lookbehind refused a number
+  after `*` or `/`, so `**00 765 43 21**` (Markdown bold), the second number of `+998…/+998…` and `wa.me/998…` inside a
+  description stayed raw (found by the review of stage B, with synthetic `+998 00` numbers); link fields such as
+  `contact_url` could carry a number (`wa.me/998…`, `tel:`).
+- **Resolution.** The masker runs in rounds to a fixed point: numbers are read over the whole text first, links
+  included, with the no-break and thin spaces and the Unicode dashes as separators, a `+` number starting anywhere and
+  fullwidth digits normalised; then the digits of every link `LinkGuard` refuses are masked but the last two.
+  `LinkGuard` keeps a link only when it is `https`, valid UTF-8 and holds no run of nine digits; a name with nine
+  digits is never shown or filed. A frozen copy of the masker of `main` pins that the new one is never weaker
+  (property tests, not a proof). Details in the specification's "As built".
+
+ASSUMPTION_MISMATCH AM-122 (2026-11-27):
+- **Assumption.** WP-42 "LegacyListingSource": `previews()` reads each item "through the limiter", dropping a `404` and
+  logging one that is unavailable.
+- **What was found.** At WP-41's default 5 calls a second and 0.5 s wait, a cold personal list of 20 got at most 10
+  previews; the rest were dropped, indistinguishable from a `404` for the caller.
+- **Resolution.** Asked the developer: DEC-110 — the batch shares a 4 s wait (`legacy.previews.max_wait_ms`); a `404`
+  is omitted, any other miss makes the call `503`. Pooled reads go out in the second that gave them their place
+  (`LegacyLimiter::tryAcquire()`), a batch ends by `legacy.previews.deadline_ms` (12 s, below the Mini App's 15 s
+  timeout), and a background batch waits within its own budget.
+
+ASSUMPTION_MISMATCH AM-123 (2026-11-27):
+- **Assumption.** WP-42 "Overlay" step 1: an item that carries its own author key (the operator field) is checked
+  directly against the user's blocked keys.
+- **What was found.** No feed item, map point or data object carries an author field, and the operator has not named
+  one (WP-02 point 6).
+- **Resolution.** Blocked and realtor authors are recognised only for listings that have a `listing_refs` row, i.e.
+  whose full card someone opened through legacy; listed as a gap in `docs/api/README.md`.
+
+Reviews: four subagent reviews (stages A, B and C, and a narrow review of their fixes; the narrow review's probes
+re-run by the integrator on the final masker); 3 high and 11 medium findings in all, every one fixed with tests (one
+medium, DEC-110 under load, recorded in DEC-110 instead), the list in the specification's "As built" ("Review"). Verified by the integrator on the final commit: the whole suite
+on SQLite and on PostgreSQL, the Pgsql suite, PHPStan, Pint, `npm run check` and `composer openapi:check` after
+`migrate:fresh` on `homi_test`. Not run: step 9 (a walk of the Mini App on the fixtures; the developer's database
+misses migrations). Open: KI-72 (a number with `/` or `,` between its groups is not masked, as before WP-42).
+Next ids: AM-124, KI-73, DEC-111.
