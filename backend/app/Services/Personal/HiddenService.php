@@ -27,6 +27,16 @@ final readonly class HiddenService
 
     public function hide(User $user, ListingPointer $pointer, HiddenReason $reason = HiddenReason::Manual): void
     {
+        $this->record($user, $pointer, $reason);
+        $this->resolver->backfill($pointer);
+    }
+
+    /**
+     * The hidden row alone, for a caller inside a transaction (`VoteService::report()`): the back-fill of an unfiled
+     * pointer is the caller's to queue once the transaction commits, since a queued job may run before the commit.
+     */
+    public function record(User $user, ListingPointer $pointer, HiddenReason $reason): void
+    {
         HiddenListing::query()->insertOrIgnore([
             'user_id' => $user->id,
             'listing_number' => $pointer->number,
@@ -35,7 +45,17 @@ final readonly class HiddenService
             'reason' => $reason->value,
             'created_at' => now(),
         ]);
-        $this->resolver->backfill($pointer);
+    }
+
+    /**
+     * Shows a listing again that the user's own report of that reason hid (`DELETE /listings/{number}/reports`): the
+     * number asked and the survivor `listing_refs` files for it; a row of another reason — a manual hide, another
+     * report — stays.
+     */
+    public function unhideReported(User $user, int $number, HiddenReason $reason): void
+    {
+        $user->hiddenListings()->whereIn('listing_number', array_values(array_unique([$number, $this->resolver->survivor($number)])))
+            ->where('reason', $reason->value)->delete();
     }
 
     /**

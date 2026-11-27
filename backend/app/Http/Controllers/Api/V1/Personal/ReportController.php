@@ -2,25 +2,35 @@
 
 namespace App\Http\Controllers\Api\V1\Personal;
 
+use App\Enums\Personal\HiddenReason;
+use App\Enums\Personal\ReportReason;
 use App\Enums\SourceDriver;
 use App\Exceptions\Sources\SourceNotFound;
 use App\Http\Controllers\Api\V1\ApiController;
 use App\Http\Requests\Api\V1\Personal\StoreReportRequest;
 use App\Http\Resources\Api\V1\ReportResultResource;
-use App\Services\Sources\Stub\StubListingRefs;
-use App\Services\Sources\Stub\StubResponder;
+use App\Services\Personal\HiddenService;
+use App\Services\Personal\ListingResolver;
+use App\Services\Personal\VoteService;
+use App\Services\Sources\SourceContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
 /**
- * The reports of a listing on stubs (WP-13; stored and applied in HOMI only, DEC-48, WP-44). A repeated report with
- * the same reason is counted once and answers the same; the detail is stored for review and changes nothing. The
- * stub is stateless: it never marks an author by itself, and a withdrawal has nothing to remove.
+ * The reports of a listing in HOMI's tables (WP-44, `VoteService`; the shapes of WP-13; stored and applied in HOMI
+ * only, DEC-48). A repeated report with the same reason is counted once and answers the same; the detail is stored for
+ * review and changes nothing. An `agent` report counts per author key, so the author is filed first
+ * (`ListingResolver::fileAuthor()`). While `sources.native_stubs` is on, `NativeStubs` answers the stub bodies of
+ * WP-13 instead (the scenario `agent_marked` is theirs).
  */
 class ReportController extends ApiController
 {
-    public function __construct(private readonly StubResponder $stubs, private readonly StubListingRefs $refs) {}
+    public function __construct(
+        private readonly VoteService $votes,
+        private readonly ListingResolver $resolver,
+        private readonly HiddenService $hidden,
+    ) {}
 
     /**
      * `POST /listings/{number}/reports`: `hidden` says whether the listing is now hidden for the reporter;
@@ -29,11 +39,17 @@ class ReportController extends ApiController
      */
     public function store(StoreReportRequest $request, int $number): JsonResponse
     {
-        $context = $this->stubs->check($request);
-        $this->refs->preview($this->positive($number), $context);
-        $agentMarked = $request->namesAgent() && $context->scenario === 'agent_marked';
+        $context = SourceContext::fromRequest($request);
+        $pointer = $this->resolver->resolve($this->positive($number), $context);
+        $reason = $request->reason();
 
-        return $this->sourced(new ReportResultResource($request->hides(), $agentMarked), SourceDriver::Stub);
+        if ($reason === ReportReason::Agent) {
+            $this->resolver->fileAuthor($pointer, $context);
+        }
+
+        $outcome = $this->votes->report($this->signedInUser($request), $pointer, $reason, $request->detail());
+
+        return $this->sourced(new ReportResultResource($outcome->hidden, $outcome->agentMarked), SourceDriver::Native);
     }
 
     /**
@@ -42,8 +58,11 @@ class ReportController extends ApiController
      */
     public function destroy(Request $request, int $number): Response
     {
-        $context = $this->stubs->check($request);
-        $this->refs->preview($this->positive($number), $context);
+        $user = $this->signedInUser($request);
+        $pointer = $this->resolver->resolve($this->positive($number), SourceContext::fromRequest($request));
+
+        $this->votes->withdraw($user, $pointer, ReportReason::Rented);
+        $this->hidden->unhideReported($user, $number, HiddenReason::ReportRented);
 
         return $this->noContent();
     }

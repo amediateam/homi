@@ -9,6 +9,7 @@ use App\Http\OpenApi\RelativeServer;
 use App\Models\User;
 use App\Services\Access\RateLimits;
 use App\Services\Identity\TelegramInitDataVerifier;
+use App\Services\Personal\VoteDetectors;
 use App\Services\Sources\SourceContext;
 use Carbon\CarbonImmutable;
 use Dedoc\Scramble\Scramble;
@@ -25,6 +26,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Intervention\Image\ImageManager;
+use Laravel\Pennant\Feature;
 use Symfony\Component\HttpFoundation\Response;
 
 class AppServiceProvider extends ServiceProvider
@@ -60,6 +62,17 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->configureRateLimiting();
         $this->configureApiDocs();
+        $this->configureVoteDetectors();
+    }
+
+    /**
+     * The kill switches of HOMI's vote detectors (WP-44, SEC-REQ-045): on until `votes:detector` stores `false` in
+     * Pennant's global scope (`VoteDetectors`).
+     */
+    protected function configureVoteDetectors(): void
+    {
+        Feature::define(VoteDetectors::RENTED, true);
+        Feature::define(VoteDetectors::REALTOR, true);
     }
 
     /**

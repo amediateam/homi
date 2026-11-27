@@ -22,15 +22,16 @@ use Illuminate\Support\Facades\Cache;
  * | `favorites`, `viewed` | the user's rows of `favorites`, `listing_views` among the numbers asked |
  * | `hiddenNumbers` | the user's `hidden_listings` |
  * | `blockedAuthorKeys` | the user's `blocked_authors` |
- * | `rentedByVotes` | `listing_marks` with a `rented_at` among the numbers asked |
- * | `realtorAuthorKeys` | every `author_marks` key with a `realtor_marked_at`, cached `REALTOR_KEYS_SECONDS` |
+ * | `rentedByVotes` | `listing_marks` with a `rented_at` among the numbers asked; none while the rented detector is off |
+ * | `realtorAuthorKeys` | every `author_marks` key with a `realtor_marked_at`, cached `REALTOR_KEYS_SECONDS`; none while the realtor detector is off |
  *
  * `ListingOverlay` reads the per-user sets once per request's context and the ones that take numbers once per list.
  * A write of the user flushes nothing shared: the listing caches hold no per-user data, and only the realtor keys,
  * the same for everyone, are cached here — as a list of strings, never an object (`serializable_classes => false`),
  * read back only when it still is one. A mark row without its time marks nothing (stage B locks such a row while it
- * recounts). Stage B of WP-44 adds the kill switches of the two detectors: `rentedByVotes` and `realtorAuthorKeys` are
- * then empty while their detector is off, checked before the realtor keys' cache; until then every mark counts.
+ * recounts). The kill switches of the two detectors (`VoteDetectors`) are asked before any read of a mark, and the
+ * realtor detector before the realtor keys' cache, so switching one off takes effect on the next request; a recount
+ * that moves an author's mark forgets the cache (`VoteService`).
  */
 final class EloquentOverlayData implements OverlayData
 {
@@ -41,6 +42,8 @@ final class EloquentOverlayData implements OverlayData
 
     /** Numbers per `whereIn`, well below the bound parameters SQLite and PostgreSQL accept. */
     private const int CHUNK = 1000;
+
+    public function __construct(private readonly VoteDetectors $detectors) {}
 
     public function favorites(User $user, array $numbers): array
     {
@@ -64,11 +67,19 @@ final class EloquentOverlayData implements OverlayData
 
     public function rentedByVotes(array $numbers): array
     {
+        if ($numbers === [] || ! $this->detectors->rentedOn()) {
+            return [];
+        }
+
         return $this->numbersAmong(ListingMark::query()->whereNotNull('rented_at'), $numbers);
     }
 
     public function realtorAuthorKeys(): array
     {
+        if (! $this->detectors->realtorOn()) {
+            return [];
+        }
+
         $cached = Cache::get(self::REALTOR_KEYS);
 
         if (is_array($cached) && array_is_list($cached)) {

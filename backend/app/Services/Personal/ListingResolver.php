@@ -76,6 +76,21 @@ final readonly class ListingResolver
         return $number;
     }
 
+    /**
+     * Makes sure `listing_refs` files the listing's author when the card source knows one (WP-44's `agent` votes,
+     * counted per author key): a number filed with an author is left as it is, else the full card is read through the
+     * card source, which files it on that read on the legacy driver (the stub files none). `SourceNotFound` (`404`) or
+     * `SourceUnavailable` (`503`) from that read, as for `resolve()`.
+     */
+    public function fileAuthor(ListingPointer $pointer, SourceContext $context): void
+    {
+        if (ListingRef::query()->whereKey($pointer->number)->whereNotNull('author_key')->exists()) {
+            return;
+        }
+
+        $this->sources->listings('source.listings.card', $context)->source->details($pointer->number, $context);
+    }
+
     /** After the write of an unfiled pointer: queues the back-fill of its channel and post. */
     public function backfill(ListingPointer $pointer): void
     {
