@@ -470,8 +470,12 @@ it('discloses a listing legacy answers again once its withdrawal has passed', fu
     $withdrawn = false;
     contactOf(100001)->assertNotFound()->assertJsonPath('code', 'contact_unavailable');
 
-    // `legacy.cache.card` (60 s) and one read with every attempt (47 s with the defaults) later.
-    $this->travel(108)->seconds();
+    // Withdrawn for `legacy.cache.card` (60 s) and one read with every attempt (47 s with the defaults).
+    $this->travel(106)->seconds();
+    contactOf(100001)->assertNotFound()->assertJsonPath('code', 'contact_unavailable');
+    expect(LegacyListingsHttp::sent('/api/listings/100001'))->toHaveCount(1);
+
+    $this->travel(2)->seconds();
     contactOf(100001)->assertOk()->assertJsonPath('data.phone', '+998001234567');
 });
 
