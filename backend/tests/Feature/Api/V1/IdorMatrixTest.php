@@ -13,6 +13,7 @@ use App\Models\ListingRef;
 use App\Models\ListingView;
 use App\Models\ListingVote;
 use App\Models\User;
+use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Routing\Route;
@@ -24,7 +25,8 @@ use Laravel\Sanctum\Sanctum;
 
 /*
  * The authorisation and IDOR matrix (WP-44, `15` §3.1, SEC-REQ-014, SEC-REQ-006; brief decision 15): one row per
- * bearer route — every route behind `auth:sanctum` — with the actors of `15` §3.1:
+ * bearer route — every route behind Sanctum, however its guards are declared (`idorBehindSanctum()`) — with the
+ * actors of `15` §3.1:
  *
  * - no token → `401 unauthenticated`, and a blocked user → `403 access_denied` with `blocked`, on every row;
  * - a real row runs the owner (`A`), another user (`B`) and an unknown id against HOMI's rows: B's call answers B's own
@@ -48,6 +50,27 @@ beforeEach(function (): void {
 });
 
 /**
+ * Whether the route sits behind Sanctum: one of its middleware is `Authenticate` (or a subclass of it) with `sanctum`
+ * among its guards — `auth:sanctum`, `auth:sanctum,web`, `Authenticate::using('web', 'sanctum')`, the class name.
+ */
+function idorBehindSanctum(Route $route): bool
+{
+    foreach (Router::gatherRouteMiddleware($route) as $middleware) {
+        if (! is_string($middleware)) {
+            continue;
+        }
+
+        [$class, $guards] = array_pad(explode(':', $middleware, 2), 2, '');
+
+        if (is_a($class, Authenticate::class, true) && in_array('sanctum', explode(',', $guards), true)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
  * Every bearer route by name, as its method and an address with sample parameters (a listing number, a ULID).
  *
  * @return array<string, array{0: string, 1: string}>
@@ -57,7 +80,7 @@ function idorBearerRoutes(): array
     $routes = [];
 
     foreach (Router::getRoutes()->getRoutes() as $route) {
-        if (! $route instanceof Route || ! in_array('Illuminate\Auth\Middleware\Authenticate:sanctum', Router::gatherRouteMiddleware($route), true)) {
+        if (! $route instanceof Route || ! idorBehindSanctum($route)) {
             continue;
         }
 
@@ -399,12 +422,27 @@ it('has a row for every bearer route, and none for a route that is gone', functi
         ->and($routes)->toHaveCount(59);
 });
 
-it('fails the coverage on a bearer route registered without a row', function (): void {
-    Router::middleware(['api', 'auth:sanctum'])->get('api/v1/idor-probe', fn (): string => 'probe')->name('api.v1.idor-probe');
+it('fails the coverage on a bearer route registered without a row, however its Sanctum guard is declared', function (string $middleware): void {
+    Router::middleware(['api', $middleware])->get('api/v1/idor-probe', fn (): string => 'probe')->name('api.v1.idor-probe');
     Router::getRoutes()->refreshNameLookups();
 
     expect(array_values(array_diff(array_keys(idorBearerRoutes()), array_keys(idorMatrix()))))->toBe(['api.v1.idor-probe']);
-});
+
+    test()->getJson('/api/v1/idor-probe')->assertUnauthorized();
+})->with([
+    'auth:sanctum' => 'auth:sanctum',
+    'Sanctum and a second guard' => 'auth:sanctum,web',
+    'a second guard first' => 'auth:web,sanctum',
+    'the class name' => Authenticate::class.':sanctum',
+    'Authenticate::using()' => Authenticate::using('web', 'sanctum'),
+]);
+
+it('counts no route as a bearer route whose guards leave Sanctum out', function (string $middleware): void {
+    Router::middleware(['api', $middleware])->get('api/v1/idor-probe', fn (): string => 'probe')->name('api.v1.idor-probe');
+    Router::getRoutes()->refreshNameLookups();
+
+    expect(idorBearerRoutes())->not->toHaveKey('api.v1.idor-probe');
+})->with(['auth:web', 'a guard named like it' => 'auth:sanctum-like']);
 
 it('counts the rows by kind: real, a placeholder naming its package, the media tests of WP-00', function (): void {
     $kinds = array_count_values(array_column(idorMatrix(), 0));
