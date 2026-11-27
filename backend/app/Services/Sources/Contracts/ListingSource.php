@@ -61,10 +61,13 @@ interface ListingSource
     public function previews(array $numbers, SourceContext $context): array;
 
     /**
-     * The author's number and call link; every answer is a disclosure (WP-43 counts it).
+     * The author's contact (WP-43, Q-API-062). With `phone` the source has the number (variant A): its `callUrl` and
+     * `expiresAt` may be blank, and `ContactService` answers HOMI's own call link. Without, `callUrl` is the source's
+     * call link (variant B). Called only by `ContactService::disclose()`, which counts every answer as a disclosure,
+     * and by HOMI's call page, whose token was issued by one.
      *
      * @throws SourceNotFound|SourceUnavailable
-     * @throws ContactUnavailable when the listing has no phone
+     * @throws ContactUnavailable when the listing has neither a phone nor a call link
      */
     public function contact(int $number, SourceContext $context): ListingContact;
 

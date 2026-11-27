@@ -66,7 +66,7 @@ class CallPageController extends Controller
      * @param  array<string, mixed>  $data
      * @param  array<string, string|int>  $headers  added to `HEADERS` (a limiter's `Retry-After`)
      */
-    public static function page(string $view, int $status, string $locale, array $data = [], array $headers = []): Response
+    public static function page(string $view, int $status, string $locale, #[\SensitiveParameter] array $data = [], array $headers = []): Response
     {
         $html = view($view, ['locale' => $locale] + $data)->render();
 

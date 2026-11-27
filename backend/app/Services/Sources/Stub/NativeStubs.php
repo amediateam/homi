@@ -8,10 +8,13 @@ use App\Exceptions\Identity\InvalidInitData;
 use App\Exceptions\Identity\InvalidInitDataReason;
 use App\Http\Requests\Api\V1\Auth\TelegramSignInRequest;
 use App\Http\Requests\Api\V1\UpdateSettingsRequest;
+use App\Http\Resources\Api\V1\ContactResource;
 use App\Http\Resources\Api\V1\MeResource;
 use App\Http\Resources\Api\V1\SessionResource;
 use App\Http\Resources\Api\V1\SettingsResource;
 use App\Services\Identity\TokenIssuer;
+use App\Services\Sources\SourceContext;
+use App\Services\Sources\SourceManager;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,7 +32,10 @@ use LogicException;
  * controller, and it answers the envelope of `ApiController::sourced()` with `meta.source = stub`.
  *
  * WP-40 moved here: sign-in (every value signs in the one stub user, nothing is verified, the token is not capped),
- * `GET /me`, `GET /settings` and `PATCH /settings`.
+ * `GET /me`, `GET /settings` and `PATCH /settings`. WP-43 moved here `POST /listings/{number}/contact`: the contact of
+ * the method's driver as it answered before (on the stub driver the stub's number and its link
+ * `{APP_URL}/call/stub-token-<number>`), with `meta.source` that driver — no disclosure quota, no HOMI call link, no
+ * `ContactDisclosed`.
  */
 final readonly class NativeStubs
 {
@@ -65,6 +71,7 @@ final readonly class NativeStubs
         'api.v1.me.show' => 'me',
         'api.v1.settings.show' => 'settings',
         'api.v1.settings.update' => 'updateSettings',
+        'api.v1.listings.contact' => 'contact',
     ];
 
     public function __construct(private Container $container) {}
@@ -121,13 +128,26 @@ final readonly class NativeStubs
         return $this->sourced(new SettingsResource($settings));
     }
 
+    /**
+     * `POST /listings/{number}/contact` as WP-12 answered it (the controller body before WP-43): the contact of the
+     * driver of `source.listings.contact`, nothing counted.
+     */
+    public function contact(Request $request, SourceManager $sources): JsonResponse
+    {
+        $number = $request->route('number');
+        $context = SourceContext::fromRequest($request);
+        $resolved = $sources->listings('source.listings.contact', $context);
+
+        return $this->sourced(new ContactResource($resolved->source->contact(is_numeric($number) ? (int) $number : 0, $context)), $resolved->driver);
+    }
+
     /** The envelope of `ApiController::sourced()` for a stub answer without extra meta. */
-    private function sourced(JsonResource $data): JsonResponse
+    private function sourced(JsonResource $data, SourceDriver $driver = SourceDriver::Stub): JsonResponse
     {
         return response()->json([
             'success' => true,
             'data' => $data,
-            'meta' => ['source' => SourceDriver::Stub],
+            'meta' => ['source' => $driver],
         ]);
     }
 }

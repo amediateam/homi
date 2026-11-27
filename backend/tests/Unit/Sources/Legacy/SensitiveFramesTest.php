@@ -1,8 +1,15 @@
 <?php
 
+use App\Http\Controllers\Pages\CallPageController;
 use App\Services\Listings\AuthorKey;
+use App\Services\Listings\CallLink;
+use App\Services\Listings\CallLinkClaims;
+use App\Services\Listings\CallLinkService;
+use App\Services\Listings\ContactDisclosure;
+use App\Services\Listings\ContactService;
 use App\Services\Listings\LinkGuard;
 use App\Services\Listings\PhoneMasker;
+use App\Services\Sources\Legacy\LegacyContact;
 use App\Services\Sources\Legacy\LegacyListingSource;
 
 /*
@@ -16,7 +23,10 @@ use App\Services\Sources\Legacy\LegacyListingSource;
  * and `LegacyListingSource`, and every parameter of one with a name of `SENSITIVE_NAMES` and a built-in type (an
  * array, a string, `mixed`): `$card`, `$legacyCard`, `$answer`, `$item`, `$event`, `$point`, `$option`, `$data`,
  * `$raw`, `$part`, `$value`, `$facts`, `$sources`, `$phone`, `$text`, `$name`, `$link`, `$url` and `$secret`
- * (`$event` and `$raw` name no parameter yet; a later one must carry the attribute). Left out by name: `$number`,
+ * (`$event` and `$raw` name no parameter yet; a later one must carry the attribute). WP-43 adds `$token` (a call
+ * token) and `$display` (the display of an author's number), and the classes of the contact: `LegacyContact`,
+ * `ContactService`, `ContactDisclosure`, `CallLinkService`, `CallLink`, `CallLinkClaims` and `CallPageController`.
+ * Left out by name: `$number`,
  * `$path`, `$key`, `$city` and the like, which are listing numbers, path templates, field names and codes; and by
  * type: a parameter that takes an object (`SourceManager $sources`). A data object's `fromArray()` takes the
  * translated array and masks it itself; it is not reflected.
@@ -25,7 +35,7 @@ use App\Services\Sources\Legacy\LegacyListingSource;
 /** The parameter names that hold raw legacy data, an unmasked text or a secret. */
 const SENSITIVE_NAMES = [
     'card', 'legacyCard', 'answer', 'item', 'event', 'point', 'option', 'data', 'raw', 'part', 'value', 'facts', 'sources',
-    'phone', 'text', 'name', 'link', 'url', 'secret',
+    'phone', 'text', 'name', 'link', 'url', 'secret', 'token', 'display',
 ];
 
 /**
@@ -41,7 +51,11 @@ function sensitiveFrameClasses(): array
     );
 
     /** @var list<class-string> $classes */
-    $classes = [...$translators, AuthorKey::class, LinkGuard::class, PhoneMasker::class, LegacyListingSource::class];
+    $classes = [
+        ...$translators, AuthorKey::class, LinkGuard::class, PhoneMasker::class, LegacyListingSource::class,
+        LegacyContact::class, ContactService::class, ContactDisclosure::class, CallLinkService::class, CallLink::class,
+        CallLinkClaims::class, CallPageController::class,
+    ];
 
     return $classes;
 }
@@ -93,6 +107,14 @@ it('finds the translators and the masking classes, and enough frames to mean som
             'PhoneMasker::lastTwo($phone)',
             'LegacyListingSource::file($card)',
             'LegacyListingSource::file($answer)',
+            'LegacyListingSource::callUrl($answer)',
+            'LegacyListingSource::callLink($display)',
+            'LegacyContact::fromCard($card)',
+            'LegacyContact::format($phone)',
+            'CallLinkService::verify($token)',
+            'CallLinkService::sign($secret)',
+            'CallLink::__construct($url)',
+            'CallPageController::__invoke($token)',
         )
         ->and($frames)->not->toContain('LegacyListingSource::__construct($sources)');
 });

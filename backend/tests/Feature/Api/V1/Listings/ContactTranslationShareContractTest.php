@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Services\Listings\CallLinkService;
 use Laravel\Sanctum\Sanctum;
 use Tests\Support\ContractShapes;
 use Tests\Support\JsonShape;
@@ -9,7 +10,21 @@ beforeEach(function (): void {
     Sanctum::actingAs(User::factory()->create(), ['app:read']);
 });
 
-it('gives the author\'s number with a call link', function (): void {
+it('gives the author\'s number with HOMI\'s call link (WP-43)', function (): void {
+    $response = $this->postJson('/api/v1/listings/100001/contact')->assertOk();
+
+    JsonShape::assertSame(['success' => 'bool', 'data' => ContractShapes::CONTACT, 'meta' => ['source' => 'string']], JsonShape::of($response->json()));
+    $response->assertJsonPath('data.phone', '+998000000067')
+        ->assertJsonPath('data.phone_display', '+998 00 000-00-67')
+        ->assertJsonPath('meta.source', 'stub');
+    expect($response->json('data.call_url'))->toStartWith(rtrim(config('app.url'), '/').'/call/')
+        ->and(app(CallLinkService::class)->verify(substr($response->json('data.call_url'), strrpos($response->json('data.call_url'), '/') + 1))?->number)->toBe(100001)
+        ->and(strtotime($response->json('data.expires_at')))->toBeGreaterThanOrEqual(time() + 9 * 60);
+});
+
+it('gives the stub\'s number and link of WP-12 while the native stubs are on (the e2e suite)', function (): void {
+    config(['sources.native_stubs' => true]);
+
     $response = $this->postJson('/api/v1/listings/100001/contact')->assertOk();
 
     JsonShape::assertSame(['success' => 'bool', 'data' => ContractShapes::CONTACT, 'meta' => ['source' => 'string']], JsonShape::of($response->json()));
