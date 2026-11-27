@@ -27,7 +27,7 @@ final class FlowTranslator
      *
      * @throws LegacyContractError
      */
-    public static function toData(array $answer, ?Coercions $seen = null): FlowEstimate
+    public static function toData(#[\SensitiveParameter] array $answer, ?Coercions $seen = null): FlowEstimate
     {
         $flow = self::translate($answer, $seen);
 
@@ -43,7 +43,7 @@ final class FlowTranslator
      *
      * @throws LegacyContractError
      */
-    public static function translate(array $answer, ?Coercions $seen = null): array
+    public static function translate(#[\SensitiveParameter] array $answer, ?Coercions $seen = null): array
     {
         $week = Whole::of($answer['week'] ?? null);
         $days = $answer['days'] ?? null;

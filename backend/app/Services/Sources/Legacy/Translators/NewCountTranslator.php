@@ -32,7 +32,7 @@ final class NewCountTranslator
      *
      * @throws LegacyContractError
      */
-    public static function count(array $answer, string $path = self::PATH): int
+    public static function count(#[\SensitiveParameter] array $answer, string $path = self::PATH): int
     {
         $count = Whole::of($answer['count'] ?? null);
 

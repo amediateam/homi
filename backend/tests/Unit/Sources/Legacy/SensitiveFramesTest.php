@@ -3,17 +3,20 @@
 use App\Services\Listings\AuthorKey;
 use App\Services\Listings\LinkGuard;
 use App\Services\Listings\PhoneMasker;
+use App\Services\Sources\Legacy\Translators\FlowTranslator;
 use App\Services\Sources\Legacy\Translators\LegacyValue;
 use App\Services\Sources\Legacy\Translators\ListingDetailsTranslator;
 use App\Services\Sources\Legacy\Translators\ListingSummaryTranslator;
+use App\Services\Sources\Legacy\Translators\MapPointsTranslator;
+use App\Services\Sources\Legacy\Translators\NewCountTranslator;
 use App\Services\Sources\Legacy\Translators\SourceRefParser;
 
 /*
- * WP-42 (DEC-52, brief rule 6): every frame that takes a raw legacy card, item or answer, a part of one, or an
- * author-written text or link before it is masked marks that parameter `#[\SensitiveParameter]`, so a stack trace of an
- * exception thrown inside it never shows the author's number. The data objects' `fromArray()` take the translated,
- * number-free arrays and are not listed; nor are the map, flow, new-since and city translators, whose answers carry no
- * author data.
+ * WP-42 (DEC-52, brief rule 6): every frame that takes a raw legacy card, item or answer of the listing methods, a part
+ * of one, or an author-written text or link before it is masked marks that parameter `#[\SensitiveParameter]`, so a
+ * stack trace of an exception thrown inside it never shows the author's number. The data objects' `fromArray()` take
+ * the translated, number-free arrays and are not listed; nor are the city statistics (no listing data) and the
+ * fixture server of `legacy.fake` (synthetic answers, refused in production).
  */
 
 /**
@@ -41,6 +44,9 @@ function sensitiveFrames(): array
             'flag' => ['data'], 'truthy' => ['data'], 'objects' => ['data'], 'requiredList' => ['data'], 'fits' => ['part'],
             'odd' => ['value'],
         ],
+        MapPointsTranslator::class => ['toData' => ['answer'], 'translate' => ['answer'], 'optionalCount' => ['answer']],
+        FlowTranslator::class => ['toData' => ['answer'], 'translate' => ['answer']],
+        NewCountTranslator::class => ['count' => ['answer']],
         LinkGuard::class => ['safeName' => ['name'], 'safe' => ['url'], 'channelOf' => ['path'], 'decoded' => ['url']],
         PhoneMasker::class => ['mask' => ['text'], 'maskText' => ['text'], 'maskLink' => ['link'], 'lastTwo' => ['number'], 'digits' => ['number']],
     ];

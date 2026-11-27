@@ -31,7 +31,7 @@ final class MapPointsTranslator
      *
      * @throws LegacyContractError
      */
-    public static function toData(array $answer, int $nativeFloor, ?Coercions $seen = null): MapPoints
+    public static function toData(#[\SensitiveParameter] array $answer, int $nativeFloor, ?Coercions $seen = null): MapPoints
     {
         $map = self::translate($answer, $nativeFloor, $seen);
 
@@ -49,7 +49,7 @@ final class MapPointsTranslator
      *
      * @throws LegacyContractError
      */
-    public static function translate(array $answer, int $nativeFloor, ?Coercions $seen = null): array
+    public static function translate(#[\SensitiveParameter] array $answer, int $nativeFloor, ?Coercions $seen = null): array
     {
         $sent = LegacyValue::requiredList($answer, 'points', self::PATH);
         $points = [];
@@ -134,7 +134,7 @@ final class MapPointsTranslator
     }
 
     /** @param  array<array-key, mixed>  $answer  `null` when absent; a whole number ≥ 0, else a contract error */
-    private static function optionalCount(array $answer, string $key): ?int
+    private static function optionalCount(#[\SensitiveParameter] array $answer, string $key): ?int
     {
         $value = Whole::of($answer[$key] ?? null);
 
