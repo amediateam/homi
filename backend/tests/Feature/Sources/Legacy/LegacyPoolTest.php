@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\AccessReason;
+use App\Exceptions\AccessDenied;
 use App\Exceptions\Sources\LegacyContractError;
 use App\Exceptions\Sources\SourceUnavailable;
 use App\Models\User;
@@ -276,4 +278,19 @@ it('counts a contract error of a pooled read as a single read counts it (L2)', f
 
     expect(fn () => pooledSource()->previews([$numbers[1]], poolUser()))->toThrow(SourceUnavailable::class);
     expect(contractErrors())->toBe(2);
+});
+
+it('answers a batch of previews on legacy\'s pause as the pause, 403 with the reason paused, and never as a breaker failure', function (): void {
+    config(['legacy.rate.per_second' => 1000]);
+    $numbers = feedNumbers(3);
+    LegacyListingsHttp::fake(fn (Request $request): mixed => LegacyListingsHttp::path($request) === "/api/listings/{$numbers[1]}" ? Http::response(['detail' => 'paused'], 403) : null);
+
+    try {
+        pooledSource()->previews($numbers, poolUser());
+        $this->fail('The batch was answered during the pause.');
+    } catch (AccessDenied $paused) {
+        expect($paused->reason)->toBe(AccessReason::Paused);
+    }
+
+    expect(Cache::get('legacy:breaker:failures'))->toBeNull();
 });
