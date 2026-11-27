@@ -4,6 +4,7 @@ namespace App\Services\Sources\Legacy;
 
 use App\Enums\AccessReason;
 use App\Exceptions\AccessDenied;
+use App\Exceptions\ApiException;
 use App\Exceptions\Listings\DailyLimitReached;
 use App\Exceptions\Sources\LegacyContractError;
 use App\Exceptions\Sources\SourceNotFound;
@@ -15,6 +16,7 @@ use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\HttpClientException;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Pool;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
@@ -43,6 +45,10 @@ use Throwable;
  * configured header): log lines carry the method, the path template and the status, never a header, a value or a
  * body, and no exception of the HTTP client is chained, because its message quotes the response body. With
  * `legacy.fake` on, the requests go to `LegacyFakeServer` instead of the network.
+ *
+ * `pool()` sends several reads at once (the card previews of WP-42) on the same path: each read is admitted by the
+ * breaker, takes its own place in the limiter and goes out in that second, is retried once when it failed in transit,
+ * and ends in `settle()`.
  */
 final class LegacyClient
 {
@@ -126,6 +132,231 @@ final class LegacyClient
         }
 
         return $this->settle($response, $method, $path, $probe);
+    }
+
+    /**
+     * Several reads sent together, each the way `get()` sends one: admitted by the breaker (an open breaker refuses each
+     * read), sent in rounds (the reads that find a place in the limiter now go out at once; the others wait for the next
+     * second and go in a later round, so a read is always sent in the second whose place it took), one more attempt for
+     * the reads that failed in transit (each with a new place; without one, the first outcome stands), and each outcome
+     * through `settle()`. The caller sends as many reads as may run in parallel (`legacy.previews.concurrency`); one
+     * failed read never fails the others.
+     *
+     * The limiter waits of the whole call come from `$wait` (DEC-110), else from one read's `legacy.rate.max_wait_ms`
+     * for a user's call and none for a background one; a background call given a `$wait` waits for its share's places
+     * within it. A read that finds no place within that wait is refused with `SourceUnavailable`. With `$deadline`, no
+     * round, wait or retry starts after it, each request's timeout ends by it, and a read it cut — not sent, or not
+     * answered in time — is refused with `SourceUnavailable` without counting against legacy in the breaker.
+     *
+     * @param  array<array-key, array{0: string, 1?: array<string, scalar|list<scalar>|null>}>  $reads  the path and
+     *                                                                                                  query of each read
+     * @return array<array-key, array<array-key, mixed>|ApiException> keyed like `$reads`: the decoded JSON, or the
+     *                                                                exception `get()` would have thrown for that read
+     *
+     * @throws SourceUnavailable when no service key is configured: no read is sent
+     */
+    public function pool(array $reads, ?LegacyCall $call = null, ?LegacyWaitBudget $wait = null, ?LegacyDeadline $deadline = null): array
+    {
+        if ($reads === []) {
+            return [];
+        }
+
+        $call ??= new LegacyCall;
+        $wait ??= new LegacyWaitBudget($call->background ? 0 : Config::integer('legacy.rate.max_wait_ms'));
+
+        foreach ($reads as [$path]) {
+            if (! str_starts_with($path, '/') || str_starts_with($path, '//')) {
+                throw new LogicException('A legacy path starts with one slash.');
+            }
+        }
+
+        $this->lastOutcome = null;
+        $key = $this->key();
+        /** @var array<array-key, ApiException> $refused */
+        $refused = [];
+        /** @var array<array-key, Lock|null> $probes */
+        $probes = [];
+
+        foreach (array_keys($reads) as $id) {
+            try {
+                $probes[$id] = $this->breaker->admit();
+            } catch (SourceUnavailable $open) {
+                $refused[$id] = $open;
+            }
+        }
+
+        try {
+            $responses = $this->poolAttempts($reads, array_keys($probes), $call, $key, $refused, $wait, $deadline);
+        } catch (Throwable $before) {
+            foreach ($probes as $probe) {
+                $probe?->release();
+            }
+
+            throw $before;
+        }
+
+        $results = [];
+
+        foreach (array_keys($reads) as $id) {
+            if (isset($refused[$id])) {
+                // Not sent, or cut by the deadline: a probe goes back for another call, as in `call()`.
+                ($probes[$id] ?? null)?->release();
+                $results[$id] = $refused[$id];
+
+                continue;
+            }
+
+            try {
+                $results[$id] = $this->settle($responses[$id], 'GET', $reads[$id][0], $probes[$id] ?? null);
+            } catch (ApiException $outcome) {
+                $results[$id] = $outcome;
+            }
+        }
+
+        return $results;
+    }
+
+    /**
+     * The attempts of the admitted reads of `pool()`: the reads that failed in transit are sent once more, after the
+     * pause of `legacy.retry.sleep_ms`, unless the deadline would pass first.
+     *
+     * @param  array<array-key, array{0: string, 1?: array<string, scalar|list<scalar>|null>}>  $reads
+     * @param  list<array-key>  $admitted
+     * @param  array<array-key, ApiException>  $refused  filled with the reads that got no first place or that the
+     *                                                   deadline cut before their first answer
+     * @return array<array-key, Response|string> the last outcome of each read that was sent and answered
+     */
+    private function poolAttempts(array $reads, array $admitted, LegacyCall $call, #[\SensitiveParameter] string $key, array &$refused, LegacyWaitBudget $wait, ?LegacyDeadline $deadline): array
+    {
+        $attempts = 1 + max(0, Config::integer('legacy.retry.times'));
+        $responses = [];
+        $pending = $admitted;
+
+        for ($attempt = 1; $attempt <= $attempts && $pending !== []; $attempt++) {
+            if ($attempt > 1) {
+                $pause = Config::integer('legacy.retry.sleep_ms');
+
+                if ($deadline !== null && $deadline->remainingMs() <= $pause) {
+                    break;
+                }
+
+                Sleep::for($pause)->milliseconds();
+            }
+
+            ['answered' => $answered, 'unsent' => $unsent, 'cut' => $cut] = $this->sendAsPlaced($reads, $pending, $call, $key, $wait, $deadline);
+
+            foreach ([...$unsent, ...$cut] as $id) {
+                // A retry that found no place or ran out of time: the first outcome stands.
+                if (! isset($responses[$id])) {
+                    $refused[$id] = new SourceUnavailable;
+                }
+            }
+
+            if ($cut !== [] || ($unsent !== [] && $deadline?->passed() === true)) {
+                Log::warning('Legacy reads of a batch ran out of time.', ['path' => self::template($reads[$pending[0]][0]), 'unsent' => count($unsent), 'cut' => count($cut)]);
+            }
+
+            $responses = $answered + $responses;
+            $pending = array_values(array_filter(array_keys($answered), fn (int|string $id): bool => $this->retryable($answered[$id])));
+        }
+
+        return $responses;
+    }
+
+    /**
+     * One attempt of the reads of `pool()`, in rounds: each round sends at once the reads that got a place in the
+     * limiter now; when none is free, the rest waits for the next second from `$wait`, unless that wait reaches the
+     * deadline. A round's requests time out by the deadline at the latest; a read that failed in transit once the
+     * deadline had passed under such a shortened timeout was cut by it, not failed by legacy.
+     *
+     * @param  array<array-key, array{0: string, 1?: array<string, scalar|list<scalar>|null>}>  $reads
+     * @param  list<array-key>  $ids
+     * @return array{answered: array<array-key, Response|string>, unsent: list<array-key>, cut: list<array-key>}
+     */
+    private function sendAsPlaced(array $reads, array $ids, LegacyCall $call, #[\SensitiveParameter] string $key, LegacyWaitBudget $wait, ?LegacyDeadline $deadline): array
+    {
+        $answered = [];
+        $cut = [];
+        $queue = $ids;
+
+        while ($queue !== [] && $deadline?->passed() !== true) {
+            $placed = [];
+
+            foreach ($queue as $id) {
+                if (! $this->limiter->tryAcquire($call->background)) {
+                    break;
+                }
+
+                $placed[] = $id;
+            }
+
+            if ($placed === []) {
+                $atMost = $deadline === null ? null : $deadline->remainingMs() - 1;
+
+                if (! $this->limiter->waitForNextSecond($wait, $atMost)) {
+                    break;
+                }
+
+                continue;
+            }
+
+            $queue = array_slice($queue, count($placed));
+            $timeout = $deadline === null ? null : min((float) Config::integer('legacy.timeout'), $deadline->remainingMs() / 1000);
+            $shortened = $timeout !== null && $timeout < Config::integer('legacy.timeout');
+
+            foreach ($this->sendAll($reads, $placed, $call, $key, $timeout) as $id => $response) {
+                if ($shortened && is_string($response) && $deadline->passed()) {
+                    $cut[] = $id;
+                } else {
+                    $answered[$id] = $response;
+                }
+            }
+        }
+
+        return ['answered' => $answered, 'unsent' => $queue, 'cut' => $cut];
+    }
+
+    /**
+     * One round of `pool()`: the reads sent at once through one factory, each answer or the class name of its transport
+     * failure, as `send()` gives them.
+     *
+     * @param  array<array-key, array{0: string, 1?: array<string, scalar|list<scalar>|null>}>  $reads
+     * @param  list<array-key>  $ids
+     * @param  float|null  $timeout  seconds, when shorter than `legacy.timeout` (a deadline); also caps the connect timeout
+     * @return array<array-key, Response|string>
+     */
+    private function sendAll(array $reads, array $ids, LegacyCall $call, #[\SensitiveParameter] string $key, ?float $timeout = null): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        $answers = $this->factory()->createPendingRequest()->pool(function (Pool $pool) use ($reads, $ids, $call, $key, $timeout): void {
+            foreach ($ids as $index => $id) {
+                [$headers, $query] = $this->selectors($call, $reads[$id][1] ?? []);
+                $request = $this->request($key, $pool->as((string) $index))->withHeaders($headers);
+
+                if ($timeout !== null) {
+                    $request->timeout(max(0.001, $timeout))->connectTimeout(max(0.001, min($timeout, (float) Config::integer('legacy.connect_timeout'))));
+                }
+
+                $request->send('GET', self::url($reads[$id][0], $query));
+            }
+        });
+        $responses = [];
+
+        foreach ($ids as $index => $id) {
+            $answer = $answers[$index] ?? null;
+
+            $responses[$id] = match (true) {
+                $answer instanceof Response => $answer,
+                $answer instanceof HttpClientException, $answer instanceof GuzzleException => $answer::class,
+                $answer instanceof Throwable => throw $answer,
+                default => throw new LogicException('A pooled legacy read has no outcome.'),
+            };
+        }
+
+        return $responses;
     }
 
     /**
@@ -223,7 +454,7 @@ final class LegacyClient
     private function send(string $method, string $path, array $query, array $body, LegacyCall $call, #[\SensitiveParameter] string $key): Response|string
     {
         [$headers, $query] = $this->selectors($call, $query);
-        $url = $path.($query === [] ? '' : '?'.self::queryString($query));
+        $url = self::url($path, $query);
         $request = $this->request($key)->withHeaders($headers);
 
         try {
@@ -239,9 +470,12 @@ final class LegacyClient
         }
     }
 
-    private function request(#[\SensitiveParameter] string $key): PendingRequest
+    /**
+     * A request with the base URL, the timeouts, the key and the request id: a new one, or a read of a pool.
+     */
+    private function request(#[\SensitiveParameter] string $key, ?PendingRequest $request = null): PendingRequest
     {
-        $factory = Config::boolean('legacy.fake') ? $this->fake->factory() : $this->http;
+        $request ??= $this->factory()->createPendingRequest();
         $headers = [Config::string('legacy.auth.header') => Config::string('legacy.auth.prefix').$key];
         $requestId = Log::sharedContext()['request_id'] ?? null;
 
@@ -249,13 +483,25 @@ final class LegacyClient
             $headers['X-Request-Id'] = $requestId;
         }
 
-        return $factory->baseUrl(Config::string('legacy.base_url'))
+        return $request->baseUrl(Config::string('legacy.base_url'))
             ->timeout(Config::integer('legacy.timeout'))
             ->connectTimeout(Config::integer('legacy.connect_timeout'))
             ->withoutRedirecting()
             ->accept('application/json')
             ->withUserAgent('homi-api')
             ->withHeaders($headers);
+    }
+
+    /** The fixture server's factory while `legacy.fake` is on, else the application's. */
+    private function factory(): Factory
+    {
+        return Config::boolean('legacy.fake') ? $this->fake->factory() : $this->http;
+    }
+
+    /** @param  array<string, scalar|list<scalar>|null>  $query */
+    private static function url(string $path, array $query): string
+    {
+        return $path.($query === [] ? '' : '?'.self::queryString($query));
     }
 
     /**

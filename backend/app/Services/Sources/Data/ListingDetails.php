@@ -11,7 +11,8 @@ use App\Services\Listings\PhoneMasker;
  * with a number.
  *
  * `fromArray()` is the one way a driver builds it; it masks `summary`, `original.text`, `offers[].text`,
- * `price_history[].text` and `owner.description` (and, through `ListingSummary`, `title`). Since WP-80 it carries the
+ * `price_history[].text`, `author.label`, `owner_label` and `owner.description` (and, through `ListingSummary`,
+ * `title`). Since WP-80 it carries the
  * owner part (`owner`) and the two contact keys of a self-placed listing (`contactMode`, `contactRequest`).
  */
 final readonly class ListingDetails
@@ -66,6 +67,7 @@ final readonly class ListingDetails
         $summary = Fields::nullableString($data, 'summary');
         $originalText = Fields::nullableString($original, 'text');
         $mode = Fields::nullableString($contact, 'mode');
+        $ownerLabel = Fields::nullableString($data, 'owner_label');
         $request = Fields::nullableObject($contact, 'request');
 
         return new self(
@@ -83,7 +85,7 @@ final readonly class ListingDetails
             authorKind: $author === null ? null : Fields::string($author, 'kind'),
             authorLabel: $author === null ? null : PhoneMasker::mask(Fields::string($author, 'label')),
             authorCount: $author === null ? null : Fields::count($author, 'count'),
-            ownerLabel: Fields::nullableString($data, 'owner_label'),
+            ownerLabel: $ownerLabel === null ? null : PhoneMasker::mask($ownerLabel),
             hasPhone: Fields::bool($contact, 'has_phone'),
             contactUrl: Fields::nullableString($contact, 'contact_url'),
             contactPaid: Fields::bool($contact, 'contact_paid'),
@@ -104,5 +106,33 @@ final readonly class ListingDetails
     public function withOwnerEntry(bool $entry): self
     {
         return clone ($this, ['owner' => $this->owner->withEntry($entry)]);
+    }
+
+    /** The same card with another preview part: HOMI's per-user flags and marks (the overlay of WP-42). */
+    public function withPreview(ListingSummary $preview): self
+    {
+        return clone ($this, ['preview' => $preview]);
+    }
+
+    /** The same card with another owner part (the overlay of WP-42). */
+    public function withOwner(ListingOwner $owner): self
+    {
+        return clone ($this, ['owner' => $owner]);
+    }
+
+    /**
+     * The same card of an author HOMI's votes mark as a realtor (the overlay of WP-42, step 4): its preview
+     * `asRealtors()`, no owner tier, and no `owner_label` — HOMI's mark wins over whatever the source wrote there
+     * («Хозяин», «Собственник»), decided by the mark and never by the label's text.
+     */
+    public function asRealtors(): self
+    {
+        return clone ($this, ['preview' => $this->preview->asRealtors(), 'owner' => $this->owner->withoutTier(), 'ownerLabel' => null]);
+    }
+
+    /** The same card with the caller's request and whether `POST …/contact` can give a number (the overlay of WP-42). */
+    public function withContactRequest(?ContactRequestState $request, bool $hasPhone): self
+    {
+        return clone ($this, ['contactRequest' => $request, 'hasPhone' => $hasPhone]);
     }
 }

@@ -104,7 +104,7 @@ final class CityStatsTranslator
     }
 
     /** @return array<array-key, mixed> */
-    private static function object(mixed $value, string $code, string $key): array
+    private static function object(#[\SensitiveParameter] mixed $value, string $code, string $key): array
     {
         return is_array($value) ? $value : throw LegacyContractError::key(self::PATH, "{$code}.{$key}", 'not an object');
     }

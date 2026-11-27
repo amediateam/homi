@@ -3,6 +3,7 @@
 use App\Services\Sources\Contracts\LandingSource;
 use App\Services\Sources\Contracts\ListingSource;
 use App\Services\Sources\Contracts\ReferenceSource;
+use App\Services\Sources\Legacy\LegacyListingSource;
 use App\Services\Sources\Legacy\LegacyReferenceSource;
 use App\Services\Sources\Stub\StubLandingSource;
 use App\Services\Sources\Stub\StubListingSource;
@@ -38,7 +39,8 @@ return [
     'capabilities' => [
         // WP-41: the legacy driver of `GET /reference` and `GET /cities`; the defaults stay `stub` until WP-48.
         'reference' => ['contract' => ReferenceSource::class, 'drivers' => ['stub' => StubReferenceSource::class, 'legacy' => LegacyReferenceSource::class]],
-        'listings' => ['contract' => ListingSource::class, 'drivers' => ['stub' => StubListingSource::class]],
+        // WP-42: the legacy driver of the listing reads; contact and translation answer 503 there until WP-43.
+        'listings' => ['contract' => ListingSource::class, 'drivers' => ['stub' => StubListingSource::class, 'legacy' => LegacyListingSource::class]],
         'landing' => ['contract' => LandingSource::class, 'drivers' => ['stub' => StubLandingSource::class]],
     ],
 

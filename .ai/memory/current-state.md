@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-26 (WP-41 the legacy driver core on `feat/wp-41-legacy-driver`, env keys on `chore/wp-41-env-keys`; WP-40 merged as #124 `a987ecd`, env #125 `d650cac`; DEC-109 two development sessions)
+updated: 2026-11-27 (WP-42 listings through legacy on `feat/wp-42-listings-legacy`, env keys on `chore/wp-42-env-keys`; WP-41 merged as #128 `84a4387`, env #129 `1096636`; DEC-110)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
@@ -85,7 +85,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
     `DB_CONNECTION=pgsql DB_DATABASE=homi_test DB_HOST=127.0.0.1` → 1 362 passed; CI of `cca81c2`: `backend` pass
     (run 45845272293), `frontend` pass, `frontend-e2e` pass on attempt 2 (927 + 20 + 10; attempt 1 hit KI-63).
 
-- **WP-41 (branch `feat/wp-41-legacy-driver`; not merged at the time of writing, not deployed):**
+- **WP-41 (merged as #128 `84a4387`, env keys #129 `1096636`; not deployed, the key pending):**
   - **The legacy driver** of the reference capability is bound (`config/sources.php`); the defaults of
     `source.reference` and `source.cities` stay `stub` (WP-48 switches). `LegacyReferenceSource` answers both from
     legacy's `GET /api/meta` and `GET /api/cities` through `ReferenceTranslator` and `CityStatsTranslator`, cached
@@ -97,6 +97,22 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
   - **Fixtures:** `LEGACY_FAKE` (blank = on in local and testing; the API refuses to boot with it in production) makes
     the client answer from `resources/fixtures/legacy` through `LegacyFakeServer`'s own HTTP factory. Telescope keeps
     no entry of a legacy request.
+
+- **WP-42 (branch `feat/wp-42-listings-legacy`; not merged at the time of writing, not deployed):**
+  - **The legacy driver of the listing capability** is bound (`config/sources.php`); the six `source.listings.*`
+    defaults stay `stub`. `LegacyListingSource` answers feed, count, new-since, flow, map, card and previews from
+    legacy through the translators of `Legacy/Translators` (golden fixtures in `resources/fixtures/legacy`); shared
+    caches hold arrays, filled once under `{key}:fill`; previews share a 4 s limiter wait and end by 12 s (DEC-110).
+  - **The overlay on every driver** (`ListingOverlay`, `scoped`; skipped while `sources.native_stubs` is on): flags from
+    `OverlayData` (`NullOverlayData` bound, `viewed` from `listing_views`), hidden/blocked/vote exclusions, realtor
+    marks, `owner.entry`; `ViewRecorder` writes `listing_views` on a full card read.
+  - **Tables:** `listing_refs` (number, channel, post, pseudonymous author key — `AuthorKey`, HMAC with
+    `AUTHOR_KEY_SECRET`, never weakened once filed) and `listing_views` (two new migrations; they must run before the
+    code serves on staging and production).
+  - **`PhoneMasker`** reads numbers in rounds to a fixed point over the whole text, links included, never weaker than
+    WP-12's (property tests); `LinkGuard` drops links and names with nine digits.
+  - **Tests:** `php artisan test --compact` → 2 731 tests, 2 714 passed, 17 skipped (the Pgsql suite); on PostgreSQL
+    2 731 passed; the Pgsql suite 17 passed (on `e804673`, the integrator's run).
 
 ## Frontend (`frontend/`)
 - pnpm 11.24 workspace, Node 26, Next 16.4.5 × 3 apps on dev ports 3000/3001/3002, TypeScript ^6. `pnpm -r lint` and `pnpm -r typecheck` exit 0 (3 apps + 8 packages; on `fb4a2b2` of WP-23, merged in #68, and on `5fd06c9` of WP-24, merged in #71, where the packages are linted with the app's rules since #70).

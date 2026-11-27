@@ -52,7 +52,9 @@ interface ListingSource
 
     /**
      * @param  list<int>  $numbers
-     * @return array<int, ListingSummary> keyed by the asked number; unknown numbers are absent
+     * @return array<int, ListingSummary> keyed by the asked number; unknown numbers are absent. A number the source
+     *                                    knows but cannot give now fails the whole call, so no item vanishes from a
+     *                                    list unseen (DEC-110)
      *
      * @throws SourceUnavailable
      */

@@ -50,6 +50,22 @@ it('masks the phone numbers of every author-written field', function (): void {
         ->each->toContain('+998 ** *** ** 67')->not->toContain('000 00 67');
 });
 
+it('masks the author-written place, landmark, fact values and nearby notes too, and nothing HOMI writes', function (): void {
+    $raw = 'звоните +998 00 000 00 67';
+    $details = ListingDetails::fromArray(ListingArrays::details([
+        'place' => "Массив Ц-5, {$raw}", 'landmark' => $raw,
+        'facts' => [['key' => 'rooms', 'label' => 'Комнат', 'value' => '2'], ['key' => 'note', 'label' => 'Тел +998 00 000 00 68', 'value' => $raw]],
+        'nearby' => [['kind' => 'park', 'name' => 'Парк +998 00 000 00 69', 'km' => 0.4, 'note' => $raw]],
+    ]));
+
+    expect([$details->preview->place, $details->preview->landmark, $details->facts[1]->value, $details->nearby[0]->note])
+        ->each->toContain('+998 ** *** ** 67')->not->toContain('000 00 67')
+        ->and($details->facts[0]->value)->toBe('2')
+        ->and($details->facts[1]->label)->toBe('Тел +998 00 000 00 68')
+        ->and($details->nearby[0]->name)->toBe('Парк +998 00 000 00 69')
+        ->and($details->preview->districtName)->toBe('Юнусабадский');
+});
+
 it('keeps a price kind only when it is down_payment or business (BR-API-156, Q-API-065)', function (?string $kind, ?string $kept): void {
     expect(PriceInfo::fromArray(['display' => '$85 000', 'period' => null, 'alt' => null, 'notes' => [], 'usd' => 85000, 'kind' => $kind])->kind?->value)->toBe($kept);
 })->with([['down_payment', 'down_payment'], ['business', 'business'], ['installment', null], [null, null]]);

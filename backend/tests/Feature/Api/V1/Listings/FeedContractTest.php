@@ -97,7 +97,7 @@ it('needs a token with app:read', function (): void {
 });
 
 it('answers 503 when the flag names an unbound driver', function (): void {
-    Feature::globally()->activate('source.listings.feed', ['everyone' => 'legacy']);
+    Feature::globally()->activate('source.listings.feed', ['everyone' => 'native']);
 
     $this->getJson('/api/v1/listings?city=tashkent&deal=rent_long')->assertStatus(503)->assertJsonPath('code', 'source_unavailable');
 });

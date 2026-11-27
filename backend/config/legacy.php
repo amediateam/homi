@@ -19,7 +19,25 @@
 | - `breaker`: `failures` consecutive failures inside `window` seconds open it for `open_for` seconds; a `429` opens
 |   it for its `Retry-After`, at most `open_max`.
 | - `cache`: seconds; `last_good` is how long a last good answer of `GET /reference` and `GET /cities` is served
-|   while legacy fails (RK-25), and `after_failure` how long a failed refresh of either is not tried again.
+|   while legacy fails (RK-25), and `after_failure` how long a failed refresh of either is not tried again. The
+|   listings (WP-42): `card` per number, locale and currency; `count` per filters and locale, `flow` and `map` per
+|   filters, locale and currency (0 disables each); `not_found` how long a number legacy answered `404` for is not
+|   asked again; `fill_wait_ms` (`LEGACY_CACHE_FILL_WAIT_MS`) how long a request waits for another request that is
+|   filling the same cold entry before it reads legacy itself (0: it never waits).
+| - `media`: `public_url` is HOMI's proxy of the legacy photos (`LEGACY_MEDIA_PUBLIC_URL`, for example
+|   `https://<media host>/lm`); blank means photo lists are empty. `hosts` are the legacy hosts whose absolute photo
+|   addresses are rewritten too (a relative `/media/…` address always is): `LEGACY_MEDIA_HOSTS`, comma-separated,
+|   else the host of `base_url`.
+| - `fields.author_key`: the name of the card field that carries a stable author key, once the operator offers one
+|   (WP-02 point 6); blank means none.
+| - `previews.concurrency`: card previews read in parallel; `previews.max_wait_ms` (`LEGACY_PREVIEWS_MAX_WAIT_MS`): the
+|   limiter wait one batch of previews may spend in all (DEC-110: a personal list of 20 waits for every preview rather
+|   than losing some); `previews.background_wait_ms` (`LEGACY_PREVIEWS_BACKGROUND_WAIT_MS`): the same for a background
+|   batch, which waits for its share's places instead of failing at once; `previews.deadline_ms`
+|   (`LEGACY_PREVIEWS_DEADLINE_MS`): the most one batch may take in all, waits, retries and HTTP timeouts included —
+|   blank, 0 or not a number means 12 000, below the 15 s after which the Mini App gives a request up, so HOMI
+|   answers first; each pooled request then times out by the deadline, before one `timeout`; `feed.top_up_pages`:
+|   extra legacy pages one feed page may read when HOMI's own exclusions shrink it below half.
 | - `fake`: answer from `resources/fixtures/legacy` instead of the network. On by default in `local` and `testing`,
 |   off elsewhere; `SourceServiceProvider` refuses to boot with it in production.
 |
@@ -34,9 +52,18 @@ $value = static function (string $key, mixed $default): mixed {
 
 $fake = $value('LEGACY_FAKE', null);
 $ratePerSecond = $value('LEGACY_RATE_PER_SECOND', 5);
+$baseUrl = rtrim((string) $value('LEGACY_API_URL', 'https://legacy.invalid'), '/');
+$baseHost = parse_url($baseUrl, PHP_URL_HOST);
+$mediaHosts = $value('LEGACY_MEDIA_HOSTS', null);
+$timeout = 15;
+$previewsWait = $value('LEGACY_PREVIEWS_MAX_WAIT_MS', 4000);
+$previewsWait = is_numeric($previewsWait) && (int) $previewsWait >= 0 ? (int) $previewsWait : 4000;
+$backgroundWait = $value('LEGACY_PREVIEWS_BACKGROUND_WAIT_MS', 2000);
+$previewsDeadline = $value('LEGACY_PREVIEWS_DEADLINE_MS', null);
+$fillWait = $value('LEGACY_CACHE_FILL_WAIT_MS', 1000);
 
 return [
-    'base_url' => rtrim((string) $value('LEGACY_API_URL', 'https://legacy.invalid'), '/'),
+    'base_url' => $baseUrl,
 
     'service_key' => (string) $value('LEGACY_SERVICE_KEY', ''),
 
@@ -55,7 +82,7 @@ return [
         'name' => (string) $value('LEGACY_CURRENCY_NAME', 'currency'),
     ],
 
-    'timeout' => 15,
+    'timeout' => $timeout,
     'connect_timeout' => 5,
 
     'retry' => [
@@ -80,8 +107,35 @@ return [
         'reference' => 600,
         'cities' => 600,
         'card' => 60,
+        'count' => 30,
+        'flow' => 60,
+        'map' => 30,
+        'not_found' => 60,
+        'fill_wait_ms' => is_numeric($fillWait) && (int) $fillWait >= 0 ? (int) $fillWait : 1000,
         'last_good' => 86_400,
         'after_failure' => 60,
+    ],
+
+    'media' => [
+        'public_url' => rtrim((string) $value('LEGACY_MEDIA_PUBLIC_URL', ''), '/'),
+        'hosts' => is_string($mediaHosts)
+            ? array_values(array_filter(array_map(fn (string $host): string => strtolower(trim($host)), explode(',', $mediaHosts)), fn (string $host): bool => $host !== ''))
+            : (is_string($baseHost) && $baseHost !== '' ? [strtolower($baseHost)] : []),
+    ],
+
+    'fields' => [
+        'author_key' => '',
+    ],
+
+    'previews' => [
+        'concurrency' => 5,
+        'max_wait_ms' => $previewsWait,
+        'background_wait_ms' => is_numeric($backgroundWait) && (int) $backgroundWait >= 0 ? (int) $backgroundWait : 2000,
+        'deadline_ms' => is_numeric($previewsDeadline) && (int) $previewsDeadline > 0 ? (int) $previewsDeadline : 12_000,
+    ],
+
+    'feed' => [
+        'top_up_pages' => 2,
     ],
 
     'fake' => $fake === null

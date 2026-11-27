@@ -1,0 +1,134 @@
+{
+    "id": 100005,
+    "title": "1-комн. квартира, 38 м² · Яккасарай",
+    "short_title": "1-комн. квартира, 38 м²",
+    "price": "$45/сутки (≈ 0,6 млн сум)",
+    "price_kind": null,
+    "favorite": false,
+    "viewed": false,
+    "district_name": "Яккасарай",
+    "place": null,
+    "landmark": null,
+    "metro": "Ойбек",
+    "metro_km": 0.9,
+    "center_km": 2.4,
+    "area_total": 38,
+    "floor": 5,
+    "floors_total": 9,
+    "rooms": 1,
+    "pets_ok": false,
+    "is_owner": true,
+    "owner_verified": false,
+    "photos_preview": [
+        "https://legacy.invalid/media/100005/1.jpg?e=1795132800&s=e928b4c0f6a604664ea3dca6ef715406",
+        "https://legacy.invalid/media/100005/2.jpg?e=1795132800&s=6d74be34a61573af33850f2a820259bc",
+        "https://legacy.invalid/media/100005/3.jpg?e=1795132800&s=8803fd669ec7f9e01a9fd5459afe684e"
+    ],
+    "photos_count": 4,
+    "video": null,
+    "age": "Опубликовано · вчера",
+    "posted_at": "2026-11-13T08:10:00+00:00",
+    "status_text": null,
+    "market": "Вторичка",
+    "median_delta": null,
+    "median_tone": null,
+    "lat": 41.29321,
+    "lon": 69.25817,
+    "deal_type": "rent_daily",
+    "market_code": "secondary",
+    "photos": [
+        "https://legacy.invalid/media/100005/1.jpg?e=1795132800&s=e928b4c0f6a604664ea3dca6ef715406",
+        "https://legacy.invalid/media/100005/2.jpg?e=1795132800&s=6d74be34a61573af33850f2a820259bc",
+        "https://legacy.invalid/media/100005/3.jpg?e=1795132800&s=8803fd669ec7f9e01a9fd5459afe684e",
+        "https://legacy.invalid/media/100005/4.jpg?e=1795132800&s=79bb8cf266e5f53a129f04957c3eca94"
+    ],
+    "facts": [
+        {
+            "key": "type",
+            "label": "Тип",
+            "value": "Квартира"
+        },
+        {
+            "key": "rooms",
+            "label": "Комнат",
+            "value": "1"
+        },
+        {
+            "key": "area",
+            "label": "Площадь",
+            "value": "38 м²"
+        },
+        {
+            "key": "floor",
+            "label": "Этаж",
+            "value": "5 из 9"
+        }
+    ],
+    "nearby": [
+        {
+            "kind": "park",
+            "name": "Парк",
+            "km": 0.4,
+            "note": "через дорогу"
+        },
+        {
+            "kind": "school",
+            "name": "Школа",
+            "km": 0.9,
+            "note": null
+        }
+    ],
+    "stats": {
+        "days_listed": 3,
+        "publications": 2,
+        "channels": 2,
+        "views": 41
+    },
+    "history": [
+        {
+            "at": "2026-11-10T07:00:00+00:00",
+            "channel": "stub_channel_a",
+            "url": "https://t.me/stub_channel_a/3983",
+            "text": null,
+            "kind": "published",
+            "price_usd": 49,
+            "change_pct": null
+        },
+        {
+            "at": "2026-11-13T08:10:00+00:00",
+            "channel": "stub_channel_a",
+            "url": "https://t.me/stub_channel_a/4005",
+            "text": "Снизил цену до $45",
+            "kind": "price_down",
+            "price_usd": 45,
+            "change_pct": -7.4
+        }
+    ],
+    "geo_radius_m": 500,
+    "author": {
+        "kind": "phone",
+        "label": "+998 ** *** ** 05",
+        "count": 3
+    },
+    "call_url": "https://legacy.invalid/call/fixture-100005?e=1795132800",
+    "contact_url": "https://t.me/stub_author_3",
+    "contact_paid": false,
+    "summary": "1-комн. квартира, 38 м². Рядом метро Ойбек.",
+    "sources": [
+        {
+            "handle": "stub_channel_a",
+            "url": "https://t.me/stub_channel_a/4005"
+        }
+    ],
+    "original_text": "Сдаётся 1-комн. квартира, 38 м². Чисто, уютно.",
+    "original_url": "https://t.me/stub_channel_a/4005",
+    "post_deleted": false,
+    "offers": [],
+    "phone": "+998000000005",
+    "phone_display": "+998 00 000-00-05",
+    "owner": "Хозяин",
+    "median": false,
+    "price_usd": 45,
+    "response_minutes": null,
+    "owner_description": null
+}
