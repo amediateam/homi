@@ -56,3 +56,20 @@ it('keeps a channel or author name only while it holds at most eight digits (L1)
     'nine digits among letters' => ['a1b2c3d4e5f6g7h8i9', null],
     'null' => [null, null],
 ]);
+
+it('reads the spaces, dashes and fullwidth digits of PhoneMasker as a number\'s separators and digits (review of ec369f2, point 2)', function (string $url): void {
+    expect(LinkGuard::safe($url))->toBeNull();
+})->with([
+    'en dashes splitting the number' => ["https://example.invalid/?tel=998\u{2013}00\u{2013}765\u{2013}43\u{2013}21"],
+    'encoded en dashes' => ['https://example.invalid/?tel=998%E2%80%9300%E2%80%93765%E2%80%9343%E2%80%9321'],
+    'minus signs' => ["https://example.invalid/?tel=998\u{2212}00\u{2212}765\u{2212}43\u{2212}21"],
+    'no-break spaces' => ["https://example.invalid/?tel=998\u{00A0}00\u{00A0}765\u{00A0}43\u{00A0}21"],
+    'fullwidth digits' => ['https://example.invalid/?tel=９９８００７６５４３２１'],
+    'encoded fullwidth digits' => ['https://example.invalid/?tel=%EF%BC%99%EF%BC%99%EF%BC%98%EF%BC%90%EF%BC%90%EF%BC%97%EF%BC%96%EF%BC%95%EF%BC%94%EF%BC%93%EF%BC%92%EF%BC%91'],
+]);
+
+it('counts fullwidth digits in a channel or author name', function (): void {
+    expect(LinkGuard::safeName('@９９８００７６５４３２１'))->toBeNull()
+        ->and(LinkGuard::safeName('stub_２０２４'))->toBe('stub_２０２４')
+        ->and(LinkGuard::safe('https://t.me/a９９８００７６５４３２１/12'))->toBeNull();
+});

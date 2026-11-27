@@ -26,7 +26,7 @@ function sensitiveFrames(): array
 {
     $frames = [
         AuthorKey::class => [
-            'fromCard' => ['legacyCard'], 'derive' => ['card', 'secret'], 'e164' => ['phone'], 'phoneHash' => ['phone', 'secret'],
+            'fromCard' => ['legacyCard'], 'derive' => ['card', 'secret'], 'e164' => ['phone'], 'blank' => ['phone'], 'phoneHash' => ['phone', 'secret'],
             'operatorValue' => ['value'], 'kindOf' => ['card'],
         ],
         SourceRefParser::class => ['parse' => ['url'], 'parts' => ['url'], 'fromCard' => ['item']],
@@ -48,7 +48,10 @@ function sensitiveFrames(): array
         FlowTranslator::class => ['toData' => ['answer'], 'translate' => ['answer']],
         NewCountTranslator::class => ['count' => ['answer']],
         LinkGuard::class => ['safeName' => ['name'], 'safe' => ['url'], 'channelOf' => ['path'], 'decoded' => ['url']],
-        PhoneMasker::class => ['mask' => ['text'], 'maskText' => ['text'], 'maskLink' => ['link'], 'lastTwo' => ['number'], 'digits' => ['number']],
+        PhoneMasker::class => [
+            'mask' => ['text'], 'asciiDigits' => ['text'], 'maskNumbers' => ['text'], 'maskBare' => ['text'], 'maskLinks' => ['text'],
+            'maskLink' => ['link'], 'everyDigit' => ['text'], 'lastTwo' => ['phone'], 'digits' => ['phone'],
+        ],
     ];
     $cases = [];
 

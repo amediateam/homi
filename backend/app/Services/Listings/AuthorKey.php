@@ -15,21 +15,23 @@ use Illuminate\Support\Facades\Log;
  * | ---------------------------------------------------------------------- | ------------------------------------- | --------------- |
  * | the operator's stable author key (the field `legacy.fields.author_key`) | `legacy:<value>`                      | `author.kind`   |
  * | a phone, in E.164                                                      | `phone:` + 32 hex of HMAC-SHA-256      | `phone`         |
+ * | a phone that is not one number (two numbers, a name with it, slashes)  | none                                  | —               |
  * | no phone, a public source channel (`SourceRefParser::fromCard()`)        | `source:<channel>`, lower-cased       | `source`        |
  * | neither                                                                | none                                  | —               |
  *
  * The HMAC's key is `contacts.author_key_secret`. Blank or shorter than `MIN_SECRET_BYTES`, it derives no `phone:` key
  * (an HMAC with a short key could be reversed over the phone space), and a card with a phone is then filed under no
  * author at all, never under its channel: one channel carries many phone authors, and one `source:` key for all of
- * them would let a user who blocks one hide every other. A warning says so at most once a minute. `source:` stays for a
- * card without a phone.
+ * them would let a user who blocks one hide every other. A warning says so at most once a minute. A phone `e164()`
+ * cannot read as one number is filed under no author either, for the same reason, without a warning. `source:` stays
+ * for a card without a phone: its `phone` is missing, `null` or blank.
  *
  * Counted as absent: an operator value that is not printable ASCII or too long for the column, and one whose digits
  * form a phone number — `e164()` reads it as one (eight digits or more, separators left out), or nine digits stand in a
  * row once the separators a number is written with are left out (`LinkGuard::safe()`'s rule) — so no number is filed
- * raw as `legacy:+998…`; such a card falls through to the phone rule. Also absent: a kind longer than `MAX_KIND`, and a
- * phone that is not a number. The key is a keyed hash of a person's number, so it is personal data for the security
- * review of WP-70, not an opaque id.
+ * raw as `legacy:+998…`; such a card falls through to the phone rule. Also absent: a kind longer than `MAX_KIND`. The
+ * key is a keyed hash of a person's number, so it is personal data for the security review of WP-70, not an opaque
+ * id.
  */
 final readonly class AuthorKey
 {
@@ -98,7 +100,8 @@ final readonly class AuthorKey
             return new self(self::LEGACY.$operator, self::kindOf($card));
         }
 
-        $phone = self::e164($card['phone'] ?? null);
+        $written = $card['phone'] ?? null;
+        $phone = self::e164($written);
 
         if ($phone !== null) {
             if (strlen($secret) >= self::MIN_SECRET_BYTES) {
@@ -110,14 +113,20 @@ final readonly class AuthorKey
             return null;
         }
 
+        if (! self::blank($written)) {
+            return null;
+        }
+
         $channel = SourceRefParser::fromCard($card)['channel'] ?? null;
 
         return $channel === null ? null : new self(self::SOURCE.$channel, 'source');
     }
 
     /**
-     * A phone number in E.164 (`+` and 8 to 15 digits), or `null` when the value is not one. Spaces, dashes, dots and
-     * brackets are dropped; nine digits without a `+` are an Uzbek number without its country code (`998`).
+     * A phone number in E.164 (`+` and 8 to 15 digits), or `null` when the value is not one. Whitespace and the
+     * separators of `PhoneMasker::SEPARATORS` (dashes, the minus sign, dots, underscores, brackets) are dropped,
+     * fullwidth digits and plus are read as ASCII; nine digits without a `+` are an Uzbek number without its country
+     * code (`998`).
      */
     public static function e164(#[\SensitiveParameter] mixed $phone): ?string
     {
@@ -125,13 +134,19 @@ final readonly class AuthorKey
             return null;
         }
 
-        $compact = (string) preg_replace('/[\s\-().]/u', '', $phone);
+        $compact = (string) preg_replace('/[\s'.PhoneMasker::SEPARATORS.']/u', '', PhoneMasker::asciiDigits(str_replace('＋', '+', $phone)));
 
         if (preg_match('/^(\+?)(\d{8,15})$/', $compact, $match) !== 1) {
             return null;
         }
 
         return '+'.($match[1] === '' && strlen($match[2]) === 9 ? '998'.$match[2] : $match[2]);
+    }
+
+    /** A phone value that says there is no phone: missing, `null`, `false`, or only whitespace. */
+    private static function blank(#[\SensitiveParameter] mixed $phone): bool
+    {
+        return $phone === null || $phone === false || (is_string($phone) && preg_match('/^\s*$/u', $phone) === 1);
     }
 
     private static function phoneHash(#[\SensitiveParameter] string $phone, #[\SensitiveParameter] string $secret): string

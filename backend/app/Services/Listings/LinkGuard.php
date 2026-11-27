@@ -8,16 +8,17 @@ namespace App\Services\Listings;
  * phone number, so no number reaches the card through a link either. Pure.
  *
  * Dropped: any scheme but `https` (`tel:`, `http:`); a WhatsApp link (`wa.me`, `api.whatsapp.com`); a Telegram phone
- * link (`t.me/+…`, `telegram.me/+…`); and any link with nine digits in a row once it is percent-decoded and the
- * separators a number is written with are left out (whitespace, `-`, `.`, `_`, `(`, `)`, `+`), so
- * `https://wa.me/+998-00-765-43-21` and `…?phone=%2B998%2000…` are caught whatever their host; and a link that does
- * not decode to valid UTF-8, which cannot be checked. A slash is not such a separator: a post link keeps its channel
- * and post id apart (`https://t.me/chan_2024/1234567` is kept).
+ * link (`t.me/+…`, `telegram.me/+…`); and any link with nine digits in a row once it is percent-decoded, its
+ * fullwidth digits are read as ASCII (`PhoneMasker::asciiDigits()`) and the separators a number is written with are
+ * left out (whitespace, `+` and `PhoneMasker::SEPARATORS`: the dashes, the minus sign, `.`, `_`, `(`, `)`), so
+ * `https://wa.me/+998-00-765-43-21`, `…?phone=%2B998%2000…` and `…?tel=998–00–765…` are caught whatever their host;
+ * and a link that does not decode to valid UTF-8, which cannot be checked. A slash is not such a separator: a post
+ * link keeps its channel and post id apart (`https://t.me/chan_2024/1234567` is kept).
  *
  * `safeName()` is the same rule for a channel or author name a card shows (`source_ref.channel`, `sources[].handle`,
- * `price_history[].channel`): a name that holds nine digits or more, wherever they stand (`@998901234567`,
- * `ivan_998_90_123_45_67`), could be a phone number and is never shown. A Telegram link whose channel is such a name
- * is dropped too.
+ * `price_history[].channel`): a name that holds nine digits or more, wherever they stand and fullwidth ones counted
+ * (`@998901234567`, `ivan_998_90_123_45_67`), could be a phone number and is never shown. A Telegram link whose
+ * channel is such a name is dropped too.
  */
 final class LinkGuard
 {
@@ -35,7 +36,7 @@ final class LinkGuard
     /** The channel or author name when a card may show it, else `null`. */
     public static function safeName(#[\SensitiveParameter] ?string $name): ?string
     {
-        return $name === null || preg_match_all('/\d/', $name) > self::NAME_DIGITS_MAX ? null : $name;
+        return $name === null || preg_match_all('/[0-9]/', PhoneMasker::asciiDigits($name)) > self::NAME_DIGITS_MAX ? null : $name;
     }
 
     /** The link when a card may carry it, else `null`. */
@@ -48,7 +49,7 @@ final class LinkGuard
         $decoded = self::decoded($url);
         $host = strtolower((string) parse_url($url, PHP_URL_HOST));
         $path = (string) parse_url($decoded, PHP_URL_PATH);
-        $flat = preg_replace('/[\s\-._()+]+/u', '', $decoded);
+        $flat = preg_replace('/[\s+'.PhoneMasker::SEPARATORS.']+/u', '', PhoneMasker::asciiDigits($decoded));
 
         if ($flat === null
             || in_array($host, self::PHONE_HOSTS, true)

@@ -116,13 +116,38 @@ it('files a phone as phone: and the first 32 hex of the HMAC of its E.164 form',
     'with brackets' => ['+998 (00) 123.45.67'],
 ]);
 
-it('files a card without a usable phone under its source channel, lower-cased', function (mixed $phone): void {
+it('files a card without a phone under its source channel, lower-cased', function (mixed $phone): void {
     expect(AuthorKey::fromCard(rawCard(['phone' => $phone])))->toEqual(new AuthorKey('source:stub_channel_a', 'source'));
 })->with([
     'no phone' => [null],
-    'not text' => [998001234567],
+    'an empty phone' => [''],
+    'a blank phone' => [" \u{00A0} "],
+]);
+
+it('files no author for a card whose phone is not one number, never its channel (review of ec369f2, point 3)', function (mixed $phone): void {
+    $warnings = authorKeyWarnings(function () use ($phone): void {
+        expect(AuthorKey::fromCard(rawCard(['phone' => $phone])))->toBeNull();
+    });
+
+    expect($warnings)->toBe([]);
+})->with([
+    'two numbers' => ['+998001234567, +998007654321'],
+    'with a name' => ['+998001234567 Иван'],
+    'with slashes' => ['+998 00 123/45/67'],
     'not a number' => ['call me'],
     'too short' => ['+99812'],
+    'not text' => [998001234567],
+]);
+
+it('reads the separators and fullwidth digits of PhoneMasker in a phone (review of ec369f2, point 2)', function (string $phone): void {
+    expect(AuthorKey::fromCard(rawCard(['phone' => $phone])))->toEqual(new AuthorKey(phoneKey('+998001234567'), 'phone'));
+})->with([
+    'no-break spaces' => ["+998\u{00A0}00\u{00A0}123\u{00A0}45\u{00A0}67"],
+    'thin spaces' => ["+998\u{2009}00\u{2009}123\u{2009}45\u{2009}67"],
+    'en dashes' => ["+998 00 123\u{2013}45\u{2013}67"],
+    'non-breaking hyphens' => ["+998-00-123\u{2011}45\u{2011}67"],
+    'underscores' => ['998_00_123_45_67'],
+    'fullwidth digits' => ['＋９９８００１２３４５６７'],
 ]);
 
 it('takes the source channel from the first source link when the card has no original link', function (): void {
