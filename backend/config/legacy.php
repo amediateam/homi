@@ -34,8 +34,10 @@
 |   number is variant A, else a call link variant B, else no contact; any other value is `auto`. `link_ttl`: seconds
 |   a legacy call link is answered as valid (`expires_at` of variant B). `link_hosts` (`LEGACY_CONTACT_LINK_HOSTS`,
 |   comma-separated, lower-cased): the hosts besides that of `base_url` an absolute call link of variant B may point
-|   to, compared exactly; blank means only the host of `base_url` (a link to another host is refused with a warning
-|   naming that host, at most once a minute per host). A relative link is joined to the origin of `base_url`.
+|   to, compared exactly, each `host` (port 443) or `host:port` (1…65535; any other form adds nothing); blank means
+|   only the host of `base_url`, on its own port (443 when it names none). A link to another host or port is refused
+|   with a warning naming that host when it is a host name without a run of seven digits (else `host_invalid`), at
+|   most once a minute per host. A relative link is joined to the origin of `base_url`.
 | - `translation` (WP-43): how `POST /api/listings/{id}/translate` names the target language under the service key
 |   (WP-02 point 8, open): `via` (`LEGACY_TRANSLATION_VIA`) `locale` (default) — the language selector of every call
 |   (`locale` above; while that sends no language, `locale.via` neither `header` nor `query`, translation is

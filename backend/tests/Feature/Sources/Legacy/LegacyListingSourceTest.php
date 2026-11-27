@@ -9,10 +9,13 @@ use App\Exceptions\Sources\SourceUnavailable;
 use App\Models\User;
 use App\Services\Search\ListingQuery;
 use App\Services\Search\SearchFilters;
+use App\Services\Sources\Contracts\ReferenceSource;
+use App\Services\Sources\Data\ReferenceData;
 use App\Services\Sources\Legacy\LegacyClient;
 use App\Services\Sources\Legacy\LegacyListingSource;
 use App\Services\Sources\Legacy\Translators\FiltersTranslator;
 use App\Services\Sources\SourceContext;
+use App\Services\Sources\Stub\StubReferenceSource;
 use Illuminate\Http\Client\Request;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Cache;
@@ -921,3 +924,32 @@ it('reads the district codes without the caller\'s stub scenario', function (str
         ->assertJsonPath('meta.source', 'legacy')
         ->assertJsonPath('data.district.code', LegacyFixtures::stubListing(100001)['district']['code']);
 })->with(['rate_limited', 'forbidden', 'unauthenticated', 'source_unavailable']);
+
+it('reads the district codes in the context it was given, a foreground one (the call page) included, without its scenario', function (bool $foreground): void {
+    LegacyListingsHttp::fake();
+    $stub = app(StubReferenceSource::class);
+    $seen = new ArrayObject;
+    app()->instance(StubReferenceSource::class, new class($stub, $seen) implements ReferenceSource
+    {
+        public function __construct(private readonly ReferenceSource $inner, private readonly ArrayObject $seen) {}
+
+        public function reference(SourceContext $context): ReferenceData
+        {
+            $this->seen[] = $context;
+
+            return $this->inner->reference($context);
+        }
+
+        public function cities(SourceContext $context): array
+        {
+            return $this->inner->cities($context);
+        }
+    });
+
+    $context = new SourceContext('ru', 'UZS', scenario: 'source_unavailable', foreground: $foreground);
+    legacyListings()->details(100001, $context);
+
+    expect($seen->getArrayCopy())->not->toBe([])
+        ->and(array_map(fn (SourceContext $read): array => [$read->locale, $read->currency, $read->user, $read->scenario, $read->foreground], $seen->getArrayCopy()))
+        ->each->toBe(['ru', 'UZS', null, null, $foreground]);
+})->with(['a foreground context' => [true], 'a background one' => [false]]);

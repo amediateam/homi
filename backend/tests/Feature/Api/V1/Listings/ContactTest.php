@@ -195,7 +195,7 @@ it('variant B passes an absolute https link on and answers 503 for anything else
     'too long' => ['/call/'.str_repeat('a', 2050), 503],
 ]);
 
-it('variant B refuses a link to any host but legacy\'s and those of legacy.contact.link_hosts: 404, a warning that names the host only', function (string $url, string $host): void {
+it('variant B refuses a link to any host and port but legacy\'s and those of legacy.contact.link_hosts: 404, a warning that names a host name only', function (string $url, array $logged): void {
     onLegacyContact();
     Event::fake([ContactDisclosed::class]);
     LegacyListingsHttp::answer(fn (Request $request): ?PromiseInterface => str_ends_with(LegacyListingsHttp::path($request), '/call') ? Factory::response(['url' => $url]) : null);
@@ -205,11 +205,13 @@ it('variant B refuses a link to any host but legacy\'s and those of legacy.conta
     $warnings = array_values(array_filter($lines, fn (array $line): bool => $line['level'] === 'warning'));
 
     expect($warnings)->toHaveCount(1)
-        ->and(array_diff_key($warnings[0]['context'], ['request_id' => true]))->toBe(['path' => '/api/listings/{n}/call', 'host' => $host])
+        ->and(array_diff_key($warnings[0]['context'], ['request_id' => true]))->toBe(['path' => '/api/listings/{n}/call', ...$logged])
         ->and($serialised)->not->toContain('/x/call')
         ->and($serialised)->not->toContain('t0ken-5f2a')
         ->and($serialised)->not->toContain('phone=')
-        ->and($serialised)->not->toContain('https://');
+        ->and($serialised)->not->toContain('https://')
+        ->and($serialised)->not->toContain('901234567')
+        ->and(strtolower($serialised))->not->toContain('secret');
 
     foreach (RAW_PHONE_FORMS as $digits) {
         expect($serialised)->not->toContain($digits);
@@ -217,11 +219,61 @@ it('variant B refuses a link to any host but legacy\'s and those of legacy.conta
 
     Event::assertNotDispatched(ContactDisclosed::class);
 })->with([
-    'another host' => ['https://Attacker.Example/x/call/t0ken-5f2a?phone=998001234567', 'attacker.example'],
-    'a host ending in legacy\'s' => ['https://evillegacy.test/x/call/t0ken-5f2a?phone=998001234567', 'evillegacy.test'],
-    'a subdomain of legacy\'s host' => ['https://call.legacy.test/x/call/t0ken-5f2a#+998001234567', 'call.legacy.test'],
-    'legacy\'s host as a subdomain' => ['https://legacy.test.attacker.example/x/call/t0ken-5f2a', 'legacy.test.attacker.example'],
-    'legacy\'s host with a trailing dot' => ['https://legacy.test./x/call/t0ken-5f2a', 'legacy.test.'],
+    'another host' => ['https://Attacker.Example/x/call/t0ken-5f2a?phone=998001234567', ['host' => 'attacker.example']],
+    'a host ending in legacy\'s' => ['https://evillegacy.test/x/call/t0ken-5f2a?phone=998001234567', ['host' => 'evillegacy.test']],
+    'a subdomain of legacy\'s host' => ['https://call.legacy.test/x/call/t0ken-5f2a#+998001234567', ['host' => 'call.legacy.test']],
+    'legacy\'s host as a subdomain' => ['https://legacy.test.attacker.example/x/call/t0ken-5f2a', ['host' => 'legacy.test.attacker.example']],
+    'legacy\'s host on another port' => ['https://legacy.test:8443/x/call/t0ken-5f2a', ['host' => 'legacy.test']],
+    'legacy\'s host on port 0' => ['https://legacy.test:0/x/call/t0ken-5f2a', ['host' => 'legacy.test']],
+    'legacy\'s host with a trailing dot: not a host name' => ['https://legacy.test./x/call/t0ken-5f2a', ['host_invalid' => true]],
+    'a number as the host' => ['https://+998901234567/x', ['host_invalid' => true]],
+    'an encoded path and query in the host' => ['https://evil.example%2f998901234567%3ft=SECRET/x', ['host_invalid' => true]],
+    'a run of seven digits in a host name' => ['https://call-9012345.attacker.example/x', ['host_invalid' => true]],
+]);
+
+it('variant B warns of refused links whose host it does not name at most once a minute in all', function (): void {
+    onLegacyContact();
+    $url = 'https://+998901234567/x';
+    LegacyListingsHttp::answer(function (Request $request) use (&$url): ?PromiseInterface {
+        return str_ends_with(LegacyListingsHttp::path($request), '/call') ? Factory::response(['url' => $url]) : null;
+    });
+
+    $lines = contactLogLines(function () use (&$url): void {
+        contactOf(100002)->assertNotFound();
+        $url = 'https://+998911234567/x';
+        contactOf(100002)->assertNotFound();
+        $url = 'https://attacker.example/x';
+        contactOf(100002)->assertNotFound();
+        $this->travel(61)->seconds();
+        $url = 'https://evil.example%2f1/x';
+        contactOf(100002)->assertNotFound();
+    });
+    $logged = array_map(fn (array $line): array => array_diff_key($line['context'], ['request_id' => true, 'path' => true]), array_values(array_filter($lines, fn (array $line): bool => $line['level'] === 'warning')));
+
+    expect($logged)->toBe([['host_invalid' => true], ['host' => 'attacker.example'], ['host_invalid' => true]]);
+});
+
+it('variant B pins the port: legacy\'s own (443 by default) or one a link_hosts entry names; a malformed entry allows nothing', function (string $base, array $linkHosts, string $url, int $status): void {
+    onLegacyContact();
+    $this->getJson('/api/v1/listings/100002')->assertOk();
+
+    config(['legacy.base_url' => $base, 'legacy.contact.link_hosts' => $linkHosts]);
+    Http::fake(['legacy.test:8443/*' => Http::response(['url' => $url])]);
+    LegacyListingsHttp::answer(fn (Request $request): ?PromiseInterface => str_ends_with(LegacyListingsHttp::path($request), '/call') ? Factory::response(['url' => $url]) : null);
+
+    contactOf(100002)->assertStatus($status);
+})->with([
+    'legacy\'s host on 443 named' => ['https://legacy.test', [], 'https://legacy.test:443/call/a', 200],
+    'legacy\'s host on another port' => ['https://legacy.test', [], 'https://legacy.test:8443/call/a', 404],
+    'legacy\'s host on port 0' => ['https://legacy.test', [], 'https://legacy.test:0/call/a', 404],
+    'the base\'s own port' => ['https://legacy.test:8443', [], 'https://legacy.test:8443/call/a', 200],
+    'the default port while the base names another' => ['https://legacy.test:8443', [], 'https://legacy.test/call/a', 404],
+    'a link host with its port' => ['https://legacy.test', ['calls.kvadro.invalid:8443'], 'https://calls.kvadro.invalid:8443/call/a', 200],
+    'a link host without the port its entry names' => ['https://legacy.test', ['calls.kvadro.invalid:8443'], 'https://calls.kvadro.invalid/call/a', 404],
+    'a link host on a port its entry does not name' => ['https://legacy.test', ['calls.kvadro.invalid'], 'https://calls.kvadro.invalid:8443/call/a', 404],
+    'a link host entry on port 0' => ['https://legacy.test', ['calls.kvadro.invalid:0'], 'https://calls.kvadro.invalid:0/call/a', 404],
+    'a link host entry with a port out of range' => ['https://legacy.test', ['calls.kvadro.invalid:99999'], 'https://calls.kvadro.invalid/call/a', 404],
+    'a link host entry with a path' => ['https://legacy.test', ['calls.kvadro.invalid/x'], 'https://calls.kvadro.invalid/call/a', 404],
 ]);
 
 it('variant B warns of a refused link host at most once a minute per host', function (): void {

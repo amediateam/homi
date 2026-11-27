@@ -113,7 +113,8 @@ use LogicException;
  * entry is cached; on a miss — expired, or unreadable after the application key changed — one caller reads the card
  * again and caches it (single-flight on the entry's key; legacy's daily limit is then `503`, not the card's `429`).
  * Variant B asks `GET /api/listings/{n}/call` and answers its `url` — a path joined to the origin of
- * `legacy.base_url`, an absolute one only `https` on legacy's host or one of `legacy.contact.link_hosts` (`callUrl()`)
+ * `legacy.base_url`, an absolute one only `https` on legacy's host and port or a host and port of
+ * `legacy.contact.link_hosts` (`callUrl()`)
  * — valid for `legacy.contact.link_ttl` s, with legacy's `phone_display` only when it reads as one number; a `404`
  * there, or a link to another host, is `404 contact_unavailable`. A card without either is `ContactUnavailable`, and
  * so is a number legacy answered `404` for (its entry is dropped then). `hasContact()` is the first half of
@@ -145,8 +146,14 @@ final class LegacyListingSource implements ListingSource
     /** The longest call link taken from legacy. */
     private const int MAX_CALL_URL = 2048;
 
-    /** The longest host a warning names (a DNS name has at most 253 characters). */
-    private const int MAX_LOGGED_HOST = 253;
+    /**
+     * A host a warning may name: a DNS name of at most 253 characters, lower-case labels of letters, digits and inner
+     * hyphens, no trailing dot (`callUrl()` also refuses one with a run of seven digits or more).
+     */
+    private const string LOGGABLE_HOST = '/^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/D';
+
+    /** The port of an `https` address that names none. */
+    private const int HTTPS_PORT = 443;
 
     public function __construct(
         private readonly LegacyClient $client,
@@ -655,12 +662,16 @@ final class LegacyListingSource implements ListingSource
     /**
      * The `url` of legacy's call answer as an absolute `https` address. A path (`/call/…`) is joined to the origin of
      * `legacy.base_url` (its scheme, host and port, never its path). An absolute link must be `https` without a user
-     * or a password, on the host of `legacy.base_url` or one of `legacy.contact.link_hosts`, compared lower-cased and
-     * exactly (no suffix match): a link to any other host leaves the listing without a usable link
-     * (`ContactUnavailable`), with a warning at most once a minute per host that names the path template and that
-     * host, lower-cased — never its path, query or fragment, nor the whole address — so the operator can tell which
-     * host belongs in `LEGACY_CONTACT_LINK_HOSTS`. A backslash anywhere, a control character or a space, and every
-     * other form are a contract error naming `url`.
+     * or a password, on a host and port of `linkOrigins()` — the host of `legacy.base_url` on its port (443 when it
+     * names none), or an entry of `legacy.contact.link_hosts` on the port it names (443 when it names none) — compared
+     * lower-cased and exactly (no suffix match); the link's port is 443 when it names none, so `:0` and every other
+     * port are refused. A link to any other host or port leaves the listing without a usable link
+     * (`ContactUnavailable`), with a warning that names the path template and the host, lower-cased — never its port,
+     * path, query or fragment, nor the whole address — at most once a minute per host, so the operator can tell which
+     * host belongs in `LEGACY_CONTACT_LINK_HOSTS`; only a host name (`LOGGABLE_HOST`) without a run of seven digits or
+     * more (a phone number) is named: any other host is logged as `host_invalid: true`, at most once a minute for all
+     * of them. A backslash anywhere, a control character or a space, and every other form are a contract error naming
+     * `url`.
      *
      * @param  array<array-key, mixed>  $answer
      *
@@ -687,9 +698,11 @@ final class LegacyListingSource implements ListingSource
 
         $host = strtolower($parts['host']);
 
-        if (! in_array($host, self::linkHosts(), true)) {
-            if ($this->cache->add(self::PREFIX.'once:link_host:'.sha1($host), 1, 60)) {
-                Log::warning('Legacy gave a call link to a host HOMI does not allow: the listing has no usable link.', ['path' => self::CALL_PATH, 'host' => substr($host, 0, self::MAX_LOGGED_HOST)]);
+        if (! in_array($host.':'.($parts['port'] ?? self::HTTPS_PORT), self::linkOrigins(), true)) {
+            $named = preg_match(self::LOGGABLE_HOST, $host) === 1 && preg_match('/\d{7,}/', $host) === 0;
+
+            if ($this->cache->add(self::PREFIX.'once:link_host:'.($named ? sha1($host) : 'invalid'), 1, 60)) {
+                Log::warning('Legacy gave a call link to a host HOMI does not allow: the listing has no usable link.', ['path' => self::CALL_PATH, ...($named ? ['host' => $host] : ['host_invalid' => true])]);
             }
 
             throw new ContactUnavailable;
@@ -711,21 +724,33 @@ final class LegacyListingSource implements ListingSource
     }
 
     /**
-     * The hosts a call link of variant B may point to, lower-cased: the host of `legacy.base_url`, read at call time,
-     * and those of `legacy.contact.link_hosts` (`LEGACY_CONTACT_LINK_HOSTS`).
+     * The hosts and ports a call link of variant B may point to, as `host:port`, lower-cased: the host of
+     * `legacy.base_url` on its port (443 when it names none), read at call time, and each entry of
+     * `legacy.contact.link_hosts` (`LEGACY_CONTACT_LINK_HOSTS`): `host` on 443, or `host:port` on that port. A port
+     * outside 1…65535 (`:0` among them) and an entry of any other form (a path, a user, a scheme) add nothing.
      *
      * @return list<string>
      */
-    private static function linkHosts(): array
+    private static function linkOrigins(): array
     {
-        $base = parse_url(Config::string('legacy.base_url'), PHP_URL_HOST);
-        $hosts = array_filter(Config::array('legacy.contact.link_hosts'), is_string(...));
+        $base = parse_url(Config::string('legacy.base_url'));
+        $origins = [];
 
-        if (is_string($base) && $base !== '') {
-            $hosts[] = $base;
+        if (is_array($base) && ($base['host'] ?? '') !== '' && ($base['port'] ?? self::HTTPS_PORT) >= 1) {
+            $origins[] = strtolower($base['host']).':'.($base['port'] ?? self::HTTPS_PORT);
         }
 
-        return array_values(array_unique(array_map(fn (string $host): string => strtolower(trim($host)), $hosts)));
+        foreach (Config::array('legacy.contact.link_hosts') as $entry) {
+            if (is_string($entry) && preg_match('/^([a-z0-9._-]+)(?::(\d{1,5}))?$/D', strtolower(trim($entry)), $match) === 1) {
+                $port = isset($match[2]) ? (int) $match[2] : self::HTTPS_PORT;
+
+                if ($port >= 1 && $port <= 65_535) {
+                    $origins[] = "{$match[1]}:{$port}";
+                }
+            }
+        }
+
+        return array_values(array_unique($origins));
     }
 
     /**
@@ -1012,11 +1037,12 @@ final class LegacyListingSource implements ListingSource
     /**
      * The district matcher of the context's language over the reference capability; an unavailable reference source
      * gives one that matches nothing, so a district code is `null` and never a failed answer. The read is HOMI's own,
-     * so it goes without the caller's stub scenario, which names the outcome of the caller's method only.
+     * so it goes without the caller's stub scenario, which names the outcome of the caller's method only; it keeps the
+     * context's `foreground` flag, so a read for the call page is made as a user's call there too.
      */
     private function districts(SourceContext $context): DistrictMatcher
     {
-        $own = new SourceContext($context->locale, $context->currency, $context->user);
+        $own = new SourceContext($context->locale, $context->currency, $context->user, foreground: $context->foreground);
 
         try {
             return DistrictMatcher::fromSource($this->sources->reference('source.reference', $own)->source, $own);
