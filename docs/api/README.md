@@ -215,6 +215,27 @@ No card answer, full or `preview=1`, carries the author's number: numbers in lis
 `phone`, `phone_display` and `call_url` (DEC-52). A merged duplicate answers with another `number`; the client
 follows the answer.
 
+The three card actions (WP-43). `POST …/contact` answers in one of two forms, chosen per card while the operator's
+answer is open (`LEGACY_CONTACT_MODE=auto`): with the author's number, `phone` in E.164, `phone_display` and
+`call_url` pointing at HOMI's call page `<API origin>/call/<token>` (a signed token of ten minutes; a forwarded link
+reveals the internal user id and the listing number, never the phone); with only the operator's call link, `phone`
+and `phone_display` are `null` and `call_url` is the operator's page on its allowed host (the user sees the
+operator's page, and «Показать номер» opens it). The card's `contact.has_phone` is `true` in both forms; it can be
+`true` while the contact answers `404 contact_unavailable` for a refused link host. Every answered number counts in a
+per-user daily quota (Asia/Tashkent day; off while `CONTACT_SOFT_LIMIT` / `CONTACT_HARD_LIMIT` are blank, DEC-19):
+past the soft limit a listing not yet answered that day gets `404 contact_unavailable`; a listing already answered
+that day always answers again. HOMI's call page sends `Content-Security-Policy: default-src 'none'; style-src
+'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'`, `Cache-Control: no-store, private`,
+`Referrer-Policy: no-referrer`, `X-Robots-Tag: noindex`, `X-Content-Type-Options: nosniff`, no cookie, and answers
+`200` / `410` (expired) / `404` / `503` / `429` (30 a minute per address). `POST …/translation` answers `422
+translation_not_needed` in `ru`; a translation is cached per listing and locale for 24 hours, and the misses of a user
+are limited to 30 an hour (`429 rate_limited` without a `reason`; hits are free; the route also sits under the read
+limiter); a failure is `503 translation_unavailable`, a pause of legacy `403` with `reason: paused`. `POST …/share`
+answers `meta.source = native` with a prepared inline message of HOMI's bot, reused for the same user, listing,
+locale and currency until a minute before it expires; any failure, a bot that is not configured or a user without a
+Telegram id is `502 share_failed`, and the Mini App then falls back to the plain `t.me` link. While
+`SOURCES_NATIVE_STUBS` is on, the three methods answer their fixtures as before (no quota, no token, no Bot API).
+
 `floor` of a listing is a whole number or `null`: `0` is the ground-level (semi-basement) floor, a negative number
 is a basement, and only `null` means that the floor is unknown. A client must not read `0` as "no floor".
 

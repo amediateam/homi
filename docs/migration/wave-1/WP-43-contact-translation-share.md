@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | C |
-| Status | TODO |
+| Status | WAITING (merged in #133, env keys #132; the call page's nginx location, `CALL_LINK_SIGNING_KEY` and the bot settings pending) |
 | Depends on | WP-42 |
 | Size | about 1 800 changed lines without fixtures, M |
 | Behaviour reference | WP-12 (the shapes — unchanged here); `25` §4.2, §4.5; `24` §8.2 (Q-API-062) and the answers log of WP-02 (points 7 and 8); `08` rows of API-009, API-010, API-017 and RES-005; `03` §4 (BR-APP-032 … BR-APP-035, BR-APP-038); `16` SEC-REQ-014, SEC-REQ-020, SEC-REQ-026, SEC-REQ-027, SEC-REQ-028, SEC-REQ-047; tasks `tasks/backend/KV-BE-035-phone-disclosure-quota.md`, `KV-BE-037-call-links.md`, `KV-BE-046-share.md`, `KV-BE-048-translation.md` (rules, limits, edge cases only) |
@@ -276,6 +276,219 @@ environment.
       masked before it; a `uz` profile gets a translation; «Поделиться» opens Telegram's share sheet and the shared
       message opens the listing in HOMI's Mini App.
 
+## As built
+
+The package is built as designed, with these points decided in the code (rule 6). Each one corrects or completes
+the design above; the AM rows are in `docs/ai/reports/phase-3-notes.md` §AL, the developer's decision DEC-111 in
+`docs/migration/decisions/2026-11-27-developer-answers.md`. The operator's answers to WP-02 points 7 and 8 are open, so
+the defaults are `contact.mode = auto` and `translation.via = locale`.
+
+**Contact**
+
+- **The order of `disclose()` asks the quota before legacy is paid** (corrects the steps of "Contact"):
+  `ListingSource::hasContact()` (new on both drivers: the contact entry, else the card) → `ContactDisclosure::decide()`
+  → `contact()` (variant B's `/call` request only now) → the answer → `record()` → `ContactDisclosed`. A refused user
+  costs no `/call` request. A variant B listing whose `/call` then fails keeps its place in the day's set and raises no
+  event.
+- **The quota reserves in `decide()`**: check and reservation run under one lock, `record()` confirms; a listing whose
+  answer then fails stays counted as asked for, a refused listing stays refused that day. Only an `Exception` of the
+  cache store fails closed (`contact_unavailable`, a warning at most once a minute while the store can still count it);
+  with the whole store down the route's limiter fails first (`500`, no number given).
+- **Unblocking** a user who was never admitted deletes the row and with it a `contact_quota` flag (WP-40's
+  `access:unblock`).
+- **The quota flag never creates or widens access** (corrects "updateOrCreate … `admitted`/`open`", AM-124): it updates
+  `flagged_at` and `flag_reason` of an **existing** `access_grants` row only, never `state`, `admitted_via` or seats. A
+  user without a row (open mode without seats, an owner-list id) is reported by the once-a-day warning and
+  `ContactQuotaExceeded` only; storing that flag needs a place without a `state` (a migration, not built). The event
+  carries `asked` and `day` besides the user id; `ContactDisclosed` carries no origin yet (WP-85 adds it).
+- **The contact entry** (completes "the encrypted phone entry"): `legacy:v1:listings:contact:<number>`, per number only,
+  for `legacy.cache.card` seconds, `Crypt::encryptString` of `{p: E.164|null, d: phone_display|null, l: has a link}` —
+  the variant marker keeps an expired entry apart from a link-only card. Under mode `link` it keeps legacy's
+  `phone_display` (the variant B answer needs it) but no `p`. It is filed once, under the **answered** number; under
+  the asked number of a merged duplicate `file()` stores a sealed pointer `{m: <answered>}` with no copy of the phone,
+  and a read follows it one step. It is refilled under `singleFlight()`, dropped by `rememberGone()`; a decryption
+  failure is a miss; a miss re-reads the card (legacy's daily limit → `503`) and caches it.
+- **`has_phone`** follows `legacy.contact.mode`: `auto` and `link` — a phone `AuthorKey::e164()` reads as one number,
+  or a call link; `phone` — the phone only. A phone that is not one number is noted as a coercion of `phone`.
+- **Variant A** uses legacy's `phone_display` only when it reads as the same number, else HOMI's form
+  `+998 XX XXX-XX-XX`; `ListingContact` is unchanged and `ContactService` fills `call_url` and `expires_at`.
+- **Variant B links** (completes "Variant B"): a relative link is joined to the **origin** of `legacy.base_url`; an
+  absolute one must be `https`, on the host **and port** of `legacy.base_url` (443 when it names none) or of an entry of
+  `legacy.contact.link_hosts` (`LEGACY_CONTACT_LINK_HOSTS`: `host` on 443 or `host:port`; an entry of another form, an
+  IPv6 one too, adds nothing), compared lower-cased and exactly, without user info or a backslash, at most 2 048 bytes,
+  no control characters; a link without a port counts as 443, so `:0` and any other port are refused. It does not go
+  through `LinkGuard` (the `?e=` of a signed link has ten digits). Another host or port → `404 contact_unavailable` and
+  a warning `{path, host}` naming the refused host only (no port, path, query or token), at most once a minute per
+  host, so the production track can fill `LEGACY_CONTACT_LINK_HOSTS`; a host that is not a DNS name (a trailing dot
+  too) or holds a run of seven or more digits is logged as `{path, host_invalid: true}` under one fixed once-a-minute
+  key, so no run of a number's digits reaches a log or a cache key (a host whose digits are split by hyphens,
+  `998-90-123-45-67.example`, is still named: legacy's own answer, accepted as low). `phone_display` passes only when it reads as one
+  number, so a link-only answer never carries digits. The card can say `has_phone: true` while the contact answers
+  `404` for a refused host.
+- **A withdrawn listing** answers `contact_unavailable` at once: `contact()` checks the gone marker first. Every
+  `404` of a card also writes `legacy:v1:listings:withdrawn:<number>` — whatever `legacy.cache.not_found` says — for
+  `legacy.cache.card` plus one fill's time (107 s with the defaults) before it drops the entry; while it lives `file()`
+  files nothing for the asked or the answered number and the entry, a pointer to a withdrawn survivor and a card's
+  contact are all refused, so a card read in flight during the `404` cannot re-file a usable phone. A listing
+  re-published within those 107 s answers `contact_unavailable` although its card may say `has_phone: true`.
+- **Native stubs** (decision of the integrator, the precedent of WP-42's overlay): while `sources.native_stubs` is on,
+  `POST …/contact`, `…/translation` and `…/share` answer their stub fixtures exactly as WP-12 did (no quota, no token, no
+  Bot API), so the e2e suite (`SOURCES_NATIVE_STUBS=true` in `frontend-e2e.yml`; `listing-contact.spec.ts` expects
+  `call/stub-token-<n>`) stays deterministic; on a non-stub driver the contact then answers `503 source_unavailable`.
+- **OpenAPI.** `ContactService::disclose()` names its exceptions in prose, not `@throws`: Scramble turned those tags into
+  answers of the method.
+
+**Call links and the call page**
+
+- **The token's MAC has a purpose:** HMAC-SHA-256 over `'call-link.v1.'.<payload>`; the payload stays readable base64,
+  so a forwarded link reveals the internal user id and the listing number (`u` selects the user's drivers). A blank or
+  short `CALL_LINK_SIGNING_KEY`: in `local` and `testing` a key derived from `app.key`; elsewhere no link is issued or
+  accepted and the contact answers `503 source_unavailable` with a warning at most once a minute, never a `500`. The
+  previous key is accepted only while it is set and long enough.
+- **The page reads the contact first**, then the title from the card that read cached — one card read when cold —
+  through `SourceContext::foreground($locale)`: no user, no overlay, no view record, but a foreground call with the
+  user path's limiter wait (a system context's background share would answer `503` as soon as it is busy). It reads the
+  drivers chosen for the token's user; the reference read behind a card's districts keeps the context's foreground
+  flag. A blocked user can still open a link issued before the block until it expires
+  (≤ 660 s): accepted, the answer already carried the number.
+- **Headers** (completes the list): `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline';
+  frame-ancestors 'none'; base-uri 'none'; form-action 'none'`; `Cache-Control: no-store, private` (Symfony appends
+  `private`); `429` reuses the `unavailable` view; a token outside `[A-Za-z0-9_.-]{1,512}` gets the framework's `404`
+  without the page headers. The four views share `call/layout.blade.php`; the page is rendered to a string.
+- **Telescope** drops a request entry answered by `CallPageController`, and one whose path — once `rawurldecode`d,
+  leading slashes collapsed — matches `#^/+call(/|$)#i` (so `/call%2F<token>` and `//call/<token>` are dropped too); it
+  hides `data.phone`, `data.phone_display` and `data.call_url` in every environment; Pulse ignores the `contact:` keys.
+
+**Translation**
+
+- **The route limiter** (corrects "`v1-translation` … inside the service", AM-125): the route sits under
+  `throttle:v1-reads`; a `throttle:v1-translation` on the route would count every hit, and dropping a throttle from the
+  route removes its `429` from the OpenAPI document. `TranslationService` counts `v1-translation`
+  (`rate_limits.translation.per_hour`, 30) on misses only, before the source is asked, so a failed miss, a `404` and a
+  native number count too; the miss is counted first and then compared (`RateLimiter::hit() > 30` → `429`), atomic on
+  Redis, so parallel misses cannot pass the limit and a refused miss counts. The unused `RateLimiter::for('v1-translation')` is removed.
+- **Cache key per driver and selector:** the stub's `stub:translation:<number>:<locale>`, legacy's
+  `legacy:translation:<number>:<locale>:<via>[:<name>]`, so a changed `LEGACY_TRANSLATION_VIA` never serves a text cached
+  under the old selector. `via=locale` while `LEGACY_LOCALE_VIA` sends no language answers `503 translation_unavailable`
+  with a warning at most once a minute (legacy would answer its default language under every locale): the operator then
+  sets `query` or `body`.
+  A stub scenario skips the translation and share caches. The cached value is the masked array.
+- **Outcomes:** legacy's `403 paused` passes as `403 access_denied` with `reason: paused`, like every legacy method (the
+  Mini App shows any failure as its inline retry); the daily limit → `503`; a translate `404` does not mark the card
+  gone; a non-string `text` is a contract error naming `text`; the 15 s is `legacy.timeout`.
+- **A slow translator never opens the shared breaker** (completes "no retry, 15 s timeout"): the call is optional
+  (`LegacyCall::$optional`) — refused while the breaker is open or waits for its probe, never the probe itself, and none
+  of its outcomes (timeouts, `5xx`, `429`, `401/403`) is counted; a success neither closes the breaker nor resets the
+  count. Each refused tap still uses one of the user's misses. A translation's `429` therefore does not slow the other calls down: its `Retry-After`
+  is not applied.
+- `LegacyClient::post()` gained an optional `$query`.
+
+**Share**
+
+- **The message:** an article result with a `url` button (not `web_app`) to `https://t.me/<bot>?startapp=l_<number>`,
+  all four `allow_*_chats` flags on; the text is the Mini App's share text — title (bold, the only markup and the
+  reason for `parse_mode: HTML`) · amount and period · price kind · district — masked and HTML-escaped, the labels in
+  `lang/*/share.php` (DEC-111); a listing without title and price uses `share.untitled`. The button labels («Открыть
+  объявление» / «Eʼlonni ochish» / «Open the listing») await the product owner's confirmation.
+- **Outcomes:** the bot username must match `^[A-Za-z][A-Za-z0-9_]{4,31}$`; a user without a Telegram id → `502`; a
+  failed preview stays `503 source_unavailable` or `403 paused`; an id expiring within 60 s is not cached; the cache key
+  is `share:<user>:<number>:<locale>:<currency>:<driver>` (the text carries the price in the user's currency). The order
+  is cache → the bot's token, address and username and the caller's Telegram id → preview → Bot API, so an unconfigured
+  environment costs no legacy read and answers `502` even for an unknown number.
+- **`TelegramClient`** (for WP-50): one attempt, no redirect, a `result` that is not an object throws, a blank timeout is
+  15/5 s; any `Throwable` of the send becomes `TelegramException::transport()` without the original message (a malformed
+  address made Guzzle quote the token); `TELEGRAM_API_BASE_URL` must be a bare origin — printable ASCII only after an
+  ASCII trim (no non-breaking space, no non-ASCII letter, no backslash), `https` (plain `http` only in
+  `local`/`testing`), a host, an optional port, no user info, path, query or fragment — so a Bot API proxy behind a
+  path prefix is refused; every token-bearing frame is `#[\SensitiveParameter]`, and so are `call()`'s `$params` (the
+  `user_id` and the text) and `result()`'s `$response` (a test walks every frame's arguments and reads the response's
+  address). Telescope drops Bot API client requests; Pulse groups any token-shaped Bot API path as `/bot***/<method>`,
+  behind any prefix; Telescope's Redis and cache watchers drop entries on translation, contact, card, preview and
+  disclosure-day keys (one pattern, `SENSITIVE_KEYS`; the withdrawn marker holds no data).
+- Bot API fields used (documentation of 22 November 2026, Bot API 10.5 by the implementer — the reviewer could not
+  re-read it): `savePreparedInlineMessage(user_id, result, allow_user_chats, allow_bot_chats, allow_group_chats,
+  allow_channel_chats)` → `PreparedInlineMessage {id, expiration_date}`; `InlineQueryResultArticle {type, id, title,
+  input_message_content, reply_markup}`; `InputTextMessageContent {message_text, parse_mode}`.
+
+**Configuration** — `config/contacts.php`: `call_link_signing_key` (`CALL_LINK_SIGNING_KEY`),
+`call_link_signing_key_previous` (`CALL_LINK_SIGNING_KEY_PREVIOUS`), `soft_limit` (`CONTACT_SOFT_LIMIT`), `hard_limit`
+(`CONTACT_HARD_LIMIT`), `call_link_ttl` (600, no env), `call_page_base` (config only, `null` = `app.url`);
+`config/legacy.php`: `contact.mode` (`LEGACY_CONTACT_MODE`), `contact.link_ttl`, `contact.link_hosts`
+(`LEGACY_CONTACT_LINK_HOSTS`), `translation.via` (`LEGACY_TRANSLATION_VIA`), `translation.name`
+(`LEGACY_TRANSLATION_NAME`, beyond the spec, so the operator's answer stays an env change), `cache.translation`.
+
+**Files outside the list.** `LegacyContact` (the one reading of a raw card's contact), `call/layout.blade.php`,
+`lang/*/share.php`, `tests/Support/FailingCacheStore.php`, `tests/Pgsql/ContactFlagRaceTest.php`;
+`PreparedShare` moved to `App\Services\Telegram` as the list says.
+
+**Review.** One security review per stage by a `security-reviewer` subagent, each on a snapshot with its own probes.
+Stage A (contact, call links, the page): one medium (the quota flag widened access, AM-124), one medium-low (variant B
+link hosts), eight low, two info. Stage B (translation, share): one medium (a malformed Bot API address quoted the token
+in an exception, AM-127), six low, one info. The integrator added two points (a slow translator must not open the shared
+breaker; the warning names the refused host) and the nginx part (AM-126). A narrow re-review of every fix found 22 of 23
+fixed and one partly, plus six low and one info (the call-page filter of Telescope by an encoded or doubled slash, the
+host in the warning, two trace arguments, the cache watcher, a withdrawn merged duplicate, the Bot API address's
+characters; the port of a variant B link). Every finding is fixed with a test that failed before its fix; the
+integrator re-ran every suite on the final commit.
+
 ## Handoff
 
-Empty.
+In review (#133, env keys #132). The development track needs nothing more for this package after the merge.
+
+**For the production track, in this order** (no `source.*` flag changes; the defaults stay `stub` until WP-48; with
+`SOURCES_NATIVE_STUBS` unset the services already run on the stub driver on staging and production):
+
+1. **nginx on the API host, before this code is deployed** — `location /` already forwards `/call/<token>` to PHP, but
+   its `access_log` writes the request line, so every call token would be logged (SEC-REQ-026), and the server-level
+   `add_header … always` lines add a second `Referrer-Policy` and `X-Content-Type-Options` to the page's own. Add, in
+   `infra/production/nginx/api.homi.conf` and `infra/staging/nginx/api.staging.homi.conf` (the production track's
+   files), above `location /`:
+
+   ```nginx
+   # HOMI's call page (WP-43): PHP straight from this block, as the dashboards do — after a try_files to /index.php
+   # the request would finish in `location ~ \.php$` and be logged there with its token.
+   location ^~ /call/ {
+       access_log off;                      # or a log_format without $request / $request_uri
+       add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+       add_header X-Frame-Options "DENY" always;
+       fastcgi_pass  unix:/run/php/php8.5-fpm.sock;
+       include       fastcgi_params;
+       fastcgi_param SCRIPT_FILENAME $realpath_root/index.php;
+       fastcgi_param SCRIPT_NAME     /index.php;
+       fastcgi_param DOCUMENT_ROOT   $realpath_root;
+       fastcgi_param HTTPS           on;
+   }
+   ```
+
+   Any `add_header` inside the location stops the server-level ones from being inherited; the two above are the ones the
+   page does not set itself (it sends its own CSP, `Referrer-Policy`, `X-Content-Type-Options`, `X-Robots-Tag`,
+   `Cache-Control`). The error log stays (it holds no request line unless PHP-FPM fails). Check after the change:
+   `curl -sI https://<api host>/call/x` answers `404` with one `Referrer-Policy: no-referrer`, and the access log has
+   no `/call/` line.
+2. **Env on staging and production:** `CALL_LINK_SIGNING_KEY` (random, at least 32 bytes, per environment;
+   `CALL_LINK_SIGNING_KEY_PREVIOUS` blank — to rotate, the old value goes there for at least eleven minutes);
+   `CONTACT_SOFT_LIMIT` and `CONTACT_HARD_LIMIT` stay **blank** (quota off until the product owner decides, DEC-19).
+   Without the key, `POST …/contact` answers `503 source_unavailable` for a listing with a phone.
+3. **The bot:** `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME` of the staging and the production bot on their hosts
+   (share uses `savePreparedInlineMessage`; either blank → every share answers `502` and the Mini App falls back to the
+   plain `t.me` link). `TELEGRAM_API_BASE_URL` blank or a bare origin.
+4. **Name the public origin of the call page** (`APP_URL` of the API, `call_page_base` is config only) to the
+   development track; the Mini App's link allow-list already holds the API host.
+5. When the operator answers WP-02 points 7 and 8: set `LEGACY_CONTACT_MODE`, `LEGACY_TRANSLATION_VIA` /
+   `LEGACY_TRANSLATION_NAME` accordingly, and `LEGACY_CONTACT_LINK_HOSTS` from the host the warning «refused link host»
+   names. If the operator sends only call links (variant B), its host must also enter the Mini App's link allow-list (a
+   frontend change).
+
+**For the next packages:**
+- WP-47 listens to `ContactDisclosed` (user id, number, channel) for the action log; WP-85 adds the origin.
+- WP-50 extends `TelegramClient`: one attempt now, no `retry_after` handling, a `true` result refused (methods that
+  return `true` need a variant); `call()`'s `$params` and `result()`'s `$response` are sensitive frames already. The
+  base address still accepts a host with a trailing dot and an IPv6 literal (`https://[::1]:8081`) outside `local`;
+  WP-50 may narrow it.
+- WP-53 (the bot's «Показать номер») calls `ContactService::disclose()` with the channel `bot` and needs its own access
+  check: `AccessGate::decide()` can write a seat admission, so `disclose()` makes no gate call.
+- WP-85/86: the spec's paragraph naming `contact()` / `NativeContact::read()` as step 1 now maps to `hasContact()`.
+- A place for a quota flag of a user without an `access_grants` row needs a migration (the developer's approval).
+- The functional checklist: in variant B «Позвонить» and «Показать номер» open the operator's page (no digits).
+- Product owner: the share message's button labels («Открыть объявление» / «Eʼlonni ochish» / «Open the listing») and
+  the bold title.
