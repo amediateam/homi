@@ -462,6 +462,11 @@ it('starts a number on its plus wherever the plus stands', function (string $tex
     'another country after digits' => ['12+44 000 000 00 67', '12+** *** ** 67'],
 ]);
 
+it('writes every fullwidth digit of a text in ASCII, in a number or not (point 2: normalised, not matched)', function (): void {
+    expect(maskSynthetic('2-комн., ５４ м², этаж ３/９'))->toBe('2-комн., 54 м², этаж 3/9')
+        ->and(PhoneMasker::asciiDigits('＋９９８ ０'))->toBe('＋998 0');
+});
+
 it('reads fullwidth digits as ASCII and writes the masked tail in ASCII', function (string $text, string $masked): void {
     expect(maskSynthetic($text))->toBe($masked)
         ->and(maskSynthetic($masked))->toBe($masked)

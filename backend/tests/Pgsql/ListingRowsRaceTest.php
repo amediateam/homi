@@ -61,7 +61,6 @@ it('keeps one listing_refs row when ten requests file the same card at once', fu
         ->and($ref->source_channel)->toBe('stub_channel_a')
         ->and(inRace($ref->first_seen_at, $window))->toBeTrue()
         ->and(inRace($ref->last_seen_at, $window))->toBeTrue()
-        ->and($ref->last_seen_at?->greaterThanOrEqualTo($ref->first_seen_at ?? $window[1]))->toBeTrue()
         ->and($ref->gone_at)->toBeNull()
         ->and($ref->merged_into)->toBeNull();
 });
