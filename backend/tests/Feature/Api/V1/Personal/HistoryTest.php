@@ -134,7 +134,18 @@ it('ends the list quietly on a cursor it did not give, favourites\' among them',
     'a favourites cursor' => PersonalCursor::encode([5]),
     'not base64' => 'n1.%%%',
     'a time that is not whole' => 'n1.'.rtrim(strtr(base64_encode('[1.5,3]'), '+/', '-_'), '='),
+    'the largest integer as the time (review A, F2)' => PersonalCursor::encode([PHP_INT_MAX, 1]),
+    'a time in the year 3 170 843 (review A, F2)' => PersonalCursor::encode([99999999999999, 1]),
+    'a time in the year 10 000' => PersonalCursor::encode([253402300800, 1]),
+    'a row id of 0' => PersonalCursor::encode([1764320400, 0]),
 ]);
+
+it('takes the last second of the year 9999 as a cursor\'s time, on SQLite and PostgreSQL', function (): void {
+    ListingView::factory()->for($this->user)->create(['listing_number' => 100012]);
+
+    $this->getJson('/api/v1/history?cursor='.PersonalCursor::encode([253402300799, PHP_INT_MAX]))->assertOk()
+        ->assertJsonPath('data.0.number', 100012)->assertJsonPath('meta.next_cursor', null);
+});
 
 it('skips a listing the card source leaves out, without marking it gone', function (): void {
     ListingView::factory()->for($this->user)->create(['listing_number' => 100012, 'last_viewed_at' => now()->subMinutes(2)]);

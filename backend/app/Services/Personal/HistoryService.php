@@ -30,7 +30,7 @@ final readonly class HistoryService
      */
     public function page(User $user, ?string $cursor, int $limit, SourceContext $context): ListingPage
     {
-        $key = $cursor === null ? null : PersonalCursor::decode($cursor, 2);
+        $key = $cursor === null ? null : PersonalCursor::decode($cursor, [PersonalCursor::TIME, PersonalCursor::ROW_ID]);
 
         if ($cursor !== null && $key === null) {
             return new ListingPage([], null);

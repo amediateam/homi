@@ -5,6 +5,7 @@ use App\Models\Favorite;
 use App\Models\ListingRef;
 use App\Models\User;
 use App\Services\Listings\ListingNumber;
+use App\Services\Personal\PersonalCursor;
 use App\Services\Sources\Stub\StubListingSource;
 use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Http\Client\Request;
@@ -199,7 +200,17 @@ it('ends the list quietly on a cursor it did not give', function (string $cursor
     'not JSON' => 'n1.'.rtrim(strtr(base64_encode('nope'), '+/', '-_'), '='),
     'a key of another shape' => 'n1.'.rtrim(strtr(base64_encode('["a"]'), '+/', '-_'), '='),
     'a negative id' => 'n1.'.rtrim(strtr(base64_encode('[-1]'), '+/', '-_'), '='),
+    'a row id of 0' => PersonalCursor::encode([0]),
+    'a row id beyond the integers' => 'n1.'.rtrim(strtr(base64_encode('[99999999999999999999]'), '+/', '-_'), '='),
+    'a history cursor' => PersonalCursor::encode([1764320400, 5]),
 ]);
+
+it('takes the largest integer as a cursor\'s row id', function (): void {
+    favouriteInOrder($this->user, [100012]);
+
+    $this->getJson('/api/v1/favorites?cursor='.PersonalCursor::encode([PHP_INT_MAX]))->assertOk()
+        ->assertJsonPath('data.0.number', 100012)->assertJsonPath('meta.next_cursor', null);
+});
 
 it('refuses a limit outside 1 … 50', function (): void {
     $this->getJson('/api/v1/favorites?limit=0')->assertStatus(422)->assertJsonValidationErrors(['limit']);

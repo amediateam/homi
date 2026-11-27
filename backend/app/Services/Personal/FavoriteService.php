@@ -54,7 +54,7 @@ final readonly class FavoriteService
      */
     public function page(User $user, ?string $cursor, int $limit, SourceContext $context): ListingPage
     {
-        $key = $cursor === null ? null : PersonalCursor::decode($cursor, 1);
+        $key = $cursor === null ? null : PersonalCursor::decode($cursor, [PersonalCursor::ROW_ID]);
 
         if ($cursor !== null && $key === null) {
             return new ListingPage([], null);
