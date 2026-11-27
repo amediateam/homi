@@ -92,7 +92,7 @@ final class FlowTranslator
      *
      * @throws LegacyContractError naming the key, placed by `$prefix`, when the option does not fit
      */
-    private static function option(array $option, string $prefix, ?Coercions $seen): array
+    private static function option(#[\SensitiveParameter] array $option, string $prefix, ?Coercions $seen): array
     {
         foreach (['code', 'label', 'rate'] as $key) {
             if (! is_string($option[$key] ?? null)) {

@@ -246,7 +246,7 @@ final class ReferenceTranslator
      * @param  array<array-key, mixed>  $data
      * @return list<array<array-key, mixed>>
      */
-    private static function list(array $data, string $key, bool $required = true, string $prefix = ''): array
+    private static function list(#[\SensitiveParameter] array $data, string $key, bool $required = true, string $prefix = ''): array
     {
         if (! $required && ($data[$key] ?? null) === null) {
             return [];

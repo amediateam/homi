@@ -120,6 +120,16 @@ final readonly class ListingDetails
         return clone ($this, ['owner' => $owner]);
     }
 
+    /**
+     * The same card of an author HOMI's votes mark as a realtor (the overlay of WP-42, step 4): its preview
+     * `asRealtors()`, no owner tier, and no `owner_label` — HOMI's mark wins over whatever the source wrote there
+     * («Хозяин», «Собственник»), decided by the mark and never by the label's text.
+     */
+    public function asRealtors(): self
+    {
+        return clone ($this, ['preview' => $this->preview->asRealtors(), 'owner' => $this->owner->withoutTier(), 'ownerLabel' => null]);
+    }
+
     /** The same card with the caller's request and whether `POST …/contact` can give a number (the overlay of WP-42). */
     public function withContactRequest(?ContactRequestState $request, bool $hasPhone): self
     {

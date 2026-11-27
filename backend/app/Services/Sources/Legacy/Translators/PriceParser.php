@@ -62,7 +62,7 @@ final class PriceParser
      *
      * @param  array<array-key, mixed>  $data
      */
-    public static function usdOf(array $data, string $key, ?Coercions $seen = null): ?int
+    public static function usdOf(#[\SensitiveParameter] array $data, string $key, ?Coercions $seen = null): ?int
     {
         $value = $data[$key] ?? null;
         $usd = self::usd($value);
@@ -83,7 +83,7 @@ final class PriceParser
     }
 
     /** The text with its whitespace collapsed, or `null` when nothing is left. */
-    private static function clean(string $text): ?string
+    private static function clean(#[\SensitiveParameter] string $text): ?string
     {
         $text = trim((string) preg_replace('/\s+/u', ' ', $text));
 

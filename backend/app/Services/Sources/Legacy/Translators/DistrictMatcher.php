@@ -47,7 +47,7 @@ final class DistrictMatcher
         }
     }
 
-    public function code(?string $name, ?string $city = null): ?string
+    public function code(#[\SensitiveParameter] ?string $name, ?string $city = null): ?string
     {
         if ($name === null || trim($name) === '') {
             return null;
@@ -79,7 +79,7 @@ final class DistrictMatcher
     }
 
     /** @return list<string> the forms of a legacy name to look up, the most literal first */
-    private static function candidates(string $name): array
+    private static function candidates(#[\SensitiveParameter] string $name): array
     {
         $normal = self::normal($name);
         $bare = $normal;
@@ -101,7 +101,7 @@ final class DistrictMatcher
         return array_values(array_unique(array_filter($candidates, fn (string $candidate): bool => $candidate !== '')));
     }
 
-    private static function normal(string $name): string
+    private static function normal(#[\SensitiveParameter] string $name): string
     {
         $name = mb_strtolower(trim($name));
         $name = strtr($name, ['ё' => 'е', 'ʻ' => "'", 'ʼ' => "'", '’' => "'", '‘' => "'", '`' => "'"]);

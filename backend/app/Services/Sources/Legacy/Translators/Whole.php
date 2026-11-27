@@ -14,7 +14,7 @@ final class Whole
      * A finite float without a fraction as an int, each item of a list likewise; anything else unchanged, for the data
      * objects to accept or refuse.
      */
-    public static function of(mixed $value): mixed
+    public static function of(#[\SensitiveParameter] mixed $value): mixed
     {
         if (is_float($value) && is_finite($value) && floor($value) === $value && abs($value) < PHP_INT_MAX) {
             return (int) $value;

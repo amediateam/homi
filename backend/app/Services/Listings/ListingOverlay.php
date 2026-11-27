@@ -32,8 +32,9 @@ use WeakMap;
  *    so it reads none of step 1's sets.
  * 3. `favorite` and `viewed` come from HOMI's data on every item of the feed and on the card.
  * 4. An item whose author key HOMI's votes mark as a realtor's gets `is_owner: false` and `owner_verified: false`
- *    (the card `owner.tier: null` as well), so HOMI's mark wins over the source's «Проверенный хозяин», and is left
- *    out where the filters ask for `owners` or `no_agents`.
+ *    (the card `owner.tier: null` and `owner_label: null` as well, `ListingDetails::asRealtors()`), so HOMI's mark wins
+ *    over the source's «Проверенный хозяин» and «Хозяин», and is left out where the filters ask for `owners` or
+ *    `no_agents`.
  * 5. Count, the new-since count and flow are not overlaid. A map answer loses `total` and `with_point` by the points
  *    it leaves out.
  *
@@ -50,7 +51,10 @@ use WeakMap;
  * reads and the controller's `feed()` of the page it built share them. The reads that take the numbers of a list —
  * rented by votes, the author keys of `listing_refs`, favourites and opened listings — are one read per list, never
  * kept: a view recorded or a card filed meanwhile must show. The overlay is bound `scoped` (one instance per request or
- * queued job), and the controllers take it per call, so no instance outlives its lifecycle.
+ * queued job), and the controllers take it per call, so no instance outlives its lifecycle. The kept sets go with the
+ * `SourceContext` object, not with the instance: a console loop or a job that handles several units of work (users,
+ * lists, radar runs) must make a new context for each one (`SourceContext::system()` or `new SourceContext(…)`), or it
+ * keeps reading the sets the first unit read.
  */
 final readonly class ListingOverlay implements ListingExclusion
 {
@@ -136,7 +140,7 @@ final readonly class ListingOverlay implements ListingExclusion
         $card = $card->withPreview(self::marked($card->preview, $marks));
 
         if (isset($marks['realtor'][$number])) {
-            $card = $card->withOwner($card->owner->withoutTier());
+            $card = $card->asRealtors();
         }
 
         $card = $this->owned($card, $context->user);

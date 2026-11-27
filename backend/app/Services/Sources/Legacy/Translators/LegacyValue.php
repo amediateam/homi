@@ -72,7 +72,7 @@ final class LegacyValue
     }
 
     /** The value as a whole number: an int, or a finite float rounded; anything else `null`. Notes nothing. */
-    public static function whole(mixed $value): ?int
+    public static function whole(#[\SensitiveParameter] mixed $value): ?int
     {
         if (is_int($value)) {
             return $value;

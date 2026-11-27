@@ -207,6 +207,38 @@ it('marks a realtor\'s card and its preview: not an owner\'s, not verified, no t
         ->and([$preview['is_owner'], $preview['owner_verified']])->toBe([false, false]);
 });
 
+it('clears owner_label on a realtor\'s card, by HOMI\'s mark and not by the label\'s text (review of ec369f2, point 4)', function (?string $label): void {
+    $user = User::factory()->create();
+    $this->data->realtors = ['phone:realtor'];
+    fileUnder('phone:realtor', [100012]);
+
+    $marked = overlay()->card(cardOf(100012, ['owner_label' => $label, 'is_owner' => true]), overlayContext($user));
+    $unmarked = overlay()->card(cardOf(100013, ['owner_label' => $label, 'is_owner' => true]), overlayContext($user));
+    $json = (new ListingDetailsResource($marked))->response()->getData(true)['data'];
+
+    expect($marked->ownerLabel)->toBeNull()
+        ->and($json)->toHaveKey('owner_label')
+        ->and($json['owner_label'])->toBeNull()
+        ->and([$json['is_owner'], $json['owner_verified'], $json['owner']['tier']])->toBe([false, false, null])
+        ->and($unmarked->ownerLabel)->toBe($label);
+})->with([
+    'the source\'s «Хозяин»' => ['Хозяин'],
+    'any other label' => ['Собственник, без комиссии'],
+]);
+
+it('keeps the sets it read beside the context: one context reused keeps them, a new context reads them again', function (): void {
+    $context = SourceContext::system();
+    fileUnder('phone:realtor', [5]);
+    $page = new ListingPage([summaryOf(5, ['is_owner' => true])], null);
+
+    $first = overlay()->feed($page, overlayFilters(), $context)->items[0]->isOwner;
+    $this->data->realtors = ['phone:realtor'];
+    $reused = overlay()->feed($page, overlayFilters(), $context)->items[0]->isOwner;
+    $fresh = overlay()->feed($page, overlayFilters(), SourceContext::system())->items[0]->isOwner;
+
+    expect([$first, $reused, $fresh])->toBe([true, true, false]);
+});
+
 it('writes owner.entry (DEC-94): an owner\'s listing that is not the caller\'s own, while the cabinet is on', function (): void {
     $user = User::factory()->create();
     $owners = (array) ListingArrays::details()['owner'];

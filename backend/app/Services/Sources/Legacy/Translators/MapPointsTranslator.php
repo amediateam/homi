@@ -109,7 +109,7 @@ final class MapPointsTranslator
     }
 
     /** @param  array<array-key, mixed>  $point */
-    private static function number(array $point, int $index, int $nativeFloor): int
+    private static function number(#[\SensitiveParameter] array $point, int $index, int $nativeFloor): int
     {
         $id = $point['id'] ?? null;
         $id = is_string($id) && ctype_digit($id) && strlen($id) <= 18 ? (int) $id : Whole::of($id);

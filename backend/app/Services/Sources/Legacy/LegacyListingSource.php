@@ -402,7 +402,7 @@ final class LegacyListingSource implements ListingSource
      * @param  array<array-key, mixed>  $card  the translated card
      * @param  array<array-key, mixed>  $answer  legacy's raw answer
      */
-    private function file(int $asked, array $card, #[\SensitiveParameter] array $answer): void
+    private function file(int $asked, #[\SensitiveParameter] array $card, #[\SensitiveParameter] array $answer): void
     {
         $details = ListingDetails::fromArray($card);
         $this->refs->remember($details, AuthorKey::fromCard($answer));
