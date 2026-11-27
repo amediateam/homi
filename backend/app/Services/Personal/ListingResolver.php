@@ -77,6 +77,23 @@ final readonly class ListingResolver
     }
 
     /**
+     * The numbers a row the user wrote for the number asked may lie under, ascending and without repeats: the number
+     * asked, the pointer's number `resolve()` answered for it, and the survivor `listing_refs` files for the number
+     * asked. A row written through an alias the card source answered with its survivor lies under the pointer's number
+     * although no card read filed the alias; a row written before a later merge lies under the number asked. A
+     * withdrawal reads them all (`DELETE /listings/{number}/reports`: the vote and the hidden row).
+     *
+     * @return list<int>
+     */
+    public function numbersOf(int $asked, ListingPointer $pointer): array
+    {
+        $numbers = array_values(array_unique([$asked, $pointer->number, $this->survivor($asked)]));
+        sort($numbers);
+
+        return $numbers;
+    }
+
+    /**
      * Makes sure `listing_refs` files the listing's author when the card source knows one (WP-44's `agent` votes,
      * counted per author key): a number filed with an author is left as it is, else the full card is read through the
      * card source, which files it on that read on the legacy driver (the stub files none). `SourceNotFound` (`404`) or

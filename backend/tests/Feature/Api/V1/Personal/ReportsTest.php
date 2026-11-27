@@ -9,6 +9,7 @@ use App\Models\ListingMark;
 use App\Models\ListingRef;
 use App\Models\ListingVote;
 use App\Models\User;
+use App\Models\VoteDecision;
 use App\Services\Listings\AuthorKey;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Event;
@@ -182,6 +183,46 @@ it('reports the survivor of a merged number, and withdraws it through the alias'
 
     expect(ListingVote::query()->sole()->withdrawn_at)->not->toBeNull()
         ->and(HiddenListing::query()->count())->toBe(0);
+});
+
+it('shows the listing again when «Уже сдано» is withdrawn through an alias that no card read has filed', function (): void {
+    LegacyListingsHttp::fake();
+    Feature::globally()->activate('source.listings.card', ['everyone' => 'legacy']);
+
+    $this->postJson('/api/v1/listings/100016/reports', ['reason' => 'rented'])->assertOk()->assertJsonPath('data.hidden', true);
+
+    expect(ListingVote::query()->sole()->listing_number)->toBe(100001)
+        ->and(HiddenListing::query()->sole()->listing_number)->toBe(100001)
+        ->and(ListingRef::query()->find(100016))->toBeNull();
+
+    $this->deleteJson('/api/v1/listings/100016/reports')->assertNoContent();
+
+    expect(ListingVote::query()->sole()->withdrawn_at)->not->toBeNull()
+        ->and(HiddenListing::query()->count())->toBe(0);
+});
+
+it('withdraws a rented report stored before the listing was merged, and recounts that listing\'s mark', function (): void {
+    ListingRef::factory()->create(['listing_number' => 100012]);
+    ListingRef::factory()->create(['listing_number' => 100013]);
+    $this->postJson('/api/v1/listings/100012/reports', ['reason' => 'rented'])->assertOk();
+
+    foreach (range(1, 3) as $vote) {
+        actAsReporter();
+        $this->postJson('/api/v1/listings/100012/reports', ['reason' => 'rented'])->assertOk();
+    }
+
+    expect(ListingMark::query()->find(100012)?->rented_at)->not->toBeNull();
+
+    ListingRef::query()->whereKey(100012)->update(['merged_into' => 100013]);
+    actAsReporter($this->user);
+    $this->deleteJson('/api/v1/listings/100012/reports')->assertNoContent();
+
+    $vote = ListingVote::query()->where('user_id', $this->user->id)->sole();
+    expect([$vote->listing_number, $vote->withdrawn_at !== null])->toBe([100012, true])
+        ->and(HiddenListing::query()->where('user_id', $this->user->id)->count())->toBe(0)
+        ->and(ListingMark::query()->find(100012)?->rented_at)->toBeNull()
+        ->and(VoteDecision::query()->orderBy('id')->get()->map(fn (VoteDecision $row): array => [$row->subject, $row->voters, $row->weight_sum, $row->outcome])->all())
+        ->toBe([['100012', 4, '4.00', 'marked'], ['100012', 3, '3.00', 'unmarked']]);
 });
 
 it('hides a rented listing from the reporter\'s feed at once, and from everybody\'s only at the threshold', function (): void {

@@ -48,14 +48,15 @@ final readonly class HiddenService
     }
 
     /**
-     * Shows a listing again that the user's own report of that reason hid (`DELETE /listings/{number}/reports`): the
-     * number asked and the survivor `listing_refs` files for it; a row of another reason — a manual hide, another
-     * report — stays.
+     * Shows a listing again that the user's own report of that reason hid (`DELETE /listings/{number}/reports`), under
+     * every number the caller gives — `ListingResolver::numbersOf()`: the number asked, the pointer's and the survivor
+     * `listing_refs` files for it; a row of another reason — a manual hide, another report — stays.
+     *
+     * @param  list<int>  $numbers
      */
-    public function unhideReported(User $user, int $number, HiddenReason $reason): void
+    public function unhideReported(User $user, array $numbers, HiddenReason $reason): void
     {
-        $user->hiddenListings()->whereIn('listing_number', array_values(array_unique([$number, $this->resolver->survivor($number)])))
-            ->where('reason', $reason->value)->delete();
+        $user->hiddenListings()->whereIn('listing_number', $numbers)->where('reason', $reason->value)->delete();
     }
 
     /**

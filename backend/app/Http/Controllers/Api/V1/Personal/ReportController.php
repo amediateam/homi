@@ -53,16 +53,19 @@ class ReportController extends ApiController
     }
 
     /**
-     * `DELETE /listings/{number}/reports`: withdraws the caller's `rented` report on the listing and nothing else.
-     * Idempotent: `204` also when there is nothing to withdraw; the listing must exist (`404`).
+     * `DELETE /listings/{number}/reports`: withdraws the caller's `rented` report on the listing and nothing else —
+     * the vote and its hidden row under the number asked, its survivor and the number it resolves to, so a report made
+     * through an alias or before a later merge is withdrawn too. Idempotent: `204` also when there is nothing to
+     * withdraw; the listing must exist (`404`).
      */
     public function destroy(Request $request, int $number): Response
     {
         $user = $this->signedInUser($request);
         $pointer = $this->resolver->resolve($this->positive($number), SourceContext::fromRequest($request));
+        $numbers = $this->resolver->numbersOf($number, $pointer);
 
-        $this->votes->withdraw($user, $pointer, ReportReason::Rented);
-        $this->hidden->unhideReported($user, $number, HiddenReason::ReportRented);
+        $this->votes->withdraw($user, $pointer, ReportReason::Rented, $numbers);
+        $this->hidden->unhideReported($user, $numbers, HiddenReason::ReportRented);
 
         return $this->noContent();
     }

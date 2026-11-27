@@ -281,6 +281,26 @@ it('lowers the sum with a withdrawn vote and removes the mark with an unmarked d
     expect(decisions())->toHaveCount(2);
 });
 
+it('withdraws the voter\'s votes under every number given, recounting their author once', function (): void {
+    ListingRef::factory()->ofAuthor(VOTE_AUTHOR)->create(['listing_number' => 100001]);
+    ListingRef::factory()->ofAuthor(VOTE_AUTHOR)->create(['listing_number' => 100002]);
+    [$first, $second, $both] = voters(3, VOTE_FREE);
+    reportBy([$first, $second, $both], ReportReason::Agent, 100001);
+    reportBy([$both], ReportReason::Agent, 100002);
+
+    expect(realtorMarkedAt())->not->toBeNull();
+
+    votes()->withdraw($both, votePointer(100002), ReportReason::Agent, [100001, 100002]);
+
+    expect(ListingVote::query()->where('user_id', $both->id)->whereNull('withdrawn_at')->count())->toBe(0)
+        ->and(ListingVote::query()->whereNull('withdrawn_at')->count())->toBe(2)
+        ->and(realtorMarkedAt())->toBeNull()
+        ->and(decisions())->toBe([
+            ['author', VOTE_AUTHOR, 'agent', 3, '4.50', '4.50', 'marked'],
+            ['author', VOTE_AUTHOR, 'agent', 2, '3.00', '4.50', 'unmarked'],
+        ]);
+});
+
 it('counts a vote again when its voter reports after withdrawing it, keeping the first row', function (): void {
     $voters = voters(4);
     $last = $voters[3];

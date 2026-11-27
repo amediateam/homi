@@ -126,6 +126,15 @@ it('follows a merge chain HOMI files, but never in a loop', function (): void {
         ->and(resolverOf()->survivor(424242))->toBe(424242);
 });
 
+it('names every number a row of the asked number may lie under: the number asked, the pointer\'s and its survivor, ascending', function (): void {
+    ListingRef::factory()->create(['listing_number' => 100013]);
+    ListingRef::factory()->create(['listing_number' => 100012, 'merged_into' => 100013, 'author_key' => null]);
+
+    expect(resolverOf()->numbersOf(100016, new ListingPointer(100001, null, null, filed: false)))->toBe([100001, 100016])
+        ->and(resolverOf()->numbersOf(100012, resolvedFor(100012)))->toBe([100012, 100013])
+        ->and(resolverOf()->numbersOf(100013, resolvedFor(100013)))->toBe([100013]);
+});
+
 it('queues the back-fill only for a pointer the source gave, on the default queue, once per number', function (): void {
     Queue::fake();
 

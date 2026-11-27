@@ -37,8 +37,9 @@ use InvalidArgumentException;
  * Every crossing writes one `vote_decisions` row with its inputs, `marked` or `unmarked`. The recount is serialised
  * per subject: inside the transaction it first inserts the subject's mark row without a time (`insertOrIgnore`) and
  * locks it (`lockForUpdate`), then counts, so two voters at once cannot each count without the other's vote (the
- * default isolation of PostgreSQL), and a subject is marked once. A report or a withdrawal locks one mark row, after
- * its own vote and hidden rows, so two transactions never wait on each other in a cycle.
+ * default isolation of PostgreSQL), and a subject is marked once. A report locks one mark row, after its own vote and
+ * hidden rows; a withdrawal withdraws its votes in ascending number order and then locks each subject that changed
+ * once, in ascending order — so two transactions never wait on each other in a cycle.
  *
  * A vote only adds weight, so a report's recount may mark and never unmarks; a withdrawal's recount may unmark and
  * never marks. The kill switches (`VoteDetectors`) are read before the transaction, as Pennant may insert its default
@@ -77,7 +78,7 @@ final readonly class VoteService
 
         $author = $this->refs->author($pointer->number)?->key;
         $subject = $this->subjectOf($pointer->number, $reason, $author);
-        $detecting = $subject !== null && $this->detecting($subject);
+        $detecting = $subject !== null && $this->detecting($reason);
         $hiding = match ($reason) {
             ReportReason::Rented => HiddenReason::ReportRented,
             ReportReason::Fraud => HiddenReason::ReportFraud,
@@ -103,29 +104,47 @@ final readonly class VoteService
     }
 
     /**
-     * Withdraws the user's vote for the reason on the listing and recounts its subject (the «Уже сдано» undo of
-     * `DELETE /listings/{number}/reports`, the bot's undo buttons of WP-53). A vote already withdrawn, or none,
-     * changes nothing. The voter's hidden row is the caller's.
+     * Withdraws the user's votes for the reason on the listing and recounts each subject that changed, once (the «Уже
+     * сдано» undo of `DELETE /listings/{number}/reports`, the bot's undo buttons of WP-53). The votes are looked for
+     * under the pointer's number and every alias given — `ListingResolver::numbersOf()`: the number asked and the
+     * survivor `listing_refs` files for it — so a vote cast through an alias or before a later merge is withdrawn too,
+     * and its own subject is recounted. A vote already withdrawn, or none, changes nothing. The voter's hidden row is
+     * the caller's.
+     *
+     * @param  list<int>  $aliases
      */
-    public function withdraw(User $user, ListingPointer $pointer, ReportReason $reason): void
+    public function withdraw(User $user, ListingPointer $pointer, ReportReason $reason, array $aliases = []): void
     {
-        $vote = $user->listingVotes()->where('listing_number', $pointer->number)->where('reason', $reason->value)
-            ->whereNull('withdrawn_at')->first(['id', 'author_key']);
+        $votes = $user->listingVotes()->whereIn('listing_number', array_values(array_unique([$pointer->number, ...$aliases])))
+            ->where('reason', $reason->value)->whereNull('withdrawn_at')->orderBy('listing_number')
+            ->get(['id', 'listing_number', 'author_key']);
 
-        if ($vote === null) {
+        if ($votes->isEmpty()) {
             return;
         }
 
-        $subject = $this->subjectOf($pointer->number, $reason, $vote->author_key);
-        $detecting = $subject !== null && $this->detecting($subject);
+        $detecting = $this->detecting($reason);
 
-        [$before, $after] = DB::transaction(function () use ($vote, $subject, $detecting): array {
-            $withdrawn = ListingVote::query()->whereKey($vote->id)->whereNull('withdrawn_at')->update(['withdrawn_at' => now()]);
+        $moved = DB::transaction(function () use ($votes, $reason, $detecting): array {
+            $subjects = [];
 
-            return $withdrawn > 0 && $subject !== null ? $this->recount($subject, $detecting, mark: false) : [false, false];
+            foreach ($votes as $vote) {
+                $withdrawn = ListingVote::query()->whereKey($vote->id)->whereNull('withdrawn_at')->update(['withdrawn_at' => now()]);
+                $subject = $this->subjectOf($vote->listing_number, $reason, $vote->author_key);
+
+                if ($withdrawn > 0 && $subject !== null) {
+                    $subjects[$subject->subject] = $subject;
+                }
+            }
+
+            usort($subjects, fn (VoteSubject $a, VoteSubject $b): int => [$a->number ?? 0, $a->subject] <=> [$b->number ?? 0, $b->subject]);
+
+            return array_map(fn (VoteSubject $subject): array => [$subject, ...$this->recount($subject, $detecting, mark: false)], $subjects);
         });
 
-        $this->afterCommit(null, $subject, $before, $after);
+        foreach ($moved as [$subject, $before, $after]) {
+            $this->afterCommit(null, $subject, $before, $after);
+        }
     }
 
     /** A voter's weight as `listing_votes.weight` stores it (`"1.25"`), from `config('votes.weights')`. */
@@ -184,10 +203,13 @@ final readonly class VoteService
         };
     }
 
-    /** Whether the subject's detector is on; native `fraud` has no detector of its own (its effect is WP-84's hold). */
-    private function detecting(VoteSubject $subject): bool
+    /**
+     * Whether the detector of the reason's subject is on; native `fraud` has no detector of its own (its effect is
+     * WP-84's hold). Read before a transaction: Pennant may insert the value it resolves.
+     */
+    private function detecting(ReportReason $reason): bool
     {
-        return match ($subject->reason) {
+        return match ($reason) {
             ReportReason::Rented => $this->detectors->rentedOn(),
             ReportReason::Agent => $this->detectors->realtorOn(),
             default => true,
