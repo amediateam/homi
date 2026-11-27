@@ -14,6 +14,7 @@ use App\Services\Sources\Data\ListingNearby;
 use App\Services\Sources\Data\ListingOffer;
 use App\Services\Sources\Data\ListingSourceLink;
 use App\Services\Sources\Data\PriceEvent;
+use App\Services\Sources\Legacy\LegacyContact;
 use InvalidArgumentException;
 
 /**
@@ -29,7 +30,9 @@ use InvalidArgumentException;
  *   are their defaults (`0`, `null`), and an optional list that is not one is `[]` — each noted in the answer's
  *   `Coercions` under its place (`history.0.at`, `stats.days_listed`), so one bad part never fails a card.
  * - No number of the author leaves: `phone`, `phone_display` and `call_url` are not mapped; `contact` gets
- *   `contact_url` and `contact_paid`, and `has_phone: false` until WP-43 writes the contact method. The links
+ *   `contact_url` and `contact_paid`, and `has_phone` says whether `POST …/contact` can answer under
+ *   `legacy.contact.mode` (WP-43, `LegacyContact::variant()`): a phone that reads as one number, or a call link (only
+ *   the phone in mode `phone`). A `phone` that is not one number is not disclosed and is noted. The links
  *   `contact_url`, `offers[].url`, `original.url`, `sources[].url` and `history[].url` pass `LinkGuard` (an
  *   `https` link that cannot carry a phone number, else `null`; a source whose link is dropped is left out).
  *   `title`, `place`, `landmark`, `facts[].value`, `nearby[].note`, `summary`, `original.text`, `offers[].text`,
@@ -69,12 +72,14 @@ final class ListingDetailsTranslator
     /**
      * @param  int  $nativeFloor  the first number of HOMI's own listings (`ListingNumber::floor()`)
      * @param  bool  $relay  whether a `gate` listing takes requests (WP-87, DEC-75); off until then
+     * @param  string  $contactMode  `legacy.contact.mode` (WP-43): `auto`, `phone` or `link`
      */
     public function __construct(
         private readonly PhotoUrlRewriter $photos,
         DistrictMatcher $districts,
         int $nativeFloor,
         private readonly bool $relay = false,
+        private readonly string $contactMode = 'auto',
     ) {
         $this->summary = new ListingSummaryTranslator($photos, $districts, $nativeFloor);
     }
@@ -131,7 +136,7 @@ final class ListingDetailsTranslator
             'author' => self::author($card, $seen),
             'owner_label' => self::ownerLabel($card, $seen),
             'contact' => [
-                'has_phone' => false,
+                'has_phone' => $this->hasPhone($card, $seen),
                 'contact_url' => LinkGuard::safe(LegacyValue::string($card, 'contact_url', $seen)),
                 'contact_paid' => LegacyValue::flag($card, 'contact_paid', $seen),
                 'mode' => $this->mode($card, $seen),
@@ -162,6 +167,24 @@ final class ListingDetailsTranslator
         }
 
         return $details;
+    }
+
+    /**
+     * Whether the contact method can answer for this card under the configured mode; a `phone` that is not one number
+     * (two numbers, a name with it, another type) is noted and counts as none.
+     *
+     * @param  array<array-key, mixed>  $card
+     */
+    private function hasPhone(#[\SensitiveParameter] array $card, ?Coercions $seen): bool
+    {
+        $contact = LegacyContact::fromCard($card);
+        $phone = $card['phone'] ?? null;
+
+        if ($contact->phone === null && $phone !== null && $phone !== false && ! (is_string($phone) && trim($phone) === '')) {
+            $seen?->note('phone');
+        }
+
+        return $contact->variant($this->contactMode) !== null;
     }
 
     /** @param  array<array-key, mixed>  $card */

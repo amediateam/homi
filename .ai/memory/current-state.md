@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-27 (WP-42 listings through legacy on `feat/wp-42-listings-legacy`, env keys on `chore/wp-42-env-keys`; WP-41 merged as #128 `84a4387`, env #129 `1096636`; DEC-110)
+updated: 2026-11-27 (WP-43 contact, translation, share on `feat/wp-43-contact-translation-share`, env keys on `chore/wp-43-env-keys`; WP-42 merged as #131 `e2c6361`, env #130 `e8f05d9`; DEC-111)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
@@ -98,7 +98,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
     the client answer from `resources/fixtures/legacy` through `LegacyFakeServer`'s own HTTP factory. Telescope keeps
     no entry of a legacy request.
 
-- **WP-42 (branch `feat/wp-42-listings-legacy`; not merged at the time of writing, not deployed):**
+- **WP-42 (merged as #131 `e2c6361`, env keys #130 `e8f05d9`; not deployed — the migrations run before the code):**
   - **The legacy driver of the listing capability** is bound (`config/sources.php`); the six `source.listings.*`
     defaults stay `stub`. `LegacyListingSource` answers feed, count, new-since, flow, map, card and previews from
     legacy through the translators of `Legacy/Translators` (golden fixtures in `resources/fixtures/legacy`); shared
@@ -113,6 +113,19 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
     WP-12's (property tests); `LinkGuard` drops links and names with nine digits.
   - **Tests:** `php artisan test --compact` → 2 731 tests, 2 714 passed, 17 skipped (the Pgsql suite); on PostgreSQL
     2 731 passed; the Pgsql suite 17 passed (on `e804673`, the integrator's run).
+
+- **WP-43 (branch `feat/wp-43-contact-translation-share`; not merged at the time of writing, not deployed):**
+  - **`POST …/contact`** through `ContactService` (`hasContact` → quota → contact): with a phone, HOMI's signed call link
+    to `GET /call/{token}` (`routes/pages.php`, views `call/*`, texts in the new `backend/lang/`, DEC-111); with only the
+    operator's call link, that link on an allowed host. The phone of a legacy card lives only in an encrypted cache
+    entry. `ContactDisclosure`: a per-user Tashkent-day quota, off while `CONTACT_SOFT_LIMIT` / `CONTACT_HARD_LIMIT` are
+    blank; its flag updates existing `access_grants` rows only.
+  - **`POST …/translation`** through `TranslationService` (cache per listing, locale and selector; misses limited to 30 an
+    hour; an optional call that never moves the legacy breaker). **`POST …/share`** through `ShareService` and the new
+    minimal `TelegramClient` (`savePreparedInlineMessage`; token never in an exception or log).
+  - While `sources.native_stubs` is on, the three answer their fixtures as before.
+  - **Tests:** `php artisan test --compact` → 3 071 tests, 3 051 passed, 20 skipped; on PostgreSQL 3 071 passed; the Pgsql
+    suite 20 passed (on `9cfb247`, the integrator's run).
 
 ## Frontend (`frontend/`)
 - pnpm 11.24 workspace, Node 26, Next 16.4.5 × 3 apps on dev ports 3000/3001/3002, TypeScript ^6. `pnpm -r lint` and `pnpm -r typecheck` exit 0 (3 apps + 8 packages; on `fb4a2b2` of WP-23, merged in #68, and on `5fd06c9` of WP-24, merged in #71, where the packages are linted with the app's rules since #70).

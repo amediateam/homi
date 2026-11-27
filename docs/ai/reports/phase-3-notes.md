@@ -2194,3 +2194,53 @@ on SQLite and on PostgreSQL, the Pgsql suite, PHPStan, Pint, `npm run check` and
 `migrate:fresh` on `homi_test`. Not run: step 9 (a walk of the Mini App on the fixtures; the developer's database
 misses migrations). Open: KI-72 (a number with `/` or `,` between its groups is not masked, as before WP-42).
 Next ids: AM-124, KI-73, DEC-111.
+
+## AL. Development track, 2026-11-27 — WP-43
+
+WP-43 (contact, translation, share) on `feat/wp-43-contact-translation-share` from `main` (`e2c6361`, WP-42 merged),
+taken in queue order by the first development session. Applied: `ContactService` with both variants of the operator's
+answer behind one shape, the disclosure quota `ContactDisclosure`, HOMI's signed call links and call page
+(`GET /call/{token}`, `routes/pages.php`, `backend/lang/` — DEC-111), the encrypted contact entry,
+`LegacyListingSource::contact()` / `hasContact()` / `translation()`, `TranslationService`, a minimal `TelegramClient` and
+`ShareService`, the events `ContactDisclosed` and `ContactQuotaExceeded`. The env keys go in a separate PR. Not applied:
+the nginx location of the call page, the signing key and the bot settings on the servers (the production track). The
+integrator's choices are in the specification's "As built".
+
+ASSUMPTION_MISMATCH AM-124 (2026-11-27):
+- **Assumption.** WP-43 "Disclosure quota": at the hard limit, flag the user with an `updateOrCreate` of
+  `access_grants`, creating a missing row with `state = admitted` and `admitted_via = open`.
+- **What was found.** A created row admits its user in every later mode: an owner-list id removed from the list, a
+  flagged user after a switch from open to private, an invite-mode user without an invitation (through the bot
+  channel), a block followed by an unblock — all stayed admitted (the security review of stage A, reproduced).
+- **Resolution.** The flag updates `flagged_at` and `flag_reason` of an existing row only; a user without a row is
+  reported by the warning and `ContactQuotaExceeded`, not stored (a place without a `state` needs a migration).
+
+ASSUMPTION_MISMATCH AM-125 (2026-11-27):
+- **Assumption.** WP-43 "Translation": the per-user limiter `v1-translation` runs inside the service, so cache hits
+  never consume it — next to a route throttle of the same name (WP-40).
+- **What was found.** The route's `throttle:v1-translation` counted every request, hits included; removing a throttle
+  from the route also removes its `429` from the committed OpenAPI document.
+- **Resolution.** The route sits under `throttle:v1-reads`; the service counts `v1-translation` on misses only, count
+  first and compare (atomic on Redis).
+
+ASSUMPTION_MISMATCH AM-126 (2026-11-27):
+- **Assumption.** WP-43 "Needs from the production track": nginx must forward `GET /call/*` to Laravel and write that
+  location's access log without the path.
+- **What was found.** `location /` already forwards it; a `location ^~ /call/` with `access_log off` and `try_files … /index.php`
+  would still log the token, because the request finishes in `location ~ \.php$`; and the server-level `add_header …
+  always` lines add a second `Referrer-Policy` and `nosniff` to the page's own headers.
+- **Resolution.** The specification's "Handoff" gives the location that calls PHP itself (as the dashboards block does)
+  with `access_log off` and only the two headers the page does not send.
+
+ASSUMPTION_MISMATCH AM-127 (2026-11-27):
+- **Assumption.** Catching `HttpClientException|GuzzleException` around a Bot API call keeps the token, which is in the
+  request path, out of every exception.
+- **What was found.** A malformed `TELEGRAM_API_BASE_URL` (`https:///api.telegram.org`, a port above 65535) makes Guzzle
+  throw `MalformedUriException`, which is neither: it escaped as a `500` and its message, logged and kept by Telescope,
+  quoted the token (the security review of stage B, reproduced).
+- **Resolution.** `TelegramClient` turns any `Throwable` of the send into `TelegramException::transport()` without the
+  original message, accepts only a bare origin as the base address, and marks every token-bearing frame sensitive (a
+  test walks every frame's arguments). WP-50 builds on this client.
+
+Reviews: one security review per stage (stage A: 2 medium, 1 medium-low, 8 low, 2 info; stage B: 1 medium, 6 low, 1 info), then a narrow re-review of the fixes (22 of 23 fixed, 1 partly; 6 low and 1 info more) and a last read of the contact paths (5 low, 1 info; 1 low accepted), the rest fixed with tests (list in the spec's "As built"). Next ids: AM-128, KI-73, DEC-112.
+

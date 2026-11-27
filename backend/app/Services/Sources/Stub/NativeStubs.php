@@ -6,12 +6,21 @@ use App\Enums\SourceDriver;
 use App\Exceptions\Identity\InitDataExpired;
 use App\Exceptions\Identity\InvalidInitData;
 use App\Exceptions\Identity\InvalidInitDataReason;
+use App\Exceptions\Listings\ShareFailed;
+use App\Exceptions\Listings\TranslationNotNeeded;
+use App\Exceptions\Sources\SourceUnavailable;
 use App\Http\Requests\Api\V1\Auth\TelegramSignInRequest;
 use App\Http\Requests\Api\V1\UpdateSettingsRequest;
+use App\Http\Resources\Api\V1\ContactResource;
 use App\Http\Resources\Api\V1\MeResource;
+use App\Http\Resources\Api\V1\PreparedShareResource;
 use App\Http\Resources\Api\V1\SessionResource;
 use App\Http\Resources\Api\V1\SettingsResource;
+use App\Http\Resources\Api\V1\TranslationResource;
 use App\Services\Identity\TokenIssuer;
+use App\Services\Sources\SourceContext;
+use App\Services\Sources\SourceManager;
+use App\Services\Telegram\PreparedShare;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,7 +38,11 @@ use LogicException;
  * controller, and it answers the envelope of `ApiController::sourced()` with `meta.source = stub`.
  *
  * WP-40 moved here: sign-in (every value signs in the one stub user, nothing is verified, the token is not capped),
- * `GET /me`, `GET /settings` and `PATCH /settings`.
+ * `GET /me`, `GET /settings` and `PATCH /settings`. WP-43 moved here `POST /listings/{number}/contact`: on the stub
+ * driver the stub's number and its link `{APP_URL}/call/stub-token-<number>` as it answered before, `meta.source =
+ * stub` — no disclosure quota, no HOMI call link, no `ContactDisclosed` — and `503` on any other driver; `POST /listings/{number}/translation`: the translation of the method's driver, uncached and
+ * without the limit of misses, `ru` answering `422`; and `POST /listings/{number}/share`: `stub-prepared-<number>`,
+ * valid an hour, for a listing the card source knows, the scenario `share_failed` answering `502` — no Bot API call.
  */
 final readonly class NativeStubs
 {
@@ -65,6 +78,9 @@ final readonly class NativeStubs
         'api.v1.me.show' => 'me',
         'api.v1.settings.show' => 'settings',
         'api.v1.settings.update' => 'updateSettings',
+        'api.v1.listings.contact' => 'contact',
+        'api.v1.listings.translation' => 'translation',
+        'api.v1.listings.share' => 'share',
     ];
 
     public function __construct(private Container $container) {}
@@ -121,13 +137,64 @@ final readonly class NativeStubs
         return $this->sourced(new SettingsResource($settings));
     }
 
+    /**
+     * `POST /listings/{number}/contact` as WP-12 answered it (the controller body before WP-43): the contact of the stub
+     * driver of `source.listings.contact`, nothing counted. On any other driver it is `503 source_unavailable`, as
+     * every other driver answered before WP-43: an uncounted answer from a real source would hand out a raw number with
+     * no quota and blank link fields.
+     */
+    public function contact(Request $request, SourceManager $sources): JsonResponse
+    {
+        $number = $request->route('number');
+        $context = SourceContext::fromRequest($request);
+        $resolved = $sources->listings('source.listings.contact', $context);
+
+        if ($resolved->driver !== SourceDriver::Stub) {
+            throw new SourceUnavailable;
+        }
+
+        return $this->sourced(new ContactResource($resolved->source->contact(is_numeric($number) ? (int) $number : 0, $context)), $resolved->driver);
+    }
+
+    /**
+     * `POST /listings/{number}/translation` as WP-12 answered it (the controller body before WP-43): the translation of
+     * the driver of `source.listings.translation`, neither cached nor limited per miss.
+     */
+    public function translation(Request $request, SourceManager $sources): JsonResponse
+    {
+        $number = $request->route('number');
+        $context = SourceContext::fromRequest($request);
+
+        if ($context->locale === 'ru') {
+            throw new TranslationNotNeeded;
+        }
+
+        $resolved = $sources->listings('source.listings.translation', $context);
+
+        return $this->sourced(new TranslationResource($resolved->source->translation(is_numeric($number) ? (int) $number : 0, $context)), $resolved->driver);
+    }
+
+    /**
+     * `POST /listings/{number}/share` as WP-12 answered it (the controller body before WP-43): a stub id for a listing
+     * the card source knows, `meta.source = stub`; the scenario `share_failed` answers `502`.
+     */
+    public function share(Request $request, StubResponder $stub, SourceManager $sources): JsonResponse
+    {
+        $number = $request->route('number');
+        $context = $stub->check($request, ['share_failed' => fn (): ShareFailed => new ShareFailed]);
+        $listing = $sources->listings('source.listings.card', $context)->source->preview(is_numeric($number) ? (int) $number : 0, $context);
+        $share = new PreparedShare("stub-prepared-{$listing->number}", now()->addHour()->toIso8601String());
+
+        return $this->sourced(new PreparedShareResource($share));
+    }
+
     /** The envelope of `ApiController::sourced()` for a stub answer without extra meta. */
-    private function sourced(JsonResource $data): JsonResponse
+    private function sourced(JsonResource $data, SourceDriver $driver = SourceDriver::Stub): JsonResponse
     {
         return response()->json([
             'success' => true,
             'data' => $data,
-            'meta' => ['source' => SourceDriver::Stub],
+            'meta' => ['source' => $driver],
         ]);
     }
 }

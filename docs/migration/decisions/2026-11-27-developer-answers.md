@@ -1,7 +1,8 @@
 # Developer's answers of 2026-11-27
 
 Conventions: [`../README.md`](../README.md). The record of the questions asked on 2026-11-27, while WP-42 (listings
-through legacy) was being built. Answers are quoted in Russian as the option chosen.
+through legacy) was being built. Answers are quoted in Russian as the option chosen. DEC-111 was asked by WP-43 (contact, translation, share) the
+same day.
 
 ## How long a page of previews may wait for the legacy limiter (DEC-110)
 
@@ -29,3 +30,22 @@ good previews are cached; a pause of legacy stays `403` with the reason `paused`
 other legacy call of the second: under other traffic (a review measured 3 calls a second of other users) a cold page of
 20 can still answer `503` after caching the ten that arrived, and the Mini App's «Повторить» then mostly succeeds from
 the card cache; the operator's real rate removes the case.
+
+## Where the texts of HOMI's call page live (DEC-111)
+
+Question (asked in Russian): WP-43 adds HOMI's call page (`GET /call/{token}`) with its texts in ru, uz and en. Its
+specification puts them in a new folder `backend/lang/{ru,uz,en}/call.php` — Laravel's default translation path, which
+does not exist yet; a new folder under `backend/` needs the developer's approval. Create it?
+
+Options:
+
+- Create `backend/lang` (recommended): Laravel's default path, read by `__()` without configuration; the bot's and the
+  mails' texts can go there later.
+- Texts in the Blade views: no new folder; the three languages as an array inside `resources/views/call/*`, for this
+  page only.
+- Texts in `resources/lang`: a non-default path set with `useLangPath()` in `bootstrap/app.php`; also a new folder, but
+  inside `resources/`.
+
+Answer: «Создать backend/lang (Рекомендуется)». Registered as **DEC-111**. Consequences: WP-43 creates `backend/lang/`
+with `ru`, `uz` and `en` and the file `call.php` in each; later packages put their server-side texts there too.
+

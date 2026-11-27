@@ -5,7 +5,8 @@ namespace App\Services\Sources\Data;
 /**
  * The answer of `POST /listings/{number}/contact` (WP-12, DEC-52), the only object with the author's number. `phone`
  * is E.164 and `phoneDisplay` its display form; both are null when the source has no raw number (Q-API-062), and
- * `callUrl` (absolute, valid for at least 10 minutes) is always set.
+ * `callUrl` (absolute, valid for at least 10 minutes) is always set in the answer: HOMI's call link when there is a
+ * number (variant A, WP-43; a source's own contact may leave `callUrl` and `expiresAt` blank then), else the source's.
  */
 final readonly class ListingContact
 {

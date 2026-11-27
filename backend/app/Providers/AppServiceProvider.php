@@ -2,12 +2,14 @@
 
 namespace App\Providers;
 
+use App\Http\Controllers\Pages\CallPageController;
 use App\Http\DashboardAccess;
 use App\Http\OpenApi\ApiErrorSchema;
 use App\Http\OpenApi\RelativeServer;
 use App\Models\User;
 use App\Services\Access\RateLimits;
 use App\Services\Identity\TelegramInitDataVerifier;
+use App\Services\Sources\SourceContext;
 use Carbon\CarbonImmutable;
 use Dedoc\Scramble\Scramble;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -108,7 +110,8 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('v1-reads', fn (Request $request): Limit => Limit::perMinute(RateLimits::value('reads.per_minute'))->by($this->actorKey($request)));
         RateLimiter::for('v1-listing', fn (Request $request): Limit => Limit::perMinute(RateLimits::value('listing.per_minute'))->by($this->actorKey($request)));
         RateLimiter::for('v1-contact', fn (Request $request): Limit => Limit::perHour(RateLimits::value('contact.per_hour'))->by($this->actorKey($request)));
-        RateLimiter::for('v1-translation', fn (Request $request): Limit => Limit::perHour(RateLimits::value('translation.per_hour'))->by($this->actorKey($request)));
+        // `v1-translation` (`rate_limits.translation.per_hour`) is no route limiter: `TranslationService` counts only the
+        // cache misses of a user (WP-43), and the route is read under `v1-reads`.
         RateLimiter::for('v1-share', fn (Request $request): Limit => Limit::perHour(RateLimits::value('share.per_hour'))->by($this->actorKey($request)));
         RateLimiter::for('v1-lists', fn (Request $request): Limit => Limit::perMinute(RateLimits::value('lists.per_minute'))->by($this->actorKey($request)));
         RateLimiter::for('v1-reports', fn (Request $request): Limit => Limit::perDay(RateLimits::value('reports.per_day'))->by($this->actorKey($request)));
@@ -131,6 +134,12 @@ class AppServiceProvider extends ServiceProvider
 
         // Collector pushes: generous per token, still bounded (ADR-0009 §2).
         RateLimiter::for('intake', fn (Request $request): Limit => Limit::perMinute(600)->by($this->actorKey($request)));
+
+        // HOMI's call page (WP-43): opened from the external browser without a session, so counted per address; the
+        // excess gets the page's own `429`, with its headers.
+        RateLimiter::for('call-page', fn (Request $request): Limit => Limit::perMinute(30)
+            ->by((string) $request->ip())
+            ->response(fn (Request $request, array $headers): Response => CallPageController::page('call.unavailable', 429, SourceContext::localeOf($request), headers: $headers)));
 
         // Telegram delivers from a handful of IPs; the limit only guards against floods.
         RateLimiter::for('telegram-webhook', fn (Request $request): Limit => Limit::perMinute(3000)->by((string) $request->ip()));

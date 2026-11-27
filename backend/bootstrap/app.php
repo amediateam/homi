@@ -31,6 +31,9 @@ return Application::configure(basePath: dirname(__DIR__))
         then: function (): void {
             // Third-party webhooks served by the hook.* vhost (master prompt §8); no session, no CSRF.
             Route::middleware('hooks')->group(__DIR__.'/../routes/hooks.php');
+
+            // HOMI's public pages on the API host (WP-43: the call page); no session, no cookie, no Inertia.
+            Route::middleware('public-pages')->group(__DIR__.'/../routes/pages.php');
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -44,6 +47,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->group('hooks', [
             ThrottleRequests::class.':telegram-webhook',
             SubstituteBindings::class,
+        ]);
+
+        // Only the limiter: the call page reads its token itself (WP-43).
+        $middleware->group('public-pages', [
+            ThrottleRequests::class.':call-page',
         ]);
 
         $middleware->alias([

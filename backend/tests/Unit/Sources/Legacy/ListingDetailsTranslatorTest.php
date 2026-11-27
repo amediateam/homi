@@ -39,12 +39,44 @@ it('maps the card\'s own keys: deal_type, market_code, history, owner, original,
         ->and($card['photos']['count'])->toBe(8);
 });
 
-it('never maps phone, phone_display or call_url, and has no phone until WP-43', function (): void {
+it('never maps phone, phone_display or call_url; has_phone says the contact method can answer (WP-43)', function (): void {
     $card = translatedCard();
 
     expect($card)->not->toHaveKeys(['phone', 'phone_display', 'call_url'])
-        ->and($card['contact'])->toBe(['has_phone' => false, 'contact_url' => 'https://t.me/stub_author_6', 'contact_paid' => false, 'mode' => null, 'request' => null]);
+        ->and($card['contact'])->toBe(['has_phone' => true, 'contact_url' => 'https://t.me/stub_author_6', 'contact_paid' => false, 'mode' => null, 'request' => null]);
 });
+
+it('sets has_phone per card under each contact mode: a phone read as one number, or a call link', function (string $fixture, array $overrides, array $modes): void {
+    foreach ($modes as $mode => $hasPhone) {
+        $card = LegacyFixtures::detailsTranslator(contactMode: $mode)->translate(legacyCard($fixture, $overrides));
+
+        expect($card['contact']['has_phone'])->toBe($hasPhone, "mode {$mode}");
+    }
+})->with([
+    'a phone and a call link' => ['listing.rent_apartment', [], ['auto' => true, 'phone' => true, 'link' => true]],
+    'a phone only' => ['listing.rent_apartment', ['call_url' => null], ['auto' => true, 'phone' => true, 'link' => true]],
+    'a call link only' => ['listing.link_only', [], ['auto' => true, 'phone' => false, 'link' => true]],
+    'neither' => ['listing.no_phone', [], ['auto' => false, 'phone' => false, 'link' => false]],
+    'a blank phone and a blank link' => ['listing.rent_apartment', ['phone' => ' ', 'call_url' => ''], ['auto' => false, 'phone' => false, 'link' => false]],
+    'two numbers in phone, no link' => ['listing.rent_apartment', ['phone' => '+998001234567, +998007654321', 'call_url' => null], ['auto' => false, 'phone' => false, 'link' => false]],
+    'two numbers in phone and a link' => ['listing.rent_apartment', ['phone' => '+998001234567 / +998007654321'], ['auto' => true, 'phone' => false, 'link' => true]],
+    'a phone of nine digits' => ['listing.rent_apartment', ['phone' => '00 123 45 67', 'call_url' => null], ['auto' => true, 'phone' => true, 'link' => true]],
+]);
+
+it('notes a phone that is not one number, never its value', function (mixed $phone, bool $noted): void {
+    $seen = Coercions::collect();
+    LegacyFixtures::detailsTranslator()->translate(legacyCard(overrides: ['phone' => $phone]), $seen);
+
+    expect(in_array('phone', $seen->keys(), true))->toBe($noted)
+        ->and(json_encode($seen->keys()))->not->toContain('001234567');
+})->with([
+    'one number' => ['+998001234567', false],
+    'none' => [null, false],
+    'blank' => ['  ', false],
+    'false' => [false, false],
+    'a name with it' => ['+998001234567 Анвар', true],
+    'a number as a JSON number' => [998001234567, true],
+]);
 
 it('masks every author-written text of the card (DEC-52)', function (): void {
     $number = '+998 00 123 45 67';

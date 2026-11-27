@@ -2,7 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
-use App\Services\Listings\PreparedShare;
+use App\Services\Telegram\PreparedShare;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 

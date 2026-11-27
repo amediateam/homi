@@ -41,6 +41,10 @@ use Throwable;
  * | `429`                                   | `SourceUnavailable`; the breaker opens for `Retry-After`          |
  * | `5xx`, timeout, connection error        | `SourceUnavailable`, a breaker failure (after the retry of a read)|
  *
+ * An optional call (`LegacyCall::$optional`, the translation of WP-43) gets the same results, but it is admitted by
+ * `LegacyBreaker::admitOptional()` (refused unless the breaker is closed, never the probe) and none of its outcomes
+ * reaches the breaker: not its timeouts and server errors, nor a refused key or a `429`, nor a success.
+ *
  * The key never reaches a log, an exception message or a Telescope entry (`TelescopeServiceProvider` hides the
  * configured header): log lines carry the method, the path template and the status, never a header, a value or a
  * body, and no exception of the HTTP client is chained, because its message quotes the response body. With
@@ -87,16 +91,19 @@ final class LegacyClient
     }
 
     /**
-     * Never retried. Without a body, no body and no `Content-Type` are sent, as the legacy client does.
+     * Never retried. Without a body, no body and no `Content-Type` are sent, as the legacy client does. `$query` is
+     * added to the address as `get()` adds it (WP-43: the translation's language when `legacy.translation.via` is
+     * `query`).
      *
      * @param  array<string, mixed>  $body
+     * @param  array<string, scalar|list<scalar>|null>  $query
      * @return array<array-key, mixed> the decoded JSON
      *
      * @throws SourceUnavailable|SourceNotFound|AccessDenied|DailyLimitReached
      */
-    public function post(string $path, array $body = [], ?LegacyCall $call = null): array
+    public function post(string $path, array $body = [], ?LegacyCall $call = null, array $query = []): array
     {
-        return $this->call('POST', $path, [], $body, $call ?? new LegacyCall);
+        return $this->call('POST', $path, $query, $body, $call ?? new LegacyCall);
     }
 
     /**
@@ -113,9 +120,15 @@ final class LegacyClient
 
         $this->lastOutcome = null;
         $key = $this->key();
+        $probe = null;
 
         try {
-            $probe = $this->breaker->admit();
+            if ($call->optional) {
+                // Admitted while the breaker is closed; it never holds the probe.
+                $this->breaker->admitOptional();
+            } else {
+                $probe = $this->breaker->admit();
+            }
         } catch (SourceUnavailable $open) {
             $this->lastOutcome = 'refused before sending: the breaker is open';
 
@@ -131,7 +144,7 @@ final class LegacyClient
             throw $before;
         }
 
-        return $this->settle($response, $method, $path, $probe);
+        return $this->settle($response, $method, $path, $probe, $call->optional ? null : $this->breaker);
     }
 
     /**
@@ -207,7 +220,7 @@ final class LegacyClient
             }
 
             try {
-                $results[$id] = $this->settle($responses[$id], 'GET', $reads[$id][0], $probes[$id] ?? null);
+                $results[$id] = $this->settle($responses[$id], 'GET', $reads[$id][0], $probes[$id] ?? null, $this->breaker);
             } catch (ApiException $outcome) {
                 $results[$id] = $outcome;
             }
@@ -558,18 +571,19 @@ final class LegacyClient
     }
 
     /**
-     * The outcome of the last attempt as a value or an exception; tells the breaker what happened.
+     * The outcome of the last attempt as a value or an exception; tells the breaker what happened, unless the call is
+     * optional (`$breaker` is then `null`: `LegacyCall::$optional`).
      *
      * @return array<array-key, mixed>
      */
-    private function settle(Response|string $response, string $method, string $path, ?Lock $probe): array
+    private function settle(Response|string $response, string $method, string $path, ?Lock $probe, ?LegacyBreaker $breaker): array
     {
         $where = ['method' => $method, 'path' => self::template($path)];
 
         $this->lastOutcome = is_string($response) ? 'failed in transit: '.class_basename($response) : "HTTP {$response->status()}";
 
         if (is_string($response)) {
-            $this->breaker->failed($probe);
+            $breaker?->failed($probe);
             Log::warning('A legacy call failed in transit.', $where + ['failure' => class_basename($response)]);
 
             throw new SourceUnavailable;
@@ -581,7 +595,7 @@ final class LegacyClient
         $detail = is_array($decoded) && is_string($decoded['detail'] ?? null) ? $decoded['detail'] : null;
 
         if ($status >= 200 && $status < 300) {
-            $this->breaker->succeeded($probe);
+            $breaker?->succeeded($probe);
 
             if ($decoded === null) {
                 throw $this->contractError($path, $where, 'a 2xx answer that is empty or not a JSON object or array');
@@ -591,47 +605,47 @@ final class LegacyClient
         }
 
         if ($status === 404) {
-            $this->breaker->succeeded($probe);
+            $breaker?->succeeded($probe);
 
             throw new SourceNotFound;
         }
 
         if ($status === 403 && $detail === 'paused') {
-            $this->breaker->succeeded($probe);
+            $breaker?->succeeded($probe);
             Log::warning('Legacy is paused.', $where);
 
             throw new AccessDenied(AccessReason::Paused);
         }
 
         if ($status === 401 || $status === 403) {
-            $this->breaker->failed($probe);
+            $breaker?->failed($probe);
             Log::critical('Legacy refused the service key.', $where);
 
             throw new SourceUnavailable;
         }
 
         if ($status === 429 && $detail === 'too many today') {
-            $this->breaker->succeeded($probe);
+            $breaker?->succeeded($probe);
             Log::warning('Legacy answered its daily limit.', $where + ['today' => $this->countDailyLimit()]);
 
             throw new DailyLimitReached(self::retryAfter($response) ?? self::DAILY_RETRY_AFTER_SECONDS);
         }
 
         if ($status === 429) {
-            $this->breaker->throttled(self::retryAfter($response) ?? Config::integer('legacy.breaker.open_for'), $probe);
+            $breaker?->throttled(self::retryAfter($response) ?? Config::integer('legacy.breaker.open_for'), $probe);
             Log::warning('Legacy asked HOMI to slow down.', $where);
 
             throw new SourceUnavailable;
         }
 
         if ($status >= 500) {
-            $this->breaker->failed($probe);
+            $breaker?->failed($probe);
             Log::warning('Legacy answered a server error.', $where);
 
             throw new SourceUnavailable;
         }
 
-        $this->breaker->succeeded($probe);
+        $breaker?->succeeded($probe);
 
         throw $this->contractError($path, $where, $status === 422 ? 'a 422 to a request HOMI validated' : "an unexpected {$status}");
     }

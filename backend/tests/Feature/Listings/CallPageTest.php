@@ -1,0 +1,346 @@
+<?php
+
+use App\Http\Controllers\Pages\CallPageController;
+use App\Models\User;
+use App\Services\Listings\CallLinkService;
+use Illuminate\Contracts\Http\Kernel as HttpKernel;
+use Illuminate\Http\Request;
+use Illuminate\Log\Events\MessageLogged;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Sleep;
+use Illuminate\Testing\TestResponse;
+use Laravel\Pennant\Feature;
+use Laravel\Sanctum\Sanctum;
+use Laravel\Telescope\Contracts\EntriesRepository;
+use Laravel\Telescope\EntryType;
+use Laravel\Telescope\IncomingEntry;
+use Laravel\Telescope\Telescope;
+use Laravel\Telescope\Watchers\RequestWatcher;
+use Tests\Support\LegacyFixtures;
+use Tests\Support\LegacyListingsHttp;
+
+/*
+ * WP-43, RES-005, SEC-REQ-026: HOMI's call page on the stub catalogue (`100001` has the stub number +998000000067).
+ */
+
+beforeEach(function (): void {
+    Http::preventStrayRequests();
+    Date::setTestNow('2026-11-27 09:00:00');
+});
+
+/** The path of a call page for the listing, issued to the user (a new one when none is given). */
+function callPagePath(int $number, string $locale = 'ru', ?User $user = null): string
+{
+    $url = app(CallLinkService::class)->issue($user ?? User::factory()->create(), $number, $locale)->url;
+
+    return (string) parse_url($url, PHP_URL_PATH);
+}
+
+/** Asserts the headers of every answer of the call page, exactly. */
+function assertCallPageHeaders(TestResponse $response): void
+{
+    expect($response->headers->get('X-Robots-Tag'))->toBe('noindex')
+        ->and($response->headers->get('Cache-Control'))->toBe('no-store, private')
+        ->and($response->headers->get('Referrer-Policy'))->toBe('no-referrer')
+        ->and($response->headers->get('Content-Security-Policy'))->toBe("default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
+        ->and($response->headers->get('X-Content-Type-Options'))->toBe('nosniff')
+        ->and($response->headers->get('Content-Type'))->toBe('text/html; charset=UTF-8')
+        ->and($response->headers->has('Set-Cookie'))->toBeFalse()
+        ->and($response->headers->getCookies())->toBe([]);
+}
+
+/** Asserts that the page has no script and names no other address: no `src`, no `href` but the one `tel:`. */
+function assertSelfContained(string $html): void
+{
+    expect($html)->not->toContain('<script')
+        ->and($html)->not->toContain('src=')
+        ->and($html)->not->toContain('<link')
+        ->and($html)->not->toContain('//')
+        ->and($html)->not->toMatch('/url\s*\(/i')
+        ->and($html)->not->toContain('@import');
+    preg_match_all('/href="([^"]*)"/', $html, $links);
+    expect(array_filter($links[1], fn (string $link): bool => ! str_starts_with($link, 'tel:')))->toBe([]);
+}
+
+it('shows the title, the number and one tel: link for a valid token', function (): void {
+    $response = $this->get(callPagePath(100001))->assertOk();
+    $html = (string) $response->getContent();
+
+    assertCallPageHeaders($response);
+    assertSelfContained($html);
+    expect(substr_count($html, 'href="tel:'))->toBe(1)
+        ->and($html)->toContain('href="tel:+998000000067"')
+        ->and($html)->toContain('+998 00 000-00-67')
+        ->and($html)->toContain('HOMI')
+        ->and($html)->toContain('Позвонить')
+        ->and($html)->toContain('<html lang="ru">');
+});
+
+it('shows the page in the language of its token', function (): void {
+    $html = (string) $this->get(callPagePath(100013, 'en'))->assertOk()->getContent();
+
+    expect($html)->toContain('<html lang="en">')
+        ->and($html)->toContain('>Call<')
+        ->and($html)->toContain('href="tel:+998000000041"');
+});
+
+it('answers an expired link 410 in the language of its token', function (string $locale, string $text): void {
+    $path = callPagePath(100001, $locale);
+    $this->travel(661)->seconds();
+
+    $response = $this->get($path, ['Accept-Language' => 'en'])->assertStatus(410);
+
+    assertCallPageHeaders($response);
+    assertSelfContained((string) $response->getContent());
+    expect($response->getContent())->toContain($text)
+        ->and($response->getContent())->toContain("<html lang=\"{$locale}\">")
+        ->and($response->getContent())->not->toContain('000-00-67')
+        ->and($response->getContent())->not->toContain('tel:');
+})->with([
+    'ru' => ['ru', 'Ссылка устарела — откройте объявление в приложении ещё раз'],
+    'uz' => ['uz', 'Havola eskirgan — eʼlonni ilovada qaytadan oching'],
+    'en' => ['en', 'This link has expired — open the listing in the app again'],
+]);
+
+it('still opens a link at +659 s', function (): void {
+    $path = callPagePath(100001);
+    $this->travel(659)->seconds();
+
+    $this->get($path)->assertOk();
+});
+
+it('answers 404 without a number for a token HOMI did not sign, in the language the browser asks for', function (): void {
+    $path = callPagePath(100001);
+    $altered = substr($path, 0, -1).(str_ends_with($path, 'A') ? 'B' : 'A');
+
+    foreach (['/call/'.str_repeat('a', 40), $altered, '/call/stub-token-100001'] as $wrong) {
+        $response = $this->get($wrong, ['Accept-Language' => 'en'])->assertNotFound();
+
+        assertCallPageHeaders($response);
+        expect($response->getContent())->toContain('This link does not work')
+            ->and($response->getContent())->not->toContain('tel:');
+    }
+});
+
+it('answers 404 for an unknown listing, a listing without a phone and an erased user', function (Closure $path): void {
+    $response = $this->get($path())->assertNotFound();
+
+    assertCallPageHeaders($response);
+    expect($response->getContent())->toContain('Ссылка не действует')
+        ->and($response->getContent())->not->toContain('tel:');
+})->with([
+    'unknown listing' => [fn (): string => callPagePath(999404)],
+    'no phone (withdrawn)' => [fn (): string => callPagePath(100015)],
+    'a chat link without a phone' => [fn (): string => callPagePath(100018)],
+    'erased user' => [function (): string {
+        $user = User::factory()->create();
+        $path = callPagePath(100001, user: $user);
+        $user->delete();
+
+        return $path;
+    }],
+]);
+
+it('never shows listing B through a token of listing A', function (): void {
+    $html = (string) $this->get(callPagePath(100002))->assertOk()->getContent();
+
+    expect($html)->toContain('tel:+998000000002')
+        ->and($html)->not->toContain('000000067');
+});
+
+it('answers 503 while the listing source cannot answer', function (): void {
+    $response = $this->get(callPagePath(999503, 'uz'))->assertStatus(503);
+
+    assertCallPageHeaders($response);
+    expect($response->getContent())->toContain('Eʼlonni ochib boʻlmadi');
+});
+
+it('answers the 31st page in a minute from one address 429, with the page headers, and the next minute again', function (): void {
+    $path = callPagePath(100001);
+    $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.10']);
+
+    for ($page = 1; $page <= 30; $page++) {
+        $this->get($path)->assertOk();
+    }
+
+    $limited = $this->get($path)->assertStatus(429);
+    assertCallPageHeaders($limited);
+    expect($limited->headers->get('Retry-After'))->not->toBeNull()
+        ->and($limited->getContent())->not->toContain('tel:');
+
+    $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.20']);
+    $this->get($path)->assertOk();
+
+    $this->travel(61)->seconds();
+    $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.10']);
+    $this->get($path)->assertOk();
+});
+
+it('serves the page without a session: no cookie, no CSRF token', function (): void {
+    $response = $this->get(callPagePath(100001))->assertOk();
+
+    expect($response->headers->getCookies())->toBe([])
+        ->and($response->getContent())->not->toContain('csrf');
+});
+
+it('keeps no Telescope entry of a call page, whatever the environment records', function (): void {
+    config(['telescope.record_all' => true]);
+    (new RequestWatcher(['size_limit' => 64]))->register(app());
+    $path = callPagePath(100001);
+    $expired = callPagePath(100002);
+
+    Telescope::startRecording(loadMonitoredTags: false);
+
+    try {
+        $this->get($path)->assertOk();
+        $this->get('/call/'.str_repeat('a', 40))->assertNotFound();
+        $this->travel(661)->seconds();
+        $this->get($expired)->assertStatus(410);
+        $this->getJson('/api/v1/reference')->assertOk();
+
+        Telescope::store(app(EntriesRepository::class));
+    } finally {
+        Telescope::stopRecording();
+        Telescope::flushEntries();
+    }
+
+    $stored = DB::table('telescope_entries')->pluck('content')->implode("\n");
+    $uris = DB::table('telescope_entries')->where('type', 'request')->pluck('content')->map(fn (string $content): mixed => json_decode($content, true)['uri'] ?? null)->all();
+
+    expect($uris)->toBe(['/api/v1/reference'])
+        ->and($stored)->not->toContain(substr($path, strlen('/call/')))
+        ->and($stored)->not->toContain(substr($expired, strlen('/call/')))
+        ->and($stored)->not->toContain('000000067')
+        ->and($stored)->not->toContain('/call/');
+});
+
+it('keeps no Telescope entry of a call page asked by an encoded slash or a doubled slash', function (string $shape, int $status): void {
+    config(['telescope.record_all' => true]);
+    (new RequestWatcher(['size_limit' => 64]))->register(app());
+    $token = substr(callPagePath(100001), strlen('/call/'));
+    $uri = ['encoded slash' => "/call%2F{$token}", 'doubled slash' => "//call/{$token}", 'both' => "//CALL%2f{$token}?x=1"][$shape];
+    $kernel = app(HttpKernel::class);
+
+    Telescope::startRecording(loadMonitoredTags: false);
+
+    try {
+        // The raw address as nginx passes it: `Request::create()` would normalise it first.
+        $request = new Request(server: [
+            'REQUEST_URI' => $uri, 'REQUEST_METHOD' => 'GET', 'SCRIPT_NAME' => '/index.php', 'SCRIPT_FILENAME' => public_path('index.php'),
+            'PHP_SELF' => '/index.php', 'HTTP_HOST' => 'homi.test', 'SERVER_PORT' => 443, 'HTTPS' => 'on', 'REMOTE_ADDR' => '127.0.0.1',
+        ]);
+        $response = $kernel->handle($request);
+        $kernel->terminate($request, $response);
+
+        Telescope::store(app(EntriesRepository::class));
+    } finally {
+        Telescope::stopRecording();
+        Telescope::flushEntries();
+    }
+
+    $stored = DB::table('telescope_entries')->pluck('content')->implode("\n");
+
+    expect($response->getStatusCode())->toBe($status)
+        ->and(DB::table('telescope_entries')->where('type', 'request')->count())->toBe(0)
+        ->and($stored)->not->toContain($token)
+        ->and($stored)->not->toContain('000000067');
+})->with([
+    'an encoded slash, which the router decodes: the page itself' => ['encoded slash', 200],
+    'a doubled slash' => ['doubled slash', 404],
+    'both, in capitals' => ['both', 404],
+]);
+
+it('drops a request entry the call page answered whatever its address says, and one whose decoded path is the call page\'s', function (): void {
+    config(['telescope.record_all' => true]);
+    $keeps = fn (array $content): bool => collect(Telescope::$filterUsing)->every(fn (callable $filter): bool => $filter(IncomingEntry::make($content + ['response_status' => 200])->type(EntryType::REQUEST)));
+
+    expect($keeps(['uri' => '/x', 'controller_action' => CallPageController::class.'@__invoke']))->toBeFalse()
+        ->and($keeps(['uri' => '/x', 'controller_action' => CallPageController::class]))->toBeFalse()
+        ->and($keeps(['uri' => '/%63all/abc', 'controller_action' => null]))->toBeFalse()
+        ->and($keeps(['uri' => '///call', 'controller_action' => null]))->toBeFalse()
+        ->and($keeps(['uri' => '/callback', 'controller_action' => null]))->toBeTrue()
+        ->and($keeps(['uri' => '/api/v1/call/abc', 'controller_action' => null]))->toBeTrue();
+});
+
+it('counts a forged X-Forwarded-For in the bucket of the address that connected while no proxy is trusted', function (): void {
+    config(['trustedproxy.proxies' => null]);
+    $path = callPagePath(100001);
+    $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.10']);
+
+    for ($page = 1; $page <= 30; $page++) {
+        $this->get($path, ['X-Forwarded-For' => "198.51.100.{$page}"])->assertOk();
+    }
+
+    $this->get($path, ['X-Forwarded-For' => '198.51.100.99'])->assertStatus(429);
+    $this->get($path, ['X-Forwarded-For' => '192.0.2.7, 198.51.100.1'])->assertStatus(429);
+});
+
+it('opens a link issued through the legacy driver with the legacy number, on the drivers of the token\'s user', function (): void {
+    LegacyListingsHttp::fake();
+    Sleep::fake();
+    config(['legacy.media.public_url' => LegacyFixtures::MEDIA, 'legacy.rate.per_second' => 1000]);
+    $user = User::factory()->create();
+
+    // The default stays the stub; only this user reads the card and the contact through legacy.
+    foreach (['card', 'contact'] as $method) {
+        Feature::globally()->activate("source.listings.{$method}", ['users' => [$user->id => 'legacy']]);
+    }
+
+    Sanctum::actingAs($user, ['app:read', 'app:write']);
+    $url = $this->postJson('/api/v1/listings/100001/contact', [], ['Accept-Language' => 'uz'])->assertOk()->assertJsonPath('meta.source', 'legacy')->json('data.call_url');
+    $path = (string) parse_url($url, PHP_URL_PATH);
+    $lines = new ArrayObject;
+    Log::listen(function (MessageLogged $entry) use ($lines): void {
+        $lines[] = [$entry->level, $entry->message, $entry->context];
+    });
+
+    $page = (string) $this->get($path)->assertOk()->getContent();
+    expect($page)->toContain('href="tel:+998001234567"')
+        ->and($page)->toContain('+998 00 123-45-67')
+        ->and($page)->toContain('<html lang="uz">')
+        ->and($page)->not->toContain('000000067')
+        ->and(LegacyListingsHttp::sent('/api/listings/100001'))->toHaveCount(1);
+
+    // The card's caches have expired: the page reads the card once again (its title comes from that read), and still
+    // answers.
+    $this->travel(61)->seconds();
+    expect((string) $this->get($path)->assertOk()->getContent())->toContain('href="tel:+998001234567"')
+        ->and(LegacyListingsHttp::sent('/api/listings/100001'))->toHaveCount(2)
+        ->and(array_map(LegacyListingsHttp::query(...), LegacyListingsHttp::sent('/api/listings/100001')))->toBe(['', '']);
+
+    $serialised = json_encode($lines->getArrayCopy(), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+    expect($serialised)->not->toContain(substr($path, strlen('/call/')))
+        ->and($serialised)->not->toContain('001234567');
+});
+
+it('reads a cold page with one card request, made as a user\'s call, and takes its title from that read', function (): void {
+    LegacyListingsHttp::fake();
+    Sleep::fake();
+    config(['legacy.media.public_url' => LegacyFixtures::MEDIA, 'legacy.rate.per_second' => 5]);
+    $user = User::factory()->create();
+
+    foreach (['card', 'contact'] as $method) {
+        Feature::globally()->activate("source.listings.{$method}", ['users' => [$user->id => 'legacy']]);
+    }
+
+    $path = callPagePath(100001, 'en', $user);
+
+    // The background share of this second is spent: a background call would be refused at once, a user's call is not.
+    Cache::put('legacy:out:bg:'.intdiv((int) now()->getPreciseTimestamp(3), 1000), 100, 2);
+
+    $page = (string) $this->get($path)->assertOk()->getContent();
+    $sent = LegacyListingsHttp::sent('/api/listings/100001');
+
+    expect($page)->toContain('href="tel:+998001234567"')
+        ->and($page)->toContain('<html lang="en">')
+        ->and($sent)->toHaveCount(1)
+        ->and(LegacyListingsHttp::query($sent[0]))->toBe('')
+        ->and(Cache::get('legacy:out:bg:'.intdiv((int) now()->getPreciseTimestamp(3), 1000)))->toBe(100);
+
+    $this->get($path)->assertOk();
+    expect(LegacyListingsHttp::sent('/api/listings/100001'))->toHaveCount(1);
+});

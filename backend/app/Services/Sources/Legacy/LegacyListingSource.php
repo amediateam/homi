@@ -4,7 +4,9 @@ namespace App\Services\Sources\Legacy;
 
 use App\Exceptions\AccessDenied;
 use App\Exceptions\ApiException;
+use App\Exceptions\Listings\ContactUnavailable;
 use App\Exceptions\Listings\DailyLimitReached;
+use App\Exceptions\Listings\TranslationUnavailable;
 use App\Exceptions\Sources\LegacyContractError;
 use App\Exceptions\Sources\SourceNotFound;
 use App\Exceptions\Sources\SourceUnavailable;
@@ -39,10 +41,13 @@ use App\Services\Sources\SourceManager;
 use Closure;
 use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Contracts\Cache\Repository;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Sleep;
 use InvalidArgumentException;
+use JsonException;
 use LogicException;
 
 /**
@@ -60,6 +65,9 @@ use LogicException;
  * | `details`    | `GET /api/listings/{n}`             | `legacy.cache.card` s per number, language and currency     |
  * | `preview`    | `GET /api/listings/{n}?preview=1`   | the same, beside the card's entry; a cached card serves it  |
  * | `previews`   | `preview` reads, `legacy.previews.concurrency` at a time through `LegacyClient::pool()`, one limiter wait of `legacy.previews.max_wait_ms` (`background_wait_ms` in the background) and one deadline of `legacy.previews.deadline_ms` for the batch | per item |
+ * | `hasContact` | the contact entry, else `GET /api/listings/{n}` again                                           | the contact entry per number, `legacy.cache.card` s |
+ * | `contact`    | variant A: the contact entry, else `GET /api/listings/{n}` again; variant B: `GET /api/listings/{n}/call` | the contact entry per number, `legacy.cache.card` s |
+ * | `translation`| `POST /api/listings/{n}/translate`, the language per `translationSelector()`, an optional call for the breaker (WP-43) | none here: `TranslationService` keeps it per number, locale and selector |
  *
  * Every cache here is shared between users, so a cold key is filled once (single-flight, WP-42 review M2): the first
  * caller takes the lock `{key}:fill` (held at most as long as one read may take) and reads legacy; a caller that finds
@@ -93,7 +101,29 @@ use LogicException;
  * (`items.3.floor` counts as `items.*.floor`) — and every such answer is counted (`coerced`). The photo rewriter and the
  * district matcher are made for each answer, so their counts are that answer's. The card passes legacy's daily limit on as `429 rate_limited` with `reason:
  * "daily"` (DEC-59); every other method answers it as `503`, since only the card has that limit. A system context
- * (no user) makes background calls in the limiter. `contact()` and `translation()` are WP-43's: `503` until then.
+ * (no user) makes background calls in the limiter, unless it is `SourceContext::foreground()` (the call page).
+ *
+ * The contact (WP-43, Q-API-062). Every full card read from legacy also files its author's contact (`LegacyContact`:
+ * the phone in E.164 when it reads as one number, legacy's `phone_display`, whether a call link exists) in a second
+ * cache entry beside the card's, `legacy:v1:listings:contact:<number>` (per number only: a phone does not depend on
+ * the language or the currency), for `legacy.cache.card` s, as a string encrypted with `Crypt` (the application key):
+ * the card's own entry holds no number, and under the mode `link` the entry holds none either (`LegacyContact::kept()`).
+ * The entry is filed once, under the number legacy answered with; a merged duplicate's own entry is a pointer to it
+ * (`{"m": <survivor>}`), so a `404` of the survivor leaves no copy of its phone (`file()`).
+ * `contact()` decides the variant per card under `legacy.contact.mode`: variant A answers the phone and its display
+ * (`callUrl` and `expiresAt` blank: `ContactService` answers HOMI's own call link) without a legacy call while the
+ * entry is cached; on a miss — expired, or unreadable after the application key changed — one caller reads the card
+ * again and caches it (single-flight on the entry's key; legacy's daily limit is then `503`, not the card's `429`).
+ * Variant B asks `GET /api/listings/{n}/call` and answers its `url` — a path joined to the origin of
+ * `legacy.base_url`, an absolute one only `https` on legacy's host and port or a host and port of
+ * `legacy.contact.link_hosts` (`callUrl()`)
+ * — valid for `legacy.contact.link_ttl` s, with legacy's `phone_display` only when it reads as one number; a `404`
+ * there, or a link to another host or port, is `404 contact_unavailable`. A card without either is
+ * `ContactUnavailable`, and so is a number legacy answered `404` for, or a duplicate merged into one, for
+ * `legacy.cache.card` s and one read's time after that `404` whatever `legacy.cache.not_found` says (its entry is
+ * dropped, and nothing is filed for it meanwhile: `rememberGone()`). `hasContact()` is the first half of
+ * `contact()`: the entry, else the card read, never the call link, so `ContactService` asks the quota before
+ * variant B spends a legacy call.
  *
  * A background batch of previews (a queued job, the bot: WP-46's radar matcher) waits for its share's places within
  * `legacy.previews.background_wait_ms` instead of failing at once, and never leaves an item out silently either: when
@@ -110,6 +140,27 @@ final class LegacyListingSource implements ListingSource
 
     /** How often a caller waiting for another caller's fill looks at the cache again. */
     private const int FILL_STEP_MS = 100;
+
+    /** The path template of legacy's call link (API-009). */
+    private const string CALL_PATH = '/api/listings/{n}/call';
+
+    /** The path template of legacy's translation (API-010). */
+    private const string TRANSLATE_PATH = '/api/listings/{n}/translate';
+
+    /** The longest call link taken from legacy. */
+    private const int MAX_CALL_URL = 2048;
+
+    /**
+     * A host a warning may name: a DNS name of at most 253 characters, lower-case labels of letters, digits and inner
+     * hyphens, no trailing dot (`callUrl()` also refuses one with seven digits or more in all).
+     */
+    /** The authority of an absolute call link: a host (a bracketed IPv6 literal too) and an optional port of digits only. */
+    private const string LINK_AUTHORITY = '#^https://(\[[0-9a-f:.]+\]|[^/?\#:\[\]]+)(:\d{0,5})?(?=[/?\#]|$)#iD';
+
+    private const string LOGGABLE_HOST = '/^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/D';
+
+    /** The port of an `https` address that names none. */
+    private const int HTTPS_PORT = 443;
 
     public function __construct(
         private readonly LegacyClient $client,
@@ -311,16 +362,112 @@ final class LegacyListingSource implements ListingSource
         return $ordered;
     }
 
-    /** WP-43 writes the contact method; until then legacy is not asked. */
-    public function contact(int $number, SourceContext $context): ListingContact
+    /** Whether the contact entry (else the card read again) gives a variant under `legacy.contact.mode`; no call link is asked. */
+    public function hasContact(int $number, SourceContext $context): bool
     {
-        throw new SourceUnavailable;
+        try {
+            return $this->contactEntry($number, $context)->variant(Config::string('legacy.contact.mode')) !== null;
+        } catch (ContactUnavailable) {
+            return false;
+        }
     }
 
-    /** WP-43 writes the translation method; until then legacy is not asked. */
+    /**
+     * The author's contact under `legacy.contact.mode`: variant A gives the phone (and blank `callUrl` and `expiresAt`
+     * for `ContactService` to fill with HOMI's link), variant B legacy's call link.
+     */
+    public function contact(int $number, SourceContext $context): ListingContact
+    {
+        $contact = $this->contactEntry($number, $context);
+
+        return match ($contact->variant(Config::string('legacy.contact.mode'))) {
+            LegacyContact::PHONE => new ListingContact('', '', $contact->phone, $contact->phoneDisplay()),
+            LegacyContact::LINK => $this->callLink($number, $context, $contact->linkDisplay()),
+            default => throw new ContactUnavailable,
+        };
+    }
+
+    /**
+     * The original text in the context's language, machine-translated by legacy (API-010): `POST
+     * /api/listings/{n}/translate` with the target language per `translationSelector()`, never retried, within the
+     * client's `legacy.timeout` (15 s), as an optional call (`LegacyCall::$optional`): an open breaker refuses it, and
+     * nothing it answers — a timeout, a `5xx` — counts for the breaker shared by every legacy call. Nothing is cached
+     * here: `TranslationService` keeps the answer per listing, locale and selector. Legacy's `404` (an unknown listing,
+     * or one without an original text) is `404 not_found`, and the number is not marked gone, since its card may still
+     * answer; `unsupported`, an empty text, an answer that does not fit (logged as a contract error naming `text`) and
+     * every other failure, legacy's daily limit included, are `503 translation_unavailable`; legacy's pause stays `403
+     * paused`, as on every legacy method. `locale` while the
+     * selector of every call sends no language (`legacy.locale.via` neither `header` nor `query`) is `unsupported`
+     * too, with a warning at most once a minute: legacy would answer its default language for every locale.
+     *
+     * @throws SourceNotFound|TranslationUnavailable|AccessDenied
+     */
     public function translation(int $number, SourceContext $context): ListingTranslation
     {
-        throw new SourceUnavailable;
+        self::refuseNative($number);
+
+        $via = Config::string('legacy.translation.via');
+
+        if ($via === 'unsupported') {
+            throw new TranslationUnavailable;
+        }
+
+        $selector = self::translationSelector();
+
+        if ($selector['via'] === 'unsupported') {
+            if ($this->cache->add(self::PREFIX.'once:translation_unselected', 1, 60)) {
+                Log::warning('LEGACY_TRANSLATION_VIA is locale, but LEGACY_LOCALE_VIA sends no language: translations are unavailable.');
+            }
+
+            throw new TranslationUnavailable;
+        }
+
+        if ($this->cache->has($this->goneKey($number))) {
+            throw new SourceNotFound('Listing not found.');
+        }
+
+        $language = [$selector['name'] => LegacyLocale::toLegacy($context->locale)];
+
+        try {
+            $answer = $this->client->post(self::cardPath($number).'/translate', $via === 'body' ? $language : [], $this->call($context, optional: true), $via === 'query' ? $language : []);
+        } catch (SourceNotFound|AccessDenied $passed) {
+            throw $passed;
+        } catch (ApiException $failure) {
+            $this->failure($failure);
+
+            throw new TranslationUnavailable;
+        }
+
+        try {
+            $text = $this->checked(fn (): string => self::translatedText($answer));
+        } catch (LegacyContractError) {
+            throw new TranslationUnavailable;
+        }
+
+        return ListingTranslation::fromArray(['text' => $text, 'locale' => $context->locale]);
+    }
+
+    /**
+     * How legacy's translation is told the target language (WP-02 point 8): `via` and the `name` it goes under —
+     * `header` or `query` under `legacy.locale.name` (the selector of every call) when `legacy.translation.via` is
+     * `locale` (any value but `query`, `body` and `unsupported`), `query` or `body` under `legacy.translation.name`
+     * when it says so — or `unsupported` without a name when legacy is not asked: `legacy.translation.via` is
+     * `unsupported`, or it is `locale` while `legacy.locale.via` sends no language. Read at call time;
+     * `TranslationService` keys its cache by it, so a changed setting never serves an entry cached under the old one.
+     *
+     * @return array{via: string, name: string}
+     */
+    public static function translationSelector(): array
+    {
+        $via = Config::string('legacy.translation.via');
+        $locale = Config::string('legacy.locale.via');
+
+        return match (true) {
+            $via === 'unsupported' => ['via' => 'unsupported', 'name' => ''],
+            $via === 'query', $via === 'body' => ['via' => $via, 'name' => Config::string('legacy.translation.name')],
+            $locale === 'header', $locale === 'query' => ['via' => $locale, 'name' => Config::string('legacy.locale.name')],
+            default => ['via' => 'unsupported', 'name' => ''],
+        };
     }
 
     /**
@@ -366,13 +513,27 @@ final class LegacyListingSource implements ListingSource
      */
     private function fetchCard(int $number, SourceContext $context, bool $preview): array
     {
+        // Only the full card has legacy's daily limit (DEC-59); a preview is outside it.
+        return $this->readCard($number, $context, $preview, daily: ! $preview)['card'];
+    }
+
+    /**
+     * A card or its preview form read from legacy and translated, with the author's contact of a full card and the
+     * number legacy answered with (filed by `file()`; the asked one for a preview); legacy's daily limit is passed on
+     * only where `$daily` says so.
+     *
+     * @return array{card: array<string, mixed>, contact: LegacyContact|null, answered: int}
+     *
+     * @throws SourceNotFound|SourceUnavailable|DailyLimitReached
+     */
+    private function readCard(int $number, SourceContext $context, bool $preview, bool $daily): array
+    {
         if ($this->cache->has($this->goneKey($number))) {
             throw new SourceNotFound('Listing not found.');
         }
 
         try {
-            // Only the full card has legacy's daily limit (DEC-59); a preview is outside it.
-            $answer = $this->read(self::cardPath($number), $preview ? ['preview' => 1] : [], $this->call($context), daily: ! $preview);
+            $answer = $this->read(self::cardPath($number), $preview ? ['preview' => 1] : [], $this->call($context), daily: $daily);
         } catch (SourceNotFound $missing) {
             $this->rememberGone($number);
 
@@ -386,27 +547,315 @@ final class LegacyListingSource implements ListingSource
                 : $details->translate($answer, $seen),
         ));
 
-        if (! $preview) {
-            $this->file($number, $card, $answer);
+        if ($preview) {
+            return ['card' => $card, 'contact' => null, 'answered' => $number];
         }
 
-        return $card;
+        return ['card' => $card, ...$this->file($number, $card, $answer)];
     }
 
     /**
-     * Files a full card legacy answered in `listing_refs` (a cache miss, so once per listing, language and currency a
-     * minute: the card cache's key and `legacy.cache.card`): the author key read from the raw answer, which still holds
-     * the number the translated card no longer has (DEC-52), and the merge when legacy answered another number. A
+     * Files a full card legacy answered (a cache miss, so once per listing, language and currency a minute: the card
+     * cache's key and `legacy.cache.card`): in `listing_refs` the author key read from the raw answer, which still holds
+     * the number the translated card no longer has (DEC-52), and the merge when legacy answered another number; and the
+     * author's contact in its encrypted entry, once, under the answered number, with a pointer to it (`{"m":
+     * <answered>}`, sealed alike, no copy of the phone) under an asked number legacy merged into it — so the `404` of
+     * the survivor leaves no copy of its phone behind. Nothing is filed while either number is withdrawn
+     * (`withdrawnKey()`): a read that was in flight when legacy answered `404` for it cannot file a usable entry. A
      * preview carries no phone or post link, so it files nothing.
      *
      * @param  array<array-key, mixed>  $card  the translated card
      * @param  array<array-key, mixed>  $answer  legacy's raw answer
+     * @return array{contact: LegacyContact, answered: int}
      */
-    private function file(int $asked, #[\SensitiveParameter] array $card, #[\SensitiveParameter] array $answer): void
+    private function file(int $asked, #[\SensitiveParameter] array $card, #[\SensitiveParameter] array $answer): array
     {
         $details = ListingDetails::fromArray($card);
+        $answered = $details->preview->number;
         $this->refs->remember($details, AuthorKey::fromCard($answer));
-        $this->refs->markMerged($asked, $details->preview->number);
+        $this->refs->markMerged($asked, $answered);
+
+        $contact = LegacyContact::fromCard($answer)->kept(Config::string('legacy.contact.mode'));
+        $seconds = Config::integer('legacy.cache.card');
+
+        if ($seconds > 0 && ! $this->withdrawn($asked) && ! $this->withdrawn($answered)) {
+            $this->cache->put($this->contactKey($answered), self::sealed($contact->toArray()), $seconds);
+
+            if ($asked !== $answered) {
+                $this->cache->put($this->contactKey($asked), self::sealed(['m' => $answered]), $seconds);
+            }
+        }
+
+        return ['contact' => $contact, 'answered' => $answered];
+    }
+
+    /**
+     * What a contact entry holds, encrypted with `Crypt` (the application key): a contact (`LegacyContact::toArray()`)
+     * or a pointer to the surviving number's entry.
+     *
+     * @param  array{p: string|null, d: string|null, l: bool}|array{m: int}  $data
+     */
+    private static function sealed(#[\SensitiveParameter] array $data): string
+    {
+        return Crypt::encryptString(json_encode($data, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * The author's contact of a listing: its encrypted entry (through the pointer of a merged duplicate to its
+     * survivor's), else the card read again, by one caller at a time (`singleFlight()` on the entry's key, as
+     * `cached()` fills a card). A number legacy answered `404` for, and a duplicate whose survivor it answered `404`
+     * for, is `ContactUnavailable` at once, whatever entry is left (`refuseWithdrawn()`).
+     *
+     * @throws ContactUnavailable|SourceNotFound|SourceUnavailable
+     */
+    private function contactEntry(int $number, SourceContext $context): LegacyContact
+    {
+        self::refuseNative($number);
+        $this->refuseWithdrawn($number);
+
+        if (Config::integer('legacy.cache.card') <= 0) {
+            return $this->contactFromCard($number, $context);
+        }
+
+        return $this->singleFlight(
+            $this->contactKey($number),
+            fn (): ?LegacyContact => $this->cachedContact($number),
+            fn (): LegacyContact => $this->contactFromCard($number, $context),
+        );
+    }
+
+    /**
+     * The contact of a full card read again (its entry missed; `file()` stores the new entry); the card is cached as
+     * `details()` would cache it, so the card or preview read that usually follows (the call page's title) needs no
+     * second call. While the asked number or the survivor a card answers with is withdrawn (`refuseWithdrawn()`) —
+     * legacy answered `404` while this read was in flight — the card gives no contact and is not cached. Legacy's
+     * daily limit is `503` here: only the card method passes it on.
+     *
+     * @throws ContactUnavailable|SourceNotFound|SourceUnavailable
+     */
+    private function contactFromCard(int $number, SourceContext $context): LegacyContact
+    {
+        ['card' => $card, 'contact' => $contact, 'answered' => $answered] = $this->readCard($number, $context, false, daily: false);
+        $this->refuseWithdrawn($number);
+        $this->refuseWithdrawn($answered);
+        $seconds = Config::integer('legacy.cache.card');
+
+        if ($seconds > 0) {
+            $this->cache->put($this->cardKey('card', $number, $context), $card, $seconds);
+        }
+
+        return $contact ?? throw new LogicException('A full card files its contact.');
+    }
+
+    /**
+     * The author's contact of a listing from its encrypted entry, or from its survivor's when the entry is a merged
+     * duplicate's pointer (one step: the survivor's entry must hold a contact); `null` when there is none, or it cannot
+     * be read (the application key changed, another shape): then the entry is dropped and the card is read again. A
+     * withdrawn number, and a pointer to a withdrawn survivor, is `ContactUnavailable` — asked again here, since
+     * `singleFlight()` looks the entry up once more after waiting for another caller's fill.
+     *
+     * @throws ContactUnavailable
+     */
+    private function cachedContact(int $number): ?LegacyContact
+    {
+        $this->refuseWithdrawn($number);
+        $data = $this->unsealed($number);
+
+        if ($data !== null && array_keys($data) === ['m']) {
+            $survivor = is_int($data['m']) && $data['m'] !== $number ? $data['m'] : null;
+
+            if ($survivor === null) {
+                $this->cache->forget($this->contactKey($number));
+
+                return null;
+            }
+
+            $this->refuseWithdrawn($survivor);
+            $number = $survivor;
+            $data = $this->unsealed($survivor);
+
+            if ($data !== null && array_keys($data) === ['m']) {
+                return null;
+            }
+        }
+
+        if ($data === null) {
+            return null;
+        }
+
+        try {
+            return LegacyContact::fromArray($data);
+        } catch (InvalidArgumentException) {
+            $this->cache->forget($this->contactKey($number));
+
+            return null;
+        }
+    }
+
+    /**
+     * The decrypted contact entry of a number, `null` when there is none or it cannot be read (then it is dropped).
+     *
+     * @return array<array-key, mixed>|null
+     */
+    private function unsealed(int $number): ?array
+    {
+        $key = $this->contactKey($number);
+        $sealed = $this->cache->get($key);
+
+        if (! is_string($sealed)) {
+            return null;
+        }
+
+        try {
+            $data = json_decode(Crypt::decryptString($sealed), true, 2, JSON_THROW_ON_ERROR);
+        } catch (DecryptException|JsonException) {
+            $data = null;
+        }
+
+        if (! is_array($data)) {
+            $this->cache->forget($key);
+
+            return null;
+        }
+
+        return $data;
+    }
+
+    /**
+     * Variant B: legacy's call link of the listing (`GET /api/listings/{n}/call`, `{url}`), absolute, valid for
+     * `legacy.contact.link_ttl` s from now, with the display `LegacyContact::linkDisplay()` gives. A `404` there, or a
+     * link to a host HOMI does not allow, means no usable contact; legacy's daily limit is `503`.
+     *
+     * @throws ContactUnavailable|SourceUnavailable
+     */
+    private function callLink(int $number, SourceContext $context, #[\SensitiveParameter] ?string $display): ListingContact
+    {
+        try {
+            $answer = $this->read(self::cardPath($number).'/call', [], $this->call($context));
+        } catch (SourceNotFound) {
+            throw new ContactUnavailable;
+        }
+
+        $url = $this->checked(fn (): string => $this->callUrl($answer));
+
+        return new ListingContact($url, now()->addSeconds(max(1, Config::integer('legacy.contact.link_ttl')))->toIso8601String(), null, $display);
+    }
+
+    /**
+     * The `url` of legacy's call answer as an absolute `https` address. A path (`/call/…`) is joined to the origin of
+     * `legacy.base_url` (its scheme, host and port, never its path). An absolute link must be `https` without a user
+     * or a password, on a host and port of `linkOrigins()` — the host of `legacy.base_url` on its port (443 when it
+     * names none), or an entry of `legacy.contact.link_hosts` on the port it names (443 when it names none) — compared
+     * lower-cased and exactly (no suffix match); the link's port is 443 when it names none, so `:0` and every other
+     * port are refused. A link to any other host or port leaves the listing without a usable link
+     * (`ContactUnavailable`), with a warning that names the path template and the host, lower-cased — never its port,
+     * path, query or fragment, nor the whole address — at most once a minute per host, so the operator can tell which
+     * host belongs in `LEGACY_CONTACT_LINK_HOSTS`; only a host name (`LOGGABLE_HOST`) with fewer than seven digits in
+     * all (a phone number split by hyphens or dots is still one) is named: any other host is logged as
+     * `host_invalid: true`, at most once a minute for all of them. A backslash anywhere, a control character or a
+     * space, a port that is not digits only (`parse_url()` reads `:443x` as 443; a browser refuses it), and every
+     * other form are a contract error naming `url`.
+     *
+     * @param  array<array-key, mixed>  $answer
+     *
+     * @throws LegacyContractError|ContactUnavailable
+     */
+    private function callUrl(#[\SensitiveParameter] array $answer): string
+    {
+        $url = $answer['url'] ?? null;
+        $refuse = fn (): LegacyContractError => LegacyContractError::key(self::CALL_PATH, 'url', 'not a call link HOMI can open');
+
+        if (! is_string($url) || $url === '' || strlen($url) > self::MAX_CALL_URL || preg_match('/[\x00-\x20\x7f\\\\]/', $url) === 1) {
+            throw $refuse();
+        }
+
+        if (str_starts_with($url, '/') && ! str_starts_with($url, '//')) {
+            return (self::origin(Config::string('legacy.base_url')) ?? throw $refuse()).$url;
+        }
+
+        $parts = parse_url($url);
+
+        if (! is_array($parts) || strtolower($parts['scheme'] ?? '') !== 'https' || ($parts['host'] ?? '') === '' || isset($parts['user']) || isset($parts['pass'])) {
+            throw $refuse();
+        }
+
+        if (preg_match(self::LINK_AUTHORITY, $url) !== 1) {
+            throw $refuse();
+        }
+
+        $host = strtolower($parts['host']);
+
+        if (! in_array($host.':'.($parts['port'] ?? self::HTTPS_PORT), self::linkOrigins(), true)) {
+            $named = preg_match(self::LOGGABLE_HOST, $host) === 1 && preg_match_all('/\d/', $host) < 7;
+
+            if ($this->cache->add(self::PREFIX.'once:link_host:'.($named ? sha1($host) : 'invalid'), 1, 60)) {
+                Log::warning('Legacy gave a call link to a host HOMI does not allow: the listing has no usable link.', ['path' => self::CALL_PATH, ...($named ? ['host' => $host] : ['host_invalid' => true])]);
+            }
+
+            throw new ContactUnavailable;
+        }
+
+        return $url;
+    }
+
+    /** The origin of an absolute address (`scheme://host[:port]`), `null` when it has no scheme or host. */
+    private static function origin(string $base): ?string
+    {
+        $parts = parse_url($base);
+
+        if (! is_array($parts) || ($parts['scheme'] ?? '') === '' || ($parts['host'] ?? '') === '') {
+            return null;
+        }
+
+        return strtolower($parts['scheme']).'://'.$parts['host'].(isset($parts['port']) ? ':'.$parts['port'] : '');
+    }
+
+    /**
+     * The hosts and ports a call link of variant B may point to, as `host:port`, lower-cased: the host of
+     * `legacy.base_url` on its port (443 when it names none), read at call time, and each entry of
+     * `legacy.contact.link_hosts` (`LEGACY_CONTACT_LINK_HOSTS`): `host` on 443, or `host:port` on that port. A port
+     * outside 1…65535 (`:0` among them) and an entry of any other form (a path, a user, a scheme) add nothing.
+     *
+     * @return list<string>
+     */
+    private static function linkOrigins(): array
+    {
+        $base = parse_url(Config::string('legacy.base_url'));
+        $origins = [];
+
+        if (is_array($base) && ($base['host'] ?? '') !== '' && ($base['port'] ?? self::HTTPS_PORT) >= 1) {
+            $origins[] = strtolower($base['host']).':'.($base['port'] ?? self::HTTPS_PORT);
+        }
+
+        foreach (Config::array('legacy.contact.link_hosts') as $entry) {
+            if (is_string($entry) && preg_match('/^([a-z0-9._-]+)(?::(\d{1,5}))?$/D', strtolower(trim($entry)), $match) === 1) {
+                $port = isset($match[2]) ? (int) $match[2] : self::HTTPS_PORT;
+
+                if ($port >= 1 && $port <= 65_535) {
+                    $origins[] = "{$match[1]}:{$port}";
+                }
+            }
+        }
+
+        return array_values(array_unique($origins));
+    }
+
+    /**
+     * The `text` of legacy's translation answer (`{"text": string}`); a text that is blank is no translation.
+     *
+     * @param  array<array-key, mixed>  $answer
+     *
+     * @throws LegacyContractError|TranslationUnavailable
+     */
+    private static function translatedText(#[\SensitiveParameter] array $answer): string
+    {
+        $text = $answer['text'] ?? null;
+
+        if (! is_string($text)) {
+            throw LegacyContractError::key(self::TRANSLATE_PATH, 'text', 'not a text');
+        }
+
+        return trim($text) === '' ? throw new TranslationUnavailable : $text;
     }
 
     /**
@@ -665,7 +1114,7 @@ final class LegacyListingSource implements ListingSource
         try {
             return $this->checked(fn (): mixed => $translate(
                 new ListingSummaryTranslator($photos, $districts, $floor),
-                new ListingDetailsTranslator($photos, $districts, $floor),
+                new ListingDetailsTranslator($photos, $districts, $floor, contactMode: Config::string('legacy.contact.mode')),
             ));
         } finally {
             $this->reportMisses($photos, $districts);
@@ -675,11 +1124,12 @@ final class LegacyListingSource implements ListingSource
     /**
      * The district matcher of the context's language over the reference capability; an unavailable reference source
      * gives one that matches nothing, so a district code is `null` and never a failed answer. The read is HOMI's own,
-     * so it goes without the caller's stub scenario, which names the outcome of the caller's method only.
+     * so it goes without the caller's stub scenario, which names the outcome of the caller's method only; it keeps the
+     * context's `foreground` flag, so a read for the call page is made as a user's call there too.
      */
     private function districts(SourceContext $context): DistrictMatcher
     {
-        $own = new SourceContext($context->locale, $context->currency, $context->user);
+        $own = new SourceContext($context->locale, $context->currency, $context->user, foreground: $context->foreground);
 
         try {
             return DistrictMatcher::fromSource($this->sources->reference('source.reference', $own)->source, $own);
@@ -794,12 +1244,13 @@ final class LegacyListingSource implements ListingSource
     }
 
     /**
-     * How a call of this context is made: its language, the currency given or its own, and in the background when no
-     * user asks (a queued job, the bot).
+     * How a call of this context is made: its language, the currency given or its own, in the background when no user
+     * asks (a queued job, the bot) unless the context says a person waits (`SourceContext::foreground()`, the call
+     * page), and optional for the breaker where `$optional` says so (the translation: `LegacyCall::$optional`).
      */
-    private function call(SourceContext $context, ?string $currency = null): LegacyCall
+    private function call(SourceContext $context, ?string $currency = null, bool $optional = false): LegacyCall
     {
-        return new LegacyCall($context->locale, $currency ?? $context->currency, $context->user === null);
+        return new LegacyCall($context->locale, $currency ?? $context->currency, $context->user === null && ! $context->foreground, $optional);
     }
 
     /** @param  array<string, scalar|list<scalar>>  $query */
@@ -815,14 +1266,54 @@ final class LegacyListingSource implements ListingSource
         return self::PREFIX."{$kind}:{$number}:{$context->locale}:{$context->currency}";
     }
 
+    private function contactKey(int $number): string
+    {
+        return self::PREFIX."contact:{$number}";
+    }
+
     private function goneKey(int $number): string
     {
         return self::PREFIX."gone:{$number}";
     }
 
-    /** A number legacy answered `404` for: not asked again for a while, and gone in `listing_refs`. */
+    /** The marker of a number legacy answered `404` for, which the contact keeps whatever `legacy.cache.not_found` says. */
+    private function withdrawnKey(int $number): string
+    {
+        return self::PREFIX."withdrawn:{$number}";
+    }
+
+    /** Whether legacy answered `404` for the number lately: its gone marker or its withdrawn marker is set. */
+    private function withdrawn(int $number): bool
+    {
+        return $this->cache->has($this->goneKey($number)) || $this->cache->has($this->withdrawnKey($number));
+    }
+
+    /**
+     * No contact for a number legacy answered `404` for lately (`withdrawn()`): the number asked, or the survivor a
+     * merged duplicate's entry or card points to.
+     *
+     * @throws ContactUnavailable
+     */
+    private function refuseWithdrawn(int $number): void
+    {
+        if ($this->withdrawn($number)) {
+            throw new ContactUnavailable;
+        }
+    }
+
+    /**
+     * A number legacy answered `404` for: gone in `listing_refs`, not asked again for `legacy.cache.not_found` s (its
+     * gone marker), and withdrawn for its contact (its withdrawn marker, written first, whatever `not_found` says) for
+     * `legacy.cache.card` s and one read with every attempt (`fillSeconds()`) — longer than any contact entry filed
+     * before the `404` lives, and than any read in flight during it takes — before its contact entry is dropped; both
+     * come before the write to `listing_refs`, so a failing write leaves no number behind. So
+     * the contact method answers no number of a withdrawn listing, nor of a duplicate merged into it, even while gone
+     * numbers are not kept: `file()` files nothing for it, and `contactEntry()` refuses it.
+     */
     private function rememberGone(int $number): void
     {
+        $this->cache->put($this->withdrawnKey($number), 1, max(0, Config::integer('legacy.cache.card')) + self::fillSeconds());
+        $this->cache->forget($this->contactKey($number));
         $this->refs->markGone($number);
         $seconds = Config::integer('legacy.cache.not_found');
 

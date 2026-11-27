@@ -1,0 +1,149 @@
+{
+    "id": 100002,
+    "title": "4-комн. дом, 180 м² · Мирзо-Улугбек",
+    "short_title": "4-комн. дом, 180 м²",
+    "price": "$1 500/мес (≈ 19,2 млн сум)",
+    "price_kind": null,
+    "favorite": false,
+    "viewed": false,
+    "district_name": "Мирзо-Улугбек",
+    "place": null,
+    "landmark": null,
+    "metro": null,
+    "metro_km": null,
+    "center_km": 6.1,
+    "area_total": 180,
+    "floor": null,
+    "floors_total": 2,
+    "rooms": 4,
+    "pets_ok": false,
+    "is_owner": true,
+    "owner_verified": false,
+    "photos_preview": [
+        "/media/100002/1.jpg?e=1795132800&s=6ea506b532ba6698da2989c41ae17f71",
+        "/media/100002/2.jpg?e=1795132800&s=ddc4ce9487c8199f215097c0e97210d1",
+        "/media/100002/3.jpg?e=1795132800&s=e3ef83eba130609e16d4d267e0320ce0"
+    ],
+    "photos_count": 4,
+    "cover": null,
+    "video": "https://t.me/stub_channel_b/4002",
+    "age": "Опубликовано · вчера",
+    "posted_at": "2026-11-13T15:00:00+00:00",
+    "status_text": null,
+    "market": "Вторичка",
+    "median_delta": 0.05,
+    "median_tone": "check",
+    "lat": 41.33872,
+    "lon": 69.33411,
+    "deal_type": "rent_long",
+    "market_code": "secondary",
+    "photos": [
+        "/media/100002/1.jpg?e=1795132800&s=6ea506b532ba6698da2989c41ae17f71",
+        "/media/100002/2.jpg?e=1795132800&s=ddc4ce9487c8199f215097c0e97210d1",
+        "/media/100002/3.jpg?e=1795132800&s=e3ef83eba130609e16d4d267e0320ce0",
+        "/media/100002/4.jpg?e=1795132800&s=0f3d2b1a9c8e7d6f5a4b3c2d1e0f9a8b"
+    ],
+    "facts": [
+        {
+            "key": "type",
+            "label": "Тип",
+            "value": "Дом"
+        },
+        {
+            "key": "rooms",
+            "label": "Комнат",
+            "value": "4"
+        },
+        {
+            "key": "area",
+            "label": "Площадь",
+            "value": "180 м²"
+        }
+    ],
+    "nearby": [
+        {
+            "kind": "park",
+            "name": "Парк",
+            "km": 0.4,
+            "note": null
+        },
+        {
+            "kind": "school",
+            "name": "Школа",
+            "km": 0.9,
+            "note": null
+        }
+    ],
+    "stats": {
+        "days_listed": 3,
+        "publications": 2,
+        "channels": 2,
+        "views": 41
+    },
+    "history": [
+        {
+            "at": "2026-11-10T07:00:00+00:00",
+            "channel": "stub_channel_b",
+            "url": "https://t.me/stub_channel_b/3980",
+            "text": null,
+            "kind": "published",
+            "price_usd": 1620,
+            "change_pct": null
+        },
+        {
+            "at": "2026-11-13T15:00:00+00:00",
+            "channel": "stub_channel_b",
+            "url": "https://t.me/stub_channel_b/4002",
+            "text": null,
+            "kind": "price_down",
+            "price_usd": 1500,
+            "change_pct": -7.4
+        }
+    ],
+    "geo_radius_m": 500,
+    "author": {
+        "kind": "phone",
+        "label": "+998 ** *** ** 02",
+        "count": 3
+    },
+    "call_url": "https://legacy.invalid/call/fixture-100002?e=1795132800",
+    "contact_url": "https://t.me/stub_author_0",
+    "contact_paid": false,
+    "summary": "4-комн. дом, 180 м². Тихий район.",
+    "sources": [
+        {
+            "handle": "stub_channel_b",
+            "url": "https://t.me/stub_channel_b/4002"
+        }
+    ],
+    "original_text": "Сдаётся 4-комн. дом, 180 м². Чисто, уютно.",
+    "original_url": "https://t.me/stub_channel_b/4002",
+    "post_deleted": false,
+    "offers": [
+        {
+            "text": "Торг",
+            "url": null
+        }
+    ],
+    "phone": null,
+    "phone_display": null,
+    "owner": "Хозяин",
+    "median": true,
+    "median_value": 1425,
+    "median_own": 1500,
+    "median_n": 14,
+    "median_metric": "month",
+    "median_reason": null,
+    "median_scope": "district",
+    "median_rooms": 4,
+    "median_near_class": null,
+    "median_radius_km": null,
+    "median_district": "Мирзо-Улугбек",
+    "median_place_value": null,
+    "median_note": null,
+    "median_updated": "2026-11-12",
+    "price_per_m2": null,
+    "price_usd": 1500,
+    "response_minutes": null,
+    "owner_description": null
+}

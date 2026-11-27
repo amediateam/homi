@@ -210,6 +210,18 @@ final class StubListingSource implements ListingSource
         return $previews;
     }
 
+    /** The stub's contact costs nothing: whether `contact()` answers one, its scenario `contact_unavailable` included. */
+    public function hasContact(int $number, SourceContext $context): bool
+    {
+        try {
+            $this->contact($number, $context);
+
+            return true;
+        } catch (ContactUnavailable) {
+            return false;
+        }
+    }
+
     public function contact(int $number, SourceContext $context): ListingContact
     {
         $entry = $this->entry($number, $context);

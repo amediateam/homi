@@ -9,10 +9,13 @@ use App\Exceptions\Sources\SourceUnavailable;
 use App\Models\User;
 use App\Services\Search\ListingQuery;
 use App\Services\Search\SearchFilters;
+use App\Services\Sources\Contracts\ReferenceSource;
+use App\Services\Sources\Data\ReferenceData;
 use App\Services\Sources\Legacy\LegacyClient;
 use App\Services\Sources\Legacy\LegacyListingSource;
 use App\Services\Sources\Legacy\Translators\FiltersTranslator;
 use App\Services\Sources\SourceContext;
+use App\Services\Sources\Stub\StubReferenceSource;
 use Illuminate\Http\Client\Request;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Cache;
@@ -119,7 +122,7 @@ it('answers the listing reads through the legacy driver in the shapes of WP-12, 
     $card = $this->getJson('/api/v1/listings/100001', $headers)->assertOk()->assertJsonPath('meta.source', 'legacy');
     JsonShape::assertSame(ContractShapes::LISTING_DETAILS, JsonShape::of($card->json('data')));
     expect($card->json('data.number'))->toBe(100001)
-        ->and($card->json('data.contact.has_phone'))->toBeFalse();
+        ->and($card->json('data.contact.has_phone'))->toBeTrue();
 
     $preview = $this->getJson('/api/v1/listings/100001?preview=1', $headers)->assertOk()->assertJsonPath('meta.source', 'legacy');
     JsonShape::assertSame(ContractShapes::LISTING_PREVIEW, JsonShape::of($preview->json('data')));
@@ -209,14 +212,20 @@ it('answers 503 source_unavailable on every read while legacy is down', function
     'preview' => '/api/v1/listings/100001?preview=1',
 ]);
 
-it('answers 503 for the contact and the translation until WP-43 writes them', function (): void {
+it('answers the contact and the translation through legacy (WP-43)', function (): void {
     LegacyListingsHttp::fake();
     Sanctum::actingAs(User::factory()->create(), ['app:read', 'app:write']);
     onLegacyListings();
 
-    $this->postJson('/api/v1/listings/100001/contact')->assertStatus(503)->assertJsonPath('code', 'source_unavailable');
-    $this->postJson('/api/v1/listings/100001/translation')->assertStatus(503)->assertJsonPath('code', 'source_unavailable');
-    Http::assertNothingSent();
+    $this->postJson('/api/v1/listings/100001/contact')->assertOk()->assertJsonPath('meta.source', 'legacy')->assertJsonPath('data.phone', '+998001234567');
+    expect(LegacyListingsHttp::sent('/api/listings/100001'))->toHaveCount(1);
+
+    $this->postJson('/api/v1/listings/100001/translation', [], ['Accept-Language' => 'uz'])->assertOk()
+        ->assertJsonPath('meta.source', 'legacy')
+        ->assertJsonPath('data.locale', 'uz')
+        ->assertJsonPath('data.text', 'Ijaraga 2 xonali kvartira, 54 m². Toza, shinam. Qoʻngʻiroq qiling: +998 ** *** ** 67');
+    expect(LegacyListingsHttp::sent('/api/listings/100001/translate'))->toHaveCount(1)
+        ->and(Http::recorded())->toHaveCount(2);
 });
 
 it('passes legacy\'s daily limit of the card on as 429 rate_limited with reason daily, and as 503 elsewhere', function (): void {
@@ -328,7 +337,7 @@ it('keeps the masked card in the cache, without the phone keys and the per-user 
 
     expect($cached)->toBeArray()
         ->and($cached)->not->toHaveKeys(['phone', 'phone_display', 'call_url'])
-        ->and($cached['contact'])->toMatchArray(['has_phone' => false, 'request' => null])
+        ->and($cached['contact'])->toMatchArray(['has_phone' => true, 'request' => null])
         ->and($cached['contact'])->not->toHaveKeys(['phone', 'phone_display', 'call_url'])
         ->and($cached['owner'])->toMatchArray(['mine' => false, 'listing_id' => null])
         ->and($cached['owner'])->not->toHaveKey('entry')
@@ -406,6 +415,7 @@ function sharedCaches(): array
         'map' => [fn (): mixed => legacyListings()->map(defaultFilters(), userContext()), fn (): string => $filtersKey('map', true), '/api/map'],
         'flow' => [fn (): mixed => legacyListings()->flow(defaultFilters(), userContext()), fn (): string => $filtersKey('flow', true), '/api/feed/flow'],
         'count' => [fn (): mixed => legacyListings()->count(defaultFilters(), userContext()), fn (): string => $filtersKey('count', false), '/api/feed/count'],
+        'contact (WP-43)' => [fn (): mixed => legacyListings()->contact(100001, userContext()), fn (): string => 'legacy:v1:listings:contact:100001', '/api/listings/100001'],
     ];
 }
 
@@ -914,3 +924,32 @@ it('reads the district codes without the caller\'s stub scenario', function (str
         ->assertJsonPath('meta.source', 'legacy')
         ->assertJsonPath('data.district.code', LegacyFixtures::stubListing(100001)['district']['code']);
 })->with(['rate_limited', 'forbidden', 'unauthenticated', 'source_unavailable']);
+
+it('reads the district codes in the context it was given, a foreground one (the call page) included, without its scenario', function (bool $foreground): void {
+    LegacyListingsHttp::fake();
+    $stub = app(StubReferenceSource::class);
+    $seen = new ArrayObject;
+    app()->instance(StubReferenceSource::class, new class($stub, $seen) implements ReferenceSource
+    {
+        public function __construct(private readonly ReferenceSource $inner, private readonly ArrayObject $seen) {}
+
+        public function reference(SourceContext $context): ReferenceData
+        {
+            $this->seen[] = $context;
+
+            return $this->inner->reference($context);
+        }
+
+        public function cities(SourceContext $context): array
+        {
+            return $this->inner->cities($context);
+        }
+    });
+
+    $context = new SourceContext('ru', 'UZS', scenario: 'source_unavailable', foreground: $foreground);
+    legacyListings()->details(100001, $context);
+
+    expect($seen->getArrayCopy())->not->toBe([])
+        ->and(array_map(fn (SourceContext $read): array => [$read->locale, $read->currency, $read->user, $read->scenario, $read->foreground], $seen->getArrayCopy()))
+        ->each->toBe(['ru', 'UZS', null, null, $foreground]);
+})->with(['a foreground context' => [true], 'a background one' => [false]]);

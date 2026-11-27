@@ -28,6 +28,23 @@
 |   `https://<media host>/lm`); blank means photo lists are empty. `hosts` are the legacy hosts whose absolute photo
 |   addresses are rewritten too (a relative `/media/…` address always is): `LEGACY_MEDIA_HOSTS`, comma-separated,
 |   else the host of `base_url`.
+| - `contact` (WP-43): `mode` (`LEGACY_CONTACT_MODE`) is what the service key gets for a contact (Q-API-062, WP-02
+|   point 7): `phone` — the raw number in the card (variant A: HOMI issues its own call link), `link` — only a call
+|   link (variant B: `GET /api/listings/{id}/call`), `auto` (default) — decided per card: a phone that reads as one
+|   number is variant A, else a call link variant B, else no contact; any other value is `auto`. `link_ttl`: seconds
+|   a legacy call link is answered as valid (`expires_at` of variant B). `link_hosts` (`LEGACY_CONTACT_LINK_HOSTS`,
+|   comma-separated, lower-cased): the hosts besides that of `base_url` an absolute call link of variant B may point
+|   to, compared exactly, each `host` (port 443) or `host:port` (1…65535; any other form adds nothing); blank means
+|   only the host of `base_url`, on its own port (443 when it names none). A link to another host or port is refused
+|   with a warning naming that host when it is a host name without a run of seven digits (else `host_invalid`), at
+|   most once a minute per host. A relative link is joined to the origin of `base_url`.
+| - `translation` (WP-43): how `POST /api/listings/{id}/translate` names the target language under the service key
+|   (WP-02 point 8, open): `via` (`LEGACY_TRANSLATION_VIA`) `locale` (default) — the language selector of every call
+|   (`locale` above; while that sends no language, `locale.via` neither `header` nor `query`, translation is
+|   `unsupported`, with a warning at most once a minute), `query` or `body` — the legacy code (`uz_Latn`, `en`) under
+|   `name` (`LEGACY_TRANSLATION_NAME`, default `lang`) in the query string or the JSON body, `unsupported` — legacy is
+|   not asked and the method answers `503 translation_unavailable`; any other value is `locale`. `cache.translation`:
+|   seconds a translation is kept per listing, locale and effective selector (`TranslationService`, 0 disables).
 | - `fields.author_key`: the name of the card field that carries a stable author key, once the operator offers one
 |   (WP-02 point 6); blank means none.
 | - `previews.concurrency`: card previews read in parallel; `previews.max_wait_ms` (`LEGACY_PREVIEWS_MAX_WAIT_MS`): the
@@ -61,6 +78,9 @@ $previewsWait = is_numeric($previewsWait) && (int) $previewsWait >= 0 ? (int) $p
 $backgroundWait = $value('LEGACY_PREVIEWS_BACKGROUND_WAIT_MS', 2000);
 $previewsDeadline = $value('LEGACY_PREVIEWS_DEADLINE_MS', null);
 $fillWait = $value('LEGACY_CACHE_FILL_WAIT_MS', 1000);
+$contactMode = strtolower(trim((string) $value('LEGACY_CONTACT_MODE', 'auto')));
+$contactLinkHosts = (string) $value('LEGACY_CONTACT_LINK_HOSTS', '');
+$translationVia = strtolower(trim((string) $value('LEGACY_TRANSLATION_VIA', 'locale')));
 
 return [
     'base_url' => $baseUrl,
@@ -111,6 +131,7 @@ return [
         'flow' => 60,
         'map' => 30,
         'not_found' => 60,
+        'translation' => 86_400,
         'fill_wait_ms' => is_numeric($fillWait) && (int) $fillWait >= 0 ? (int) $fillWait : 1000,
         'last_good' => 86_400,
         'after_failure' => 60,
@@ -121,6 +142,17 @@ return [
         'hosts' => is_string($mediaHosts)
             ? array_values(array_filter(array_map(fn (string $host): string => strtolower(trim($host)), explode(',', $mediaHosts)), fn (string $host): bool => $host !== ''))
             : (is_string($baseHost) && $baseHost !== '' ? [strtolower($baseHost)] : []),
+    ],
+
+    'contact' => [
+        'mode' => in_array($contactMode, ['auto', 'phone', 'link'], true) ? $contactMode : 'auto',
+        'link_ttl' => 600,
+        'link_hosts' => array_values(array_filter(array_map(fn (string $host): string => strtolower(trim($host)), explode(',', $contactLinkHosts)), fn (string $host): bool => $host !== '')),
+    ],
+
+    'translation' => [
+        'via' => in_array($translationVia, ['locale', 'query', 'body', 'unsupported'], true) ? $translationVia : 'locale',
+        'name' => trim((string) $value('LEGACY_TRANSLATION_NAME', 'lang')),
     ],
 
     'fields' => [

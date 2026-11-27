@@ -148,6 +148,12 @@ return [
                 '/^listing-opens:/',
                 '/^access:decision:/',
                 '/^auth:/',
+                // WP-43: the day's set of listings a user asked a contact for (`contact:<id>:<day>`) and its lock, a
+                // user's prepared share messages (`share:<id>:…`) and his count of translation misses
+                // (`v1-translation:user:<id>`).
+                '/^contact:/',
+                '/^share:/',
+                '/^v1-translation:/',
             ],
             'groups' => [
                 '/^job-exceptions:.*/' => 'job-exceptions:*',
@@ -197,6 +203,9 @@ return [
                 // '#^http://127\.0\.0\.1:13714#', // Inertia SSR...
             ],
             'groups' => [
+                // WP-43: a Bot API address holds the bot token in its path (`…/bot<id>:<secret>/<method>`), behind any
+                // path prefix: grouped by the token's shape, kept without it.
+                '~^(https?://[^?#]*?)/bot\d+:[A-Za-z0-9_-]+/~' => '\1/bot***/',
                 // '#^https://api\.github\.com/repos/.*$#' => 'api.github.com/repos/*',
                 // '#^https?://([^/]*).*$#' => '\1',
                 // '#/\d+#' => '/*',
