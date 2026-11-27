@@ -17,7 +17,9 @@ use App\Services\Listings\PhoneMasker;
  *   kept — so a name, an address or a stray digit never reaches the label — else `HIDDEN_PHONE`.
  * - A source author: `@` and the channel, reduced to the characters of a Telegram handle.
  *
- * No label holds more than the last two digits of a phone or any markup, and every label fits the 64 characters of
+ * A phone author's label holds no more than the last two digits of the phone. A source author's label is the channel's
+ * public handle and keeps every digit the handle has (`@ijara_998901234567`): it is no phone of a person, and the card
+ * shows the same handle in its sources. No label holds markup, and every label fits the 64 characters of
  * `blocked_authors.label`.
  */
 final class AuthorLabel
@@ -43,6 +45,11 @@ final class AuthorLabel
         return ($masked === null ? null : self::whole($masked)) ?? self::fromSourceLabel($sourceLabel);
     }
 
+    /**
+     * `@` and the channel's handle: the characters of a Telegram handle only, digits included — the handle is public
+     * and the card shows it in its sources, so its digits are kept even when they look like a phone (review of stage
+     * A, F6).
+     */
     public static function source(string $channel): string
     {
         return '@'.mb_substr((string) preg_replace('/[^A-Za-z0-9_]/', '', $channel), 0, self::MAX_LENGTH - 1);

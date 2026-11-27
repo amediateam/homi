@@ -74,4 +74,5 @@ it('names a source author by its channel, markup and other characters stripped',
     'markup' => ['<b>example</b>_channel', '@bexampleb_channel'],
     'an at sign already' => ['@stub_channel_b', '@stub_channel_b'],
     'too long' => [str_repeat('a', 80), '@'.str_repeat('a', 63)],
+    'a public handle with digits, kept whole (review A, F6)' => ['ijara_998901234567', '@ijara_998901234567'],
 ]);
