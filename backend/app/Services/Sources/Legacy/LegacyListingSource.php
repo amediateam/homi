@@ -15,6 +15,7 @@ use App\Services\Listings\Contracts\ListingExclusion;
 use App\Services\Listings\ListingNumber;
 use App\Services\Listings\ListingRefs;
 use App\Services\Listings\PhotoUrlRewriter;
+use App\Services\Personal\AuthorLabel;
 use App\Services\Search\ListingQuery;
 use App\Services\Search\SearchFilters;
 use App\Services\Sources\Contracts\ListingSource;
@@ -369,6 +370,21 @@ final class LegacyListingSource implements ListingSource
             return $this->contactEntry($number, $context)->variant(Config::string('legacy.contact.mode')) !== null;
         } catch (ContactUnavailable) {
             return false;
+        }
+    }
+
+    /**
+     * The masked number of the contact entry (else the card read again), for a blocked author's label (WP-44): the
+     * entry's phone goes through `AuthorLabel::ofPhone()` only, so no digit but the last two leaves here; nothing is
+     * counted, no call link is asked. Under the mode `link` the entry keeps no phone, and a withdrawn listing has no
+     * contact: both give `null`.
+     */
+    public function authorPhoneLabel(int $number, SourceContext $context): ?string
+    {
+        try {
+            return AuthorLabel::ofPhone($this->contactEntry($number, $context)->phone);
+        } catch (ContactUnavailable) {
+            return null;
         }
     }
 

@@ -70,6 +70,18 @@ interface ListingSource
     public function hasContact(int $number, SourceContext $context): bool;
 
     /**
+     * The label of a phone author's number as WP-12's `PhoneMasker` writes it — `+998 ** *** ** NN`, the last two digits
+     * only — for a blocked author's entry (WP-44, `AuthorLabel::ofPhone()`): from the number the source already holds
+     * of the listing, read as `hasContact()` reads it (legacy: the contact entry, else one card read). Never a
+     * disclosure: no quota, no `ContactDisclosed`, no call link; the number itself never leaves the source. `null` when
+     * the source holds no number of the listing (legacy's mode `link`, a listing only a call link reaches, a withdrawn
+     * listing, the stub driver) or none the masker reads whole as one.
+     *
+     * @throws SourceNotFound|SourceUnavailable
+     */
+    public function authorPhoneLabel(int $number, SourceContext $context): ?string;
+
+    /**
      * The author's contact (WP-43, Q-API-062). With `phone` the source has the number (variant A): its `callUrl` and
      * `expiresAt` may be blank, and `ContactService` answers HOMI's own call link. Without, `callUrl` is the source's
      * call link (variant B). Called only by `ContactService::disclose()`, which counts every answer as a disclosure,
