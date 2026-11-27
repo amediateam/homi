@@ -255,6 +255,54 @@ function maskerRandomTexts(int $seed, int $count): array
 }
 
 /**
+ * Random runs of digit groups and the glue between them (separators, asterisks, slashes, pluses, masked tails): the
+ * texts where one number overlaps the next or a price, which the parts above rarely build.
+ *
+ * @return list<string>
+ */
+function maskerDigitGroups(int $seed, int $count): array
+{
+    return maskerGroupTexts($seed, $count, 12,
+        ['0', '00', '000', '0000', '90', '901', '9012', '998', '8', '+998', '+', '+1', '12', '123', '1234', '45', '67', '21', '765', '43', '999', '888'],
+        ['', ' ', '  ', '   ', '-', '(', ')', '.', '_', '*', '**', '/', "\u{2013}", "\u{00A0}", '+', 'x', ' ** *** ** '],
+    );
+}
+
+/**
+ * Short runs of a few digit groups with spaces, slashes and asterisks: overlaps of a price and a number (`/00   9990000
+ * 45`), which a masker that skips a whole price match leaves raw (a few hits in 40 000 at this seed).
+ *
+ * @return list<string>
+ */
+function maskerOverlaps(int $seed, int $count): array
+{
+    return maskerGroupTexts($seed, $count, 8, ['00', '000', '0000', '90', '999', '45', '765', '43', '21'], ['', ' ', '   ', '/', '*']);
+}
+
+/**
+ * @param  list<string>  $groups
+ * @param  list<string>  $glue
+ * @return list<string>
+ */
+function maskerGroupTexts(int $seed, int $count, int $longest, array $groups, array $glue): array
+{
+    $random = new Randomizer(new Mt19937($seed));
+    $texts = [];
+
+    for ($i = 0; $i < $count; $i++) {
+        $text = '';
+
+        for ($n = $random->getInt(2, $longest); $n > 0; $n--) {
+            $text .= $groups[$random->getInt(0, count($groups) - 1)].$glue[$random->getInt(0, count($glue) - 1)];
+        }
+
+        $texts[] = $text;
+    }
+
+    return $texts;
+}
+
+/**
  * Every string of the stub and legacy fixtures.
  *
  * @return list<string>
@@ -352,14 +400,18 @@ it('never leaves raw a number the masker of WP-12 hid, over the reviewer\'s clas
     expect(maskerWeakerThanWp12(maskerGluedNumbers(), $codes))->toBe([]);
 })->with('masker codes');
 
-it('never leaves raw a number the masker of WP-12 hid, over random texts and the fixtures', function (array $codes): void {
+it('never leaves raw a number the masker of WP-12 hid, over random texts, digit groups and the fixtures', function (array $codes): void {
     expect(maskerWeakerThanWp12(maskerRandomTexts(11, 40_000), $codes))->toBe([])
+        ->and(maskerWeakerThanWp12(maskerDigitGroups(12, 40_000), $codes))->toBe([])
+        ->and(maskerWeakerThanWp12(maskerOverlaps(99, 40_000), $codes))->toBe([])
         ->and(maskerWeakerThanWp12(maskerFixtureStrings(), $codes))->toBe([]);
 })->with('masker codes');
 
-it('is idempotent over the reviewer\'s class, random texts and the fixtures', function (array $codes): void {
+it('is idempotent over the reviewer\'s class, random texts, digit groups and the fixtures', function (array $codes): void {
     expect(maskerNotIdempotent(maskerGluedNumbers(), $codes))->toBe([])
         ->and(maskerNotIdempotent(maskerRandomTexts(42, 40_000), $codes))->toBe([])
+        ->and(maskerNotIdempotent(maskerDigitGroups(43, 40_000), $codes))->toBe([])
+        ->and(maskerNotIdempotent(maskerOverlaps(44, 40_000), $codes))->toBe([])
         ->and(maskerNotIdempotent(maskerFixtureStrings(), $codes))->toBe([]);
 })->with('masker codes');
 
@@ -423,3 +475,8 @@ it('reads fullwidth digits as ASCII and writes the masked tail in ASCII', functi
 it('reads no slash or comma as a separator, so floors, areas and prices stay', function (string $text): void {
     expect(maskSynthetic($text))->toBe($text);
 })->with(['3/9', '54/30 м²', '1,200,000 сум', '+998/00/765/43/21', '+998,00,765,43,21']);
+
+it('masks a price glued to a plus as another country\'s number, the cost of point 2\'s plus rule', function (): void {
+    expect(maskSynthetic('2+1 850 000 000 сум'))->toBe('2+** *** ** 00 сум')
+        ->and(maskSynthetic('2 + 1 850 000 000 сум'))->toBe('2 + 1 850 000 000 сум');
+});

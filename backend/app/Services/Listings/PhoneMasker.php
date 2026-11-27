@@ -15,7 +15,8 @@ namespace App\Services\Listings;
  *   phone, and it must not end in `000` (`900 000 000`, `950000000 сум` are prices). A slash and a comma are not
  *   separators (`3/9`, `54/30`, `1,200,000`).
  * - A number without `+` starts after anything but a digit or `+`: a slash (`+998…/+998…`) or asterisks (Markdown
- *   bold) too. A `+` starts a number wherever it stands (`кв45+998…`, `++998…`).
+ *   bold) too. A `+` starts a number wherever it stands (`кв45+998…`, `++998…`), so a price glued to a `+`
+ *   (`2+1 850 000 000 сум`) reads as another country's number and is masked.
  * - Fullwidth digits (`９９８…`) are read as ASCII digits and written as ASCII; the fullwidth plus stays a sign like any
  *   other, so it never turns a number of WP-12's into a `+` number of another length.
  *
@@ -33,7 +34,9 @@ namespace App\Services\Listings;
  * masked number in a text (WP-26). A later round reads what an earlier one uncovered: the two digits a link kept
  * when a number is glued to them (`wa.me/**00 765 43 21`), and the last two digits of a masked number as the code of
  * the next (`+998 00 765 43 00 765 43 21`), as WP-12's masker did in one go. So no masked number needs a guard, and
- * WP-12's masker hides nothing this one leaves (the test pins it against a frozen copy). A text not settled after
+ * WP-12's masker hides nothing this one leaves, on the text with ASCII digits (the test pins it against a frozen copy;
+ * WP-12's `\d` read a fullwidth digit but its `000` rule did not, so it hid `76576500０`, a price here). A price, a
+ * bare match ending in `000`, never hides a number that starts inside it (`/00   9990000 45`). A text not settled after
  * `MAX_ROUNDS` rounds — only a long chain of numbers each glued to the last two digits of the one before settles that
  * slowly — has every digit masked, which is final too. A text that is not UTF-8, or that a pattern cannot read, has
  * every digit masked as well. `AuthorLabel` (WP-44) and `PiiMasker` (WP-55) take the patterns from here; `LinkGuard`
