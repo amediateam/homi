@@ -64,9 +64,9 @@ final readonly class VoteService
 
     /**
      * Records the user's report of the listing in one transaction and recounts its subject. A detail goes only with
-     * `wrong_data` (the request validated it); with another reason it is a programming error.
-     *
-     * @throws InvalidArgumentException
+     * `wrong_data` (the request validated it); with another reason it is a programming error, an
+     * `InvalidArgumentException` — named here, not as a `@throws` tag, which the OpenAPI export would read as an
+     * answer of the calling method.
      */
     public function report(User $user, ListingPointer $pointer, ReportReason $reason, ?ReportDetail $detail = null): ReportOutcome
     {
@@ -96,7 +96,7 @@ final readonly class VoteService
         $this->afterCommit($pointer, $subject, $before, $after);
 
         $agentMarked = $subject !== null && $subject->isAuthor() && $detecting
-            && ($after && (! $before || Config::boolean('votes.agent_marked.already_marked')));
+            && ($after && (! $before || self::alreadyMarkedCounts()));
 
         return new ReportOutcome($hiding !== null, $agentMarked);
     }
@@ -139,6 +139,12 @@ final readonly class VoteService
         $configured = Config::get('votes.min_voters');
 
         return max(self::MIN_VOTERS, is_numeric($configured) ? (int) $configured : self::MIN_VOTERS);
+    }
+
+    /** `votes.agent_marked.already_marked` as the config gives it; a value that is no boolean means the default, on. */
+    private static function alreadyMarkedCounts(): bool
+    {
+        return filter_var(Config::get('votes.agent_marked.already_marked', true), FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) ?? true;
     }
 
     /** The vote row, or the first one again: a repeat after a withdrawal counts it anew. */

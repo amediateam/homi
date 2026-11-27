@@ -203,15 +203,22 @@ it('stores a vote on an author already marked and marks nothing twice', function
         ->and(VoteDecision::query()->count())->toBe(0);
 });
 
-it('answers agent_marked for an author already marked only while already_marked is on', function (): void {
+it('answers agent_marked for an author already marked only while already_marked is on, read as the config gives it', function (mixed $alreadyMarked, bool $expected): void {
     ListingRef::factory()->ofAuthor(VOTE_AUTHOR)->create(['listing_number' => 100001]);
     AuthorMark::factory()->create(['author_key' => VOTE_AUTHOR]);
-    config(['votes.agent_marked.already_marked' => false]);
+    config(['votes.agent_marked.already_marked' => $alreadyMarked]);
 
     [$outcome] = reportBy(voters(1), ReportReason::Agent, 100001);
 
-    expect($outcome->agentMarked)->toBeFalse();
-});
+    expect($outcome->agentMarked)->toBe($expected);
+})->with([
+    'false' => [false, false],
+    'a zero' => [0, false],
+    'the string "false"' => ['false', false],
+    'true' => [true, true],
+    'a one' => [1, true],
+    'unreadable, the default' => ['maybe', true],
+]);
 
 it('accepts agent on a listing without an author, with no author effect', function (): void {
     ListingRef::factory()->create(['listing_number' => 100001, 'author_key' => null, 'author_kind' => null]);
