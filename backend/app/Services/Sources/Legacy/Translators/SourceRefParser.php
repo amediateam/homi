@@ -20,7 +20,7 @@ final class SourceRefParser
 
     private function __construct() {}
 
-    public static function parse(?string $url): ?SourceRef
+    public static function parse(#[\SensitiveParameter] ?string $url): ?SourceRef
     {
         $parts = self::parts($url);
 
@@ -32,7 +32,7 @@ final class SourceRefParser
      *
      * @return array{channel: string, post_id: int}|null
      */
-    public static function parts(?string $url): ?array
+    public static function parts(#[\SensitiveParameter] ?string $url): ?array
     {
         if ($url === null || preg_match(self::PATTERN, trim($url), $match) !== 1 || LinkGuard::safeName($match[1]) === null) {
             return null;
@@ -49,7 +49,7 @@ final class SourceRefParser
      * @param  array<array-key, mixed>  $item
      * @return array{channel: string, post_id: int}|null
      */
-    public static function fromCard(array $item): ?array
+    public static function fromCard(#[\SensitiveParameter] array $item): ?array
     {
         $original = self::parts(LinkGuard::safe(LegacyValue::string($item, 'original_url')));
 

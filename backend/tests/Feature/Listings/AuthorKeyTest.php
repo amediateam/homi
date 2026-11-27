@@ -74,6 +74,30 @@ it('falls back from an operator value that is missing, not text or too long for 
     'longer than 89' => [str_repeat('x', 90)],
 ]);
 
+it('treats an operator value that is a phone number as absent, so the card falls through to the phone rule', function (mixed $value): void {
+    config(['legacy.fields.author_key' => 'author_id']);
+
+    $key = AuthorKey::fromCard(rawCard(['author_id' => $value]));
+
+    expect($key)->toEqual(new AuthorKey(phoneKey('+998001234567'), 'phone'))
+        ->and(AuthorKey::fromCard(rawCard(['author_id' => $value, 'phone' => null])))->toEqual(new AuthorKey('source:stub_channel_a', 'source'));
+})->with([
+    'E.164' => ['+998001234567'],
+    'without the plus' => ['998001234567'],
+    'a number' => [998001234567],
+    'with dashes' => ['+998-00-123-45-67'],
+    'with underscores' => ['998_00_123_45_67'],
+    'with brackets and dots' => ['+998(00)123.45.67'],
+    'inside a word' => ['id998001234567x'],
+    'eight digits, an E.164 number' => ['12345678'],
+]);
+
+it('keeps an operator value whose digits do not form a phone number', function (string $value): void {
+    config(['legacy.fields.author_key' => 'author_id']);
+
+    expect(AuthorKey::fromCard(rawCard(['author_id' => $value]))?->key)->toBe("legacy:{$value}");
+})->with(['a-81F2', '1234567', 'u12345678a', 'a1b2c3d4e5f6g7h8i9j0']);
+
 it('ignores an operator field while legacy.fields.author_key is blank', function (): void {
     expect(AuthorKey::fromCard(rawCard(['author_id' => 'a-81F2']))?->key)->toBe(phoneKey('+998001234567'));
 });
@@ -117,12 +141,14 @@ it('files no author for a card with neither a phone nor a public post link', fun
         ->and(AuthorKey::fromCard([]))->toBeNull();
 });
 
-it('derives no phone key with a blank or short secret, falls back, and warns at most once a minute', function (string $secret): void {
+it('files a card with a phone under no author with a blank or short secret, never its channel, and warns at most once a minute', function (string $secret): void {
     config(['contacts.author_key_secret' => $secret]);
 
     $warnings = authorKeyWarnings(function (): void {
-        expect(AuthorKey::fromCard(rawCard()))->toEqual(new AuthorKey('source:stub_channel_a', 'source'))
-            ->and(AuthorKey::fromCard(rawCard(['original_url' => null, 'sources' => []])))->toBeNull();
+        expect(AuthorKey::fromCard(rawCard()))->toBeNull()
+            ->and(AuthorKey::fromCard(rawCard(['phone' => '+998002222222', 'original_url' => 'https://t.me/stub_channel_a/2'])))->toBeNull()
+            ->and(AuthorKey::fromCard(rawCard(['original_url' => null, 'sources' => []])))->toBeNull()
+            ->and(AuthorKey::fromCard(rawCard(['phone' => null])))->toEqual(new AuthorKey('source:stub_channel_a', 'source'));
     });
     $this->travel(61)->seconds();
     $later = authorKeyWarnings(fn (): ?AuthorKey => AuthorKey::fromCard(rawCard()));

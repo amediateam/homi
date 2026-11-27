@@ -16,7 +16,7 @@ final class LegacyValue
     private function __construct() {}
 
     /** @param  array<array-key, mixed>  $data  a non-empty string, else `null`; another type is noted */
-    public static function string(array $data, string $key, ?Coercions $seen = null): ?string
+    public static function string(#[\SensitiveParameter] array $data, string $key, ?Coercions $seen = null): ?string
     {
         $value = $data[$key] ?? null;
 
@@ -28,7 +28,7 @@ final class LegacyValue
     }
 
     /** @param  array<array-key, mixed>  $data  a finite JSON number as sent (whole or not), else `null` */
-    public static function number(array $data, string $key, ?Coercions $seen = null): int|float|null
+    public static function number(#[\SensitiveParameter] array $data, string $key, ?Coercions $seen = null): int|float|null
     {
         $value = $data[$key] ?? null;
 
@@ -41,7 +41,7 @@ final class LegacyValue
      *
      * @param  array<array-key, mixed>  $data
      */
-    public static function int(array $data, string $key, ?Coercions $seen = null): ?int
+    public static function int(#[\SensitiveParameter] array $data, string $key, ?Coercions $seen = null): ?int
     {
         $value = $data[$key] ?? null;
         $whole = self::whole($value);
@@ -58,7 +58,7 @@ final class LegacyValue
      *
      * @param  array<array-key, mixed>  $data
      */
-    public static function count(array $data, string $key, ?Coercions $seen = null): ?int
+    public static function count(#[\SensitiveParameter] array $data, string $key, ?Coercions $seen = null): ?int
     {
         $whole = self::int($data, $key, $seen);
 
@@ -82,7 +82,7 @@ final class LegacyValue
     }
 
     /** @param  array<array-key, mixed>  $data  `true` or `false`, else `null`; another type is noted */
-    public static function bool(array $data, string $key, ?Coercions $seen = null): ?bool
+    public static function bool(#[\SensitiveParameter] array $data, string $key, ?Coercions $seen = null): ?bool
     {
         $value = $data[$key] ?? null;
 
@@ -90,7 +90,7 @@ final class LegacyValue
     }
 
     /** @param  array<array-key, mixed>  $data  `true` only when legacy sends `true`; another type is noted */
-    public static function flag(array $data, string $key, ?Coercions $seen = null): bool
+    public static function flag(#[\SensitiveParameter] array $data, string $key, ?Coercions $seen = null): bool
     {
         return self::bool($data, $key, $seen) === true;
     }
@@ -101,7 +101,7 @@ final class LegacyValue
      *
      * @param  array<array-key, mixed>  $data
      */
-    public static function truthy(array $data, string $key): bool
+    public static function truthy(#[\SensitiveParameter] array $data, string $key): bool
     {
         $value = $data[$key] ?? null;
 
@@ -115,7 +115,7 @@ final class LegacyValue
      * @param  array<array-key, mixed>  $data
      * @return array<int, array<array-key, mixed>>
      */
-    public static function objects(array $data, string $key, ?Coercions $seen = null): array
+    public static function objects(#[\SensitiveParameter] array $data, string $key, ?Coercions $seen = null): array
     {
         $value = $data[$key] ?? null;
 
@@ -150,7 +150,7 @@ final class LegacyValue
      *
      * @throws LegacyContractError naming the key
      */
-    public static function requiredList(array $data, string $key, string $path, string $prefix = ''): array
+    public static function requiredList(#[\SensitiveParameter] array $data, string $key, string $path, string $prefix = ''): array
     {
         $value = $data[$key] ?? null;
 
@@ -169,7 +169,7 @@ final class LegacyValue
      * @param  array<array-key, mixed>  $part
      * @param  string  $place  the dotted place of the part, ending in a dot (`history.0.`)
      */
-    public static function fits(callable $build, array $part, string $place, ?Coercions $seen): bool
+    public static function fits(callable $build, #[\SensitiveParameter] array $part, string $place, ?Coercions $seen): bool
     {
         try {
             $build($part);
@@ -200,7 +200,7 @@ final class LegacyValue
     }
 
     /** `null` for an absent or `null` value; any other value is noted, then read as `null`. */
-    private static function odd(mixed $value, string $key, ?Coercions $seen): null
+    private static function odd(#[\SensitiveParameter] mixed $value, string $key, ?Coercions $seen): null
     {
         if ($value !== null) {
             $seen?->note($key);

@@ -7,7 +7,8 @@ use App\Services\Listings\Contracts\OverlayData;
 
 /**
  * HOMI's overlay data as a test sets it (WP-42): favourites, opened, hidden listings and blocked author keys per user
- * id, and the outcomes of votes for everyone. `reads` counts the calls, so a test can see that a list is read once.
+ * id, and the outcomes of votes for everyone. `reads` counts every call and `calls` the calls of each method, so a
+ * test can see that a set is read once.
  */
 final class FakeOverlayData implements OverlayData
 {
@@ -31,6 +32,9 @@ final class FakeOverlayData implements OverlayData
 
     public int $reads = 0;
 
+    /** @var array<string, int> method name => calls */
+    public array $calls = [];
+
     /** Binds a new instance and answers it, so the overlay of every request reads it. */
     public static function bind(): self
     {
@@ -40,44 +44,56 @@ final class FakeOverlayData implements OverlayData
         return $data;
     }
 
-    public function favorites(User $user, array $numbers): array
+    /** The calls of one method so far. */
+    public function callsOf(string $method): int
+    {
+        return $this->calls[$method] ?? 0;
+    }
+
+    private function read(string $method): void
     {
         $this->reads++;
+        $this->calls[$method] = $this->callsOf($method) + 1;
+    }
+
+    public function favorites(User $user, array $numbers): array
+    {
+        $this->read(__FUNCTION__);
 
         return array_values(array_intersect($this->favorites[$user->id] ?? [], $numbers));
     }
 
     public function viewed(User $user, array $numbers): array
     {
-        $this->reads++;
+        $this->read(__FUNCTION__);
 
         return array_values(array_intersect($this->viewed[$user->id] ?? [], $numbers));
     }
 
     public function hiddenNumbers(User $user): array
     {
-        $this->reads++;
+        $this->read(__FUNCTION__);
 
         return $this->hidden[$user->id] ?? [];
     }
 
     public function blockedAuthorKeys(User $user): array
     {
-        $this->reads++;
+        $this->read(__FUNCTION__);
 
         return $this->blocked[$user->id] ?? [];
     }
 
     public function rentedByVotes(array $numbers): array
     {
-        $this->reads++;
+        $this->read(__FUNCTION__);
 
         return array_values(array_intersect($this->rented, $numbers));
     }
 
     public function realtorAuthorKeys(): array
     {
-        $this->reads++;
+        $this->read(__FUNCTION__);
 
         return $this->realtors;
     }

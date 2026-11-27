@@ -84,7 +84,7 @@ final class ListingDetailsTranslator
      *
      * @throws LegacyContractError
      */
-    public function toData(array $card, ?Coercions $seen = null): ListingDetails
+    public function toData(#[\SensitiveParameter] array $card, ?Coercions $seen = null): ListingDetails
     {
         return ListingDetails::fromArray($this->translate($card, $seen));
     }
@@ -99,7 +99,7 @@ final class ListingDetailsTranslator
      *
      * @throws LegacyContractError
      */
-    public function translate(array $card, ?Coercions $seen = null): array
+    public function translate(#[\SensitiveParameter] array $card, ?Coercions $seen = null): array
     {
         $number = $this->summary->number($card, self::PATH);
         $photos = LegacyValue::requiredList($card, 'photos', self::PATH);
@@ -165,7 +165,7 @@ final class ListingDetailsTranslator
     }
 
     /** @param  array<array-key, mixed>  $card */
-    private function mode(array $card, ?Coercions $seen): ?string
+    private function mode(#[\SensitiveParameter] array $card, ?Coercions $seen): ?string
     {
         $sent = $card['contact_mode'] ?? null;
         $mode = match ($sent) {
@@ -182,7 +182,7 @@ final class ListingDetailsTranslator
     }
 
     /** @param  array<array-key, mixed>  $card */
-    private static function tier(array $card, ?Coercions $seen): ?string
+    private static function tier(#[\SensitiveParameter] array $card, ?Coercions $seen): ?string
     {
         return match (true) {
             LegacyValue::flag($card, 'owner_self', $seen) => OwnerTier::Self->value,
@@ -193,7 +193,7 @@ final class ListingDetailsTranslator
     }
 
     /** @param  array<array-key, mixed>  $card  legacy's `owner` label, masked, unless the tier already says it */
-    private static function ownerLabel(array $card, ?Coercions $seen): ?string
+    private static function ownerLabel(#[\SensitiveParameter] array $card, ?Coercions $seen): ?string
     {
         $label = LegacyValue::string($card, 'owner', $seen);
 
@@ -210,7 +210,7 @@ final class ListingDetailsTranslator
      * @param  list<mixed>  $facts
      * @return list<array<array-key, mixed>>
      */
-    private static function facts(array $facts, ?Coercions $seen): array
+    private static function facts(#[\SensitiveParameter] array $facts, ?Coercions $seen): array
     {
         $unique = [];
 
@@ -237,7 +237,7 @@ final class ListingDetailsTranslator
      * @param  array<array-key, mixed>  $card
      * @return list<array<string, mixed>>
      */
-    private static function nearby(array $card, ?Coercions $seen): array
+    private static function nearby(#[\SensitiveParameter] array $card, ?Coercions $seen): array
     {
         $nearby = [];
 
@@ -265,7 +265,7 @@ final class ListingDetailsTranslator
      * @param  array<array-key, mixed>  $card
      * @return array{days_listed: int, publications: int, channels: int, views: int|null}
      */
-    private static function stats(array $card, ?Coercions $seen): array
+    private static function stats(#[\SensitiveParameter] array $card, ?Coercions $seen): array
     {
         $stats = $card['stats'] ?? null;
 
@@ -288,7 +288,7 @@ final class ListingDetailsTranslator
      * @param  array<array-key, mixed>  $card
      * @return list<array<string, mixed>>
      */
-    private static function history(array $card, ?Coercions $seen): array
+    private static function history(#[\SensitiveParameter] array $card, ?Coercions $seen): array
     {
         $events = [];
 
@@ -317,7 +317,7 @@ final class ListingDetailsTranslator
      * @param  array<array-key, mixed>  $card
      * @return array<string, mixed>|null
      */
-    private static function author(array $card, ?Coercions $seen): ?array
+    private static function author(#[\SensitiveParameter] array $card, ?Coercions $seen): ?array
     {
         $author = $card['author'] ?? null;
 
@@ -350,7 +350,7 @@ final class ListingDetailsTranslator
      * @param  array<array-key, mixed>  $card
      * @return list<array<string, mixed>>
      */
-    private static function offers(array $card, ?Coercions $seen): array
+    private static function offers(#[\SensitiveParameter] array $card, ?Coercions $seen): array
     {
         $offers = [];
 
@@ -375,7 +375,7 @@ final class ListingDetailsTranslator
      * @param  list<mixed>  $sources
      * @return list<array<string, mixed>>
      */
-    private static function sources(array $sources, ?Coercions $seen): array
+    private static function sources(#[\SensitiveParameter] array $sources, ?Coercions $seen): array
     {
         $links = [];
 
@@ -405,7 +405,7 @@ final class ListingDetailsTranslator
      * @param  array<array-key, mixed>  $card
      * @return array<string, mixed>|null
      */
-    private static function comparison(array $card, ?Coercions $seen): ?array
+    private static function comparison(#[\SensitiveParameter] array $card, ?Coercions $seen): ?array
     {
         $value = LegacyValue::number($card, 'median_value', $seen);
 
@@ -433,7 +433,7 @@ final class ListingDetailsTranslator
     }
 
     /** A channel or author name the card may show (`LinkGuard::safeName()`); one it may not is `null` and noted. */
-    private static function name(mixed $name, string $key, ?Coercions $seen): ?string
+    private static function name(#[\SensitiveParameter] mixed $name, string $key, ?Coercions $seen): ?string
     {
         if (! is_string($name)) {
             return null;
@@ -448,7 +448,7 @@ final class ListingDetailsTranslator
         return $safe;
     }
 
-    private static function masked(?string $text): ?string
+    private static function masked(#[\SensitiveParameter] ?string $text): ?string
     {
         return $text === null ? null : PhoneMasker::mask($text);
     }

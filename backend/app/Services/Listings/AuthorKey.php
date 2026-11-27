@@ -19,10 +19,17 @@ use Illuminate\Support\Facades\Log;
  * | neither                                                                | none                                  | —               |
  *
  * The HMAC's key is `contacts.author_key_secret`. Blank or shorter than `MIN_SECRET_BYTES`, it derives no `phone:` key
- * (an HMAC with a short key could be reversed over the phone space): the author falls back to his source channel or
- * none, and a warning says so at most once a minute. An operator value that is not printable ASCII or too long for the
- * column, a kind longer than `MAX_KIND`, and a phone that is not a number count as absent. The key is a keyed hash
- * of a person's number, so it is personal data for the security review of WP-70, not an opaque id.
+ * (an HMAC with a short key could be reversed over the phone space), and a card with a phone is then filed under no
+ * author at all, never under its channel: one channel carries many phone authors, and one `source:` key for all of
+ * them would let a user who blocks one hide every other. A warning says so at most once a minute. `source:` stays for a
+ * card without a phone.
+ *
+ * Counted as absent: an operator value that is not printable ASCII or too long for the column, and one whose digits
+ * form a phone number — `e164()` reads it as one (eight digits or more, separators left out), or nine digits stand in a
+ * row once the separators a number is written with are left out (`LinkGuard::safe()`'s rule) — so no number is filed
+ * raw as `legacy:+998…`; such a card falls through to the phone rule. Also absent: a kind longer than `MAX_KIND`, and a
+ * phone that is not a number. The key is a keyed hash of a person's number, so it is personal data for the security
+ * review of WP-70, not an opaque id.
  */
 final readonly class AuthorKey
 {
@@ -35,10 +42,37 @@ final readonly class AuthorKey
     /** The width of `listing_refs.author_kind`. */
     public const int MAX_KIND = 8;
 
+    /** The prefix of a key derived from a phone number. */
+    public const string PHONE = 'phone:';
+
+    /** The prefix of the operator's own key. */
+    public const string LEGACY = 'legacy:';
+
+    /** The prefix of a key that only names the source channel. */
+    public const string SOURCE = 'source:';
+
     /** How many hex digits of the HMAC the key keeps (128 bits). */
     private const int HASH_HEX = 32;
 
     public function __construct(public string $key, public ?string $kind) {}
+
+    /**
+     * The prefixes of the filed keys this key may replace (`ListingRefs::remember()`): a key of its own kind, and a
+     * `source:` key for a `phone:` or `legacy:` one. A `phone:` and a `legacy:` key never replace each other, and a key
+     * of no known kind replaces none (only a row without a key takes it).
+     *
+     * @return list<string>
+     */
+    public function replaces(): array
+    {
+        foreach ([self::PHONE, self::LEGACY] as $prefix) {
+            if (str_starts_with($this->key, $prefix)) {
+                return [$prefix, self::SOURCE];
+            }
+        }
+
+        return str_starts_with($this->key, self::SOURCE) ? [self::SOURCE] : [];
+    }
 
     /**
      * The author key of a raw legacy card, with the operator field of `legacy.fields.author_key` and the secret of
@@ -61,22 +95,24 @@ final readonly class AuthorKey
         $operator = $field === '' ? null : self::operatorValue($card[$field] ?? null);
 
         if ($operator !== null) {
-            return new self("legacy:{$operator}", self::kindOf($card));
+            return new self(self::LEGACY.$operator, self::kindOf($card));
         }
 
         $phone = self::e164($card['phone'] ?? null);
 
         if ($phone !== null) {
             if (strlen($secret) >= self::MIN_SECRET_BYTES) {
-                return new self('phone:'.self::phoneHash($phone, $secret), 'phone');
+                return new self(self::PHONE.self::phoneHash($phone, $secret), 'phone');
             }
 
             self::warnShortSecret();
+
+            return null;
         }
 
         $channel = SourceRefParser::fromCard($card)['channel'] ?? null;
 
-        return $channel === null ? null : new self("source:{$channel}", 'source');
+        return $channel === null ? null : new self(self::SOURCE.$channel, 'source');
     }
 
     /**
@@ -103,8 +139,8 @@ final readonly class AuthorKey
         return substr(hash_hmac('sha256', $phone, $secret), 0, self::HASH_HEX);
     }
 
-    /** The operator's value as text that fits the column after `legacy:`, else `null`. */
-    private static function operatorValue(mixed $value): ?string
+    /** The operator's value as text that fits the column after `legacy:` and is not a phone number, else `null`. */
+    private static function operatorValue(#[\SensitiveParameter] mixed $value): ?string
     {
         if (is_int($value)) {
             $value = (string) $value;
@@ -115,9 +151,15 @@ final readonly class AuthorKey
         }
 
         $value = trim($value);
-        $room = self::MAX_LENGTH - strlen('legacy:');
+        $room = self::MAX_LENGTH - strlen(self::LEGACY);
 
-        return preg_match('/^[\x21-\x7e]{1,'.$room.'}$/', $value) === 1 ? $value : null;
+        if (preg_match('/^[\x21-\x7e]{1,'.$room.'}$/', $value) !== 1
+            || self::e164($value) !== null
+            || preg_match('/\d{9,}/', (string) preg_replace('/[\s\-._()+]+/', '', $value)) === 1) {
+            return null;
+        }
+
+        return $value;
     }
 
     /**
@@ -125,7 +167,7 @@ final readonly class AuthorKey
      *
      * @param  array<array-key, mixed>  $card
      */
-    private static function kindOf(array $card): ?string
+    private static function kindOf(#[\SensitiveParameter] array $card): ?string
     {
         $author = $card['author'] ?? null;
         $kind = is_array($author) ? ($author['kind'] ?? null) : null;

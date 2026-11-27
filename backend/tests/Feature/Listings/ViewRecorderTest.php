@@ -108,3 +108,17 @@ it('keeps a channel that does not fit the column out of the row', function (): v
         ->and(ListingView::query()->sole()->source_channel)->toBeNull()
         ->and(ListingView::query()->sole()->source_post_id)->toBe(7);
 });
+
+it('keeps the recorded channel and post when a later read does not know them', function (): void {
+    $with = ListingDetails::fromArray(ListingArrays::details(['number' => 7]));
+    $without = ListingDetails::fromArray(ListingArrays::details(['number' => 7, 'source_ref' => null]));
+    $moved = ListingDetails::fromArray(ListingArrays::details(['number' => 7, 'source_ref' => ['channel' => 'stub_channel_b', 'post_id' => 9]]));
+
+    app(ViewRecorder::class)->record($this->user, $with);
+    app(ViewRecorder::class)->record($this->user, $without);
+    $kept = ListingView::query()->sole()->only(['source_channel', 'source_post_id', 'views']);
+    app(ViewRecorder::class)->record($this->user, $moved);
+
+    expect($kept)->toBe(['source_channel' => 'stub_channel_a', 'source_post_id' => 4812, 'views' => 2])
+        ->and(ListingView::query()->sole()->only(['source_channel', 'source_post_id', 'views']))->toBe(['source_channel' => 'stub_channel_b', 'source_post_id' => 9, 'views' => 3]);
+});

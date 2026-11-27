@@ -3,9 +3,13 @@
 use App\Models\ListingRef;
 use App\Models\User;
 use App\Services\Listings\AuthorKey;
+use App\Services\Listings\ListingOverlay;
 use App\Services\Listings\ListingPointer;
 use App\Services\Listings\ListingRefs;
+use App\Services\Search\SearchFilters;
 use App\Services\Sources\Data\ListingDetails;
+use App\Services\Sources\Data\ListingPage;
+use App\Services\Sources\Data\ListingSummary;
 use App\Services\Sources\Legacy\LegacyListingSource;
 use App\Services\Sources\SourceContext;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +17,8 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Sleep;
 use Laravel\Pennant\Feature;
 use Laravel\Sanctum\Sanctum;
+use Tests\Support\FakeOverlayData;
+use Tests\Support\FilterArrays;
 use Tests\Support\LegacyFixtures;
 use Tests\Support\LegacyListingsHttp;
 use Tests\Support\ListingArrays;
@@ -59,13 +65,65 @@ it('remembers a card: channel, post, author, district; a later card keeps first_
     expect($ref->listing_number)->toBe(100012)
         ->and($ref->source_channel)->toBe('stub_channel_a')
         ->and($ref->source_post_id)->toBe(4812)
-        ->and($ref->author_key)->toBe('source:stub_channel_a')
-        ->and($ref->author_kind)->toBe('source')
+        ->and($ref->author_key)->toBe('phone:'.str_repeat('a', 32))
+        ->and($ref->author_kind)->toBe('phone')
         ->and($ref->district_code)->toBe('chilonzor')
         ->and($ref->first_seen_at?->toIso8601String())->toBe('2026-11-27T09:00:00+00:00')
         ->and($ref->last_seen_at?->toIso8601String())->toBe('2026-11-27T11:00:00+00:00')
         ->and($ref->gone_at)->toBeNull()
         ->and($ref->merged_into)->toBeNull();
+});
+
+it('replaces a filed author key only with one at least as strong, and the kind follows the key it keeps', function (?array $stored, ?array $new, ?array $kept): void {
+    refs()->remember(refCard(100012), $stored === null ? null : new AuthorKey(...$stored));
+    refs()->remember(refCard(100012), $new === null ? null : new AuthorKey(...$new));
+
+    expect(array_values(ListingRef::query()->sole()->only(['author_key', 'author_kind'])))->toBe($kept ?? [null, null]);
+})->with([
+    'none, then phone' => [null, ['phone:aaaa', 'phone'], ['phone:aaaa', 'phone']],
+    'none, then legacy' => [null, ['legacy:a-1', null], ['legacy:a-1', null]],
+    'none, then source' => [null, ['source:chan_a', 'source'], ['source:chan_a', 'source']],
+    'none, then none' => [null, null, null],
+    'phone, then none' => [['phone:aaaa', 'phone'], null, ['phone:aaaa', 'phone']],
+    'phone, then another phone' => [['phone:aaaa', 'phone'], ['phone:bbbb', 'phone'], ['phone:bbbb', 'phone']],
+    'phone, then source' => [['phone:aaaa', 'phone'], ['source:chan_a', 'source'], ['phone:aaaa', 'phone']],
+    'phone, then legacy' => [['phone:aaaa', 'phone'], ['legacy:a-1', 'phone'], ['phone:aaaa', 'phone']],
+    'source, then none' => [['source:chan_a', 'source'], null, ['source:chan_a', 'source']],
+    'source, then another source' => [['source:chan_a', 'source'], ['source:chan_b', 'source'], ['source:chan_b', 'source']],
+    'source, then phone' => [['source:chan_a', 'source'], ['phone:aaaa', 'phone'], ['phone:aaaa', 'phone']],
+    'source, then legacy without a kind' => [['source:chan_a', 'source'], ['legacy:a-1', null], ['legacy:a-1', null]],
+    'legacy, then none' => [['legacy:a-1', 'phone'], null, ['legacy:a-1', 'phone']],
+    'legacy, then another legacy without a kind' => [['legacy:a-1', 'phone'], ['legacy:a-2', null], ['legacy:a-2', null]],
+    'legacy, then phone' => [['legacy:a-1', 'phone'], ['phone:aaaa', 'phone'], ['legacy:a-1', 'phone']],
+    'legacy, then source' => [['legacy:a-1', 'phone'], ['source:chan_a', 'source'], ['legacy:a-1', 'phone']],
+    'an operator value with quotes and a percent sign' => [['source:chan_a', 'source'], ["legacy:o'k%_1", null], ["legacy:o'k%_1", null]],
+]);
+
+it('keeps a filed author key when a later card has none, so a blocked author stays blocked', function (): void {
+    $data = FakeOverlayData::bind();
+    $user = User::factory()->create();
+    $data->blocked[$user->id] = ['phone:'.str_repeat('a', 32)];
+    $page = new ListingPage([ListingSummary::fromArray(ListingArrays::preview(['number' => 4])), ListingSummary::fromArray(ListingArrays::preview(['number' => 5]))], null);
+    refs()->remember(refCard(5), new AuthorKey('phone:'.str_repeat('a', 32), 'phone'));
+    refs()->remember(refCard(5), null);
+    refs()->remember(refCard(5), new AuthorKey('source:stub_channel_a', 'source'));
+
+    $kept = app(ListingOverlay::class)->feed($page, SearchFilters::fromNormalised(FilterArrays::defaults()), new SourceContext('ru', 'USD', $user))->items;
+
+    expect(array_map(fn (ListingSummary $item): int => $item->number, $kept))->toBe([4]);
+});
+
+it('keeps the filed channel, post and district when a later card does not know them', function (): void {
+    refs()->remember(refCard(100012), null);
+    refs()->remember(refCard(100012, ['source_ref' => null, 'district' => ['code' => null, 'name' => 'Где-то']]), null);
+
+    expect(ListingRef::query()->sole()->only(['source_channel', 'source_post_id', 'district_code']))
+        ->toBe(['source_channel' => 'stub_channel_a', 'source_post_id' => 4812, 'district_code' => 'yunusobod']);
+
+    refs()->remember(refCard(100012, ['source_ref' => ['channel' => 'stub_channel_b', 'post_id' => 7], 'district' => ['code' => 'chilonzor', 'name' => 'Чиланзарский']]), null);
+
+    expect(ListingRef::query()->sole()->only(['source_channel', 'source_post_id', 'district_code']))
+        ->toBe(['source_channel' => 'stub_channel_b', 'source_post_id' => 7, 'district_code' => 'chilonzor']);
 });
 
 it('answers a pointer with the channel and post, or with nulls for a number it has no row for', function (): void {

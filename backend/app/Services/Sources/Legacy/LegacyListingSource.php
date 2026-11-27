@@ -75,9 +75,10 @@ use LogicException;
  * that no longer fits its data object is dropped and read again. A number legacy answered `404` for is not asked again
  * for `legacy.cache.not_found` s, and a number at or above the native floor is never asked (`404` at once).
  *
- * `listing_refs` (`ListingRefs`): a full card read from legacy (a cache miss) is filed with the author key of the raw
- * answer (`AuthorKey`), which still holds the number the translated card drops; a `404` marks a number HOMI knew gone,
- * and a card that answers with another number marks the asked one merged into it.
+ * `listing_refs` (`ListingRefs`): a full card read from legacy (a cache miss, so once per listing, language and
+ * currency a minute: the card cache's key and `legacy.cache.card`) is filed with the author key of the raw answer
+ * (`AuthorKey`), which still holds the number the translated card drops; a `404` marks a number HOMI knew gone, and a
+ * card that answers with another number marks the asked one merged into it.
  *
  * Feed paging (WP-42, "Feed paging and top-up"): one HOMI page reads the legacy page its cursor names, leaves out what
  * `ListingExclusion` excludes, resumes at the cursor's position and takes up to `limit` items; while fewer than half of
@@ -393,9 +394,10 @@ final class LegacyListingSource implements ListingSource
     }
 
     /**
-     * Files a full card legacy answered in `listing_refs` (a cache miss, so at most once per `legacy.cache.card`): the
-     * author key read from the raw answer, which still holds the number the translated card no longer has (DEC-52),
-     * and the merge when legacy answered another number. A preview carries no phone or post link, so it files nothing.
+     * Files a full card legacy answered in `listing_refs` (a cache miss, so once per listing, language and currency a
+     * minute: the card cache's key and `legacy.cache.card`): the author key read from the raw answer, which still holds
+     * the number the translated card no longer has (DEC-52), and the merge when legacy answered another number. A
+     * preview carries no phone or post link, so it files nothing.
      *
      * @param  array<array-key, mixed>  $card  the translated card
      * @param  array<array-key, mixed>  $answer  legacy's raw answer

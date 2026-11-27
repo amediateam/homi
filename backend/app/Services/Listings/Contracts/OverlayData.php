@@ -9,8 +9,9 @@ use App\Models\User;
  * know under a service key, and the outcomes of HOMI's votes (DEC-48: legacy never learns about them). WP-42 binds
  * `App\Services\Listings\NullOverlayData`; WP-44 binds the real one over its tables.
  *
- * The overlay asks once per list, with the numbers of that list where a method takes them; an answer lists only numbers
- * among the ones asked.
+ * The overlay asks the methods without numbers (hidden listings, blocked keys, realtor keys) once per request's
+ * context, and the methods that take numbers once per list, with the numbers of that list; an answer lists only
+ * numbers among the ones asked. A card or a preview asks only for the flags and the realtor keys.
  */
 interface OverlayData
 {

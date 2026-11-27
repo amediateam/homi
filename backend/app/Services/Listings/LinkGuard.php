@@ -33,13 +33,13 @@ final class LinkGuard
     private function __construct() {}
 
     /** The channel or author name when a card may show it, else `null`. */
-    public static function safeName(?string $name): ?string
+    public static function safeName(#[\SensitiveParameter] ?string $name): ?string
     {
         return $name === null || preg_match_all('/\d/', $name) > self::NAME_DIGITS_MAX ? null : $name;
     }
 
     /** The link when a card may carry it, else `null`. */
-    public static function safe(?string $url): ?string
+    public static function safe(#[\SensitiveParameter] ?string $url): ?string
     {
         if ($url === null || preg_match('~^https://[^\s/?#@]+(?:[/?#]\S*)?$~i', $url) !== 1) {
             return null;
@@ -61,7 +61,7 @@ final class LinkGuard
     }
 
     /** The channel of a Telegram path (`/<channel>/…` or `/s/<channel>/…`), `''` without one. */
-    private static function channelOf(string $path): string
+    private static function channelOf(#[\SensitiveParameter] string $path): string
     {
         $segments = explode('/', trim($path, '/'));
 
@@ -69,7 +69,7 @@ final class LinkGuard
     }
 
     /** The link percent-decoded until it no longer changes (at most three rounds: a link encoded twice is caught). */
-    private static function decoded(string $url): string
+    private static function decoded(#[\SensitiveParameter] string $url): string
     {
         for ($round = 0; $round < 3; $round++) {
             $next = rawurldecode($url);

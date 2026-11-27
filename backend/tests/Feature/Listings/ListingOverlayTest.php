@@ -1,8 +1,12 @@
 <?php
 
 use App\Enums\ContactRequestStatus;
+use App\Http\Resources\Api\V1\ListingDetailsResource;
+use App\Http\Resources\Api\V1\ListingPreviewResource;
 use App\Models\ListingRef;
+use App\Models\ListingView;
 use App\Models\User;
+use App\Services\Listings\Contracts\ListingExclusion;
 use App\Services\Listings\Contracts\OwnerOverlayData;
 use App\Services\Listings\ListingOverlay;
 use App\Services\Search\ListingQuery;
@@ -15,7 +19,10 @@ use App\Services\Sources\Data\MapPoint;
 use App\Services\Sources\Data\MapPoints;
 use App\Services\Sources\Legacy\LegacyListingSource;
 use App\Services\Sources\SourceContext;
+use App\Services\Sources\Stub\FixtureStore;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Sleep;
 use Laravel\Pennant\Feature;
@@ -25,6 +32,7 @@ use Tests\Support\FilterArrays;
 use Tests\Support\LegacyFixtures;
 use Tests\Support\LegacyListingsHttp;
 use Tests\Support\ListingArrays;
+use Tests\TestCase;
 
 /*
  * HOMI's overlay of listing answers (WP-42, "Overlay"), with a fake `OverlayData`: the flags, the exclusions of feed
@@ -162,8 +170,9 @@ it('removes the listings HOMI\'s votes mark as rented, for a system context too,
 it('flips a realtor-marked author\'s listings to not an owner\'s, and removes them under owners and no_agents only', function (string $owner, array $expected): void {
     $this->data->realtors = ['phone:realtor'];
     fileUnder('phone:realtor', [2]);
+    $verified = new ListingPage(array_map(fn (int $number): ListingSummary => summaryOf($number, ['owner_verified' => true]), [1, 2, 3]), 'next');
 
-    $page = overlay()->feed(pageOf([1, 2, 3]), overlayFilters(['owner' => $owner]), SourceContext::system());
+    $page = overlay()->feed($verified, overlayFilters(['owner' => $owner]), SourceContext::system());
     $map = overlay()->map(mapOf([1, 2, 3], 3, 3), overlayFilters(['owner' => $owner]), SourceContext::system());
 
     expect(itemNumbers($page))->toBe($expected)
@@ -171,7 +180,8 @@ it('flips a realtor-marked author\'s listings to not an owner\'s, and removes th
         ->and($map->total)->toBe(count($expected));
 
     foreach ($page->items as $item) {
-        expect($item->isOwner)->toBe($item->number !== 2);
+        $json = (new ListingPreviewResource($item))->resolve();
+        expect([$json['is_owner'], $json['owner_verified']])->toBe($item->number === 2 ? [false, false] : [true, true]);
     }
 })->with([
     'any' => ['any', [1, 2, 3]],
@@ -179,17 +189,22 @@ it('flips a realtor-marked author\'s listings to not an owner\'s, and removes th
     'no agents' => ['no_agents', [1, 3]],
 ]);
 
-it('marks a realtor\'s card: not an owner\'s, no tier, and no invitation to place a listing', function (): void {
+it('marks a realtor\'s card and its preview: not an owner\'s, not verified, no tier, and no invitation to place a listing', function (): void {
     $user = User::factory()->create();
     $this->data->realtors = ['phone:realtor'];
     fileUnder('phone:realtor', [100012]);
-    $source = cardOf(100012, ['owner' => ['tier' => 'verified', 'mine' => false, 'listing_id' => null, 'entry' => true, 'response_minutes' => null, 'description' => null]]);
+    $source = cardOf(100012, ['owner_verified' => true, 'owner' => ['tier' => 'verified', 'mine' => false, 'listing_id' => null, 'entry' => true, 'response_minutes' => null, 'description' => null]]);
 
     $card = overlay()->card($source, overlayContext($user));
+    $json = (new ListingDetailsResource($card))->response()->getData(true)['data'];
+    $preview = (new ListingPreviewResource(overlay()->preview(summaryOf(100012, ['owner_verified' => true]), overlayContext($user))))->resolve();
 
     expect($card->preview->isOwner)->toBeFalse()
+        ->and($card->preview->ownerVerified)->toBeFalse()
         ->and($card->owner->tier)->toBeNull()
-        ->and($card->owner->entry)->toBeFalse();
+        ->and($card->owner->entry)->toBeFalse()
+        ->and([$json['is_owner'], $json['owner_verified'], $json['owner']['tier']])->toBe([false, false, null])
+        ->and([$preview['is_owner'], $preview['owner_verified']])->toBe([false, false]);
 });
 
 it('writes owner.entry (DEC-94): an owner\'s listing that is not the caller\'s own, while the cabinet is on', function (): void {
@@ -224,6 +239,7 @@ it('leaves the source\'s owner and request parts while no owner data is bound, a
             return in_array(10000003, $numbers, true) ? [10000003 => new ContactRequestState(ContactRequestStatus::Given, null)] : [];
         }
     });
+    app()->forgetScopedInstances();
 
     $own = overlay()->card(cardOf(100012), overlayContext($user));
     $given = overlay()->card($requestCard, overlayContext($user));
@@ -254,12 +270,133 @@ it('overlays nothing while sources.native_stubs is on', function (): void {
         ->and($this->data->reads)->toBe(0);
 });
 
+/** @return int the statements on `listing_refs` that `$run` sends */
+function listingRefsQueries(Closure $run): int
+{
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+    $run();
+    $queries = array_filter(DB::getQueryLog(), fn (array $query): bool => str_contains((string) $query['query'], 'listing_refs'));
+    DB::disableQueryLog();
+
+    return count($queries);
+}
+
 it('reads HOMI\'s data once per list, and asks listing_refs only when a key could match', function (): void {
     $user = User::factory()->create();
 
-    overlay()->feed(pageOf(range(1, 20)), overlayFilters(), overlayContext($user));
+    $none = listingRefsQueries(fn (): ListingPage => overlay()->feed(pageOf(range(1, 20)), overlayFilters(), overlayContext($user)));
 
-    expect($this->data->reads)->toBe(6);
+    expect($none)->toBe(0)
+        ->and($this->data->reads)->toBe(6)
+        ->and($this->data->calls)->toEqual(['hiddenNumbers' => 1, 'rentedByVotes' => 1, 'blockedAuthorKeys' => 1, 'realtorAuthorKeys' => 1, 'favorites' => 1, 'viewed' => 1]);
+
+    $this->data->blocked[$user->id] = ['phone:blocked'];
+    $blocked = listingRefsQueries(fn (): ListingPage => overlay()->feed(pageOf(range(1, 20)), overlayFilters(), overlayContext($user)));
+    $this->data->blocked = [];
+    $this->data->realtors = ['phone:realtor'];
+    $realtor = listingRefsQueries(fn (): ListingPage => overlay()->feed(pageOf(range(1, 20)), overlayFilters(), overlayContext($user)));
+
+    expect($blocked)->toBe(1)
+        ->and($realtor)->toBe(1);
+});
+
+it('reads only the flags and the realtor keys for a card and its preview, never the exclusion sets', function (): void {
+    $user = User::factory()->create();
+    $this->data->hidden[$user->id] = [100012];
+    $this->data->rented = [100012];
+
+    overlay()->card(cardOf(100012), overlayContext($user));
+    $card = $this->data->calls;
+    $this->data->calls = [];
+    overlay()->preview(summaryOf(100012), overlayContext($user));
+
+    expect($card)->toEqual(['realtorAuthorKeys' => 1, 'favorites' => 1, 'viewed' => 1])
+        ->and($this->data->calls)->toEqual(['realtorAuthorKeys' => 1, 'favorites' => 1, 'viewed' => 1]);
+});
+
+it('reads each set of a caller once for a legacy feed page with one top-up, through the route', function (): void {
+    $user = User::factory()->create();
+    overlaidSyntheticFeed(5, $user, $this->data, overlaidPageNumbers(1, 1, 12));
+    $this->data->blocked[$user->id] = ['phone:blocked'];
+    Feature::globally()->activate('source.listings.feed', ['everyone' => 'legacy']);
+    Sanctum::actingAs($user, ['app:read']);
+
+    $queries = listingRefsQueries(fn () => $this->getJson('/api/v1/listings?city=tashkent&deal=rent_long')->assertOk()->assertJsonPath('meta.source', 'legacy')->assertJsonCount(20, 'data'));
+
+    expect(LegacyListingsHttp::sent('/api/feed'))->toHaveCount(2)
+        ->and($this->data->callsOf('hiddenNumbers'))->toBe(1)
+        ->and($this->data->callsOf('blockedAuthorKeys'))->toBe(1)
+        ->and($this->data->callsOf('realtorAuthorKeys'))->toBe(1)
+        ->and($this->data->callsOf('favorites'))->toBe(1)
+        ->and($this->data->callsOf('viewed'))->toBe(1)
+        ->and($this->data->callsOf('rentedByVotes'))->toBe(3)
+        ->and($queries)->toBe(3);
+});
+
+it('binds one overlay per request lifecycle: the exclusion of the legacy feed is the controllers\' overlay', function (): void {
+    $first = app(ListingOverlay::class);
+
+    expect(app(ListingExclusion::class))->toBe($first)
+        ->and(app(ListingOverlay::class))->toBe($first);
+
+    app()->forgetScopedInstances();
+
+    expect(app(ListingOverlay::class))->not->toBe($first)
+        ->and(app(ListingExclusion::class))->toBe(app(ListingOverlay::class));
+});
+
+/**
+ * Binds a stub fixture store over a copy of the fixtures in which every listing of the catalogue is a favourite and
+ * viewed, so a test sees whether the overlay and the view recorder touched an answer. The copy is removed after the
+ * test; the shared catalogue is never changed.
+ */
+function flaggedFixtures(TestCase $test): void
+{
+    $root = sys_get_temp_dir().'/homi-fixtures-'.bin2hex(random_bytes(6));
+    File::copyDirectory(resource_path('fixtures/v1'), $root);
+    $catalog = json_decode((string) file_get_contents("{$root}/listings/catalog.json"), true, flags: JSON_THROW_ON_ERROR);
+    $flagged = array_map(fn (array $entry): array => [...$entry, 'favorite' => true, 'viewed' => true], $catalog);
+    file_put_contents("{$root}/listings/catalog.json", json_encode($flagged, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE));
+    app()->instance(FixtureStore::class, new FixtureStore($root));
+    (fn () => $this->beforeApplicationDestroyed(fn (): bool => File::deleteDirectory($root)))->call($test);
+}
+
+it('skips the overlay and the view recorder on the feed and card routes while sources.native_stubs is on', function (): void {
+    config(['sources.native_stubs' => true]);
+    flaggedFixtures($this);
+    $user = User::factory()->create();
+    Sanctum::actingAs($user, ['app:read']);
+    $feed = $this->getJson('/api/v1/listings?city=tashkent&deal=rent_long')->assertOk()->assertJsonPath('meta.source', 'stub');
+    $number = $feed->json('data.0.number');
+    $this->data->hidden[$user->id] = [$number];
+
+    $again = $this->getJson('/api/v1/listings?city=tashkent&deal=rent_long')->assertOk();
+    $card = $this->getJson("/api/v1/listings/{$number}")->assertOk();
+    $preview = $this->getJson("/api/v1/listings/{$number}?preview=1")->assertOk();
+
+    expect(array_unique(array_column($feed->json('data'), 'favorite')))->toBe([true])
+        ->and(array_unique(array_column($feed->json('data'), 'viewed')))->toBe([true])
+        ->and($again->json('data.0.number'))->toBe($number)
+        ->and([$card->json('data.favorite'), $card->json('data.viewed')])->toBe([true, true])
+        ->and([$preview->json('data.favorite'), $preview->json('data.viewed')])->toBe([true, true])
+        ->and($this->data->reads)->toBe(0)
+        ->and(ListingView::query()->count())->toBe(0);
+});
+
+it('overwrites the flags of the same flagged fixture once sources.native_stubs is off', function (): void {
+    flaggedFixtures($this);
+    $user = User::factory()->create();
+    Sanctum::actingAs($user, ['app:read']);
+
+    $feed = $this->getJson('/api/v1/listings?city=tashkent&deal=rent_long')->assertOk()->assertJsonPath('meta.source', 'stub');
+    $number = $feed->json('data.0.number');
+    $card = $this->getJson("/api/v1/listings/{$number}")->assertOk();
+
+    expect(array_unique(array_column($feed->json('data'), 'favorite')))->toBe([false])
+        ->and(array_unique(array_column($feed->json('data'), 'viewed')))->toBe([false])
+        ->and([$card->json('data.favorite'), $card->json('data.viewed')])->toBe([false, true])
+        ->and(ListingView::query()->count())->toBe(1);
 });
 
 it('overlays the stub driver\'s feed, map and card on the routes', function (): void {

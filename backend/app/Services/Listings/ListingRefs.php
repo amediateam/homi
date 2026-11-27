@@ -4,15 +4,28 @@ namespace App\Services\Listings;
 
 use App\Models\ListingRef;
 use App\Services\Sources\Data\ListingDetails;
+use Illuminate\Contracts\Database\Query\Expression;
+use Illuminate\Support\Facades\DB;
 
 /**
  * `listing_refs` (WP-42): where each listing number points. The legacy driver writes it — `remember()` for every full
- * card it fetches (a cache miss, so at most once a minute per listing), `markGone()` on a `404`, `markMerged()` when
- * legacy answers another number — and the overlay and the personal tables of WP-44 read it.
+ * card it fetches (a cache miss, so once per listing, language and currency a minute: the card cache's key and
+ * `legacy.cache.card`), `markGone()` on a `404`, `markMerged()` when legacy answers another number — and the overlay
+ * and the personal tables of WP-44 read it.
  *
  * Every write is one statement (an upsert or an update), so two requests for one listing never collide. A row is
  * created only for a number legacy answered for: `markGone()` updates a row HOMI has and never creates one, since a
  * card number is user input. No phone number is stored: the author is filed under `AuthorKey`.
+ *
+ * What a later card does not know never clears what an earlier one filed: a card without a source keeps the filed
+ * channel and post (the pair is replaced whole or not at all), one without a district code keeps the filed code, and
+ * the author key is replaced only by one at least as strong (`AuthorKey::replaces()`): any key replaces none, a key
+ * replaces one of its own kind, a `phone:` or `legacy:` key replaces a `source:` one, and no key never replaces one.
+ * So a blocked author's listing stays blocked when a later card of it comes without its phone. A `phone:` key is not
+ * replaced by a `legacy:` one either: once the operator field (`legacy.fields.author_key`) is switched on, the rows
+ * filed under `phone:` keep them, and moving them to the operator's keys needs a migration rule of its own. The
+ * condition is decided in the statement, on the stored key, so it holds when two cards of one listing race, and
+ * `author_kind` follows the key the row ends with.
  */
 final class ListingRefs
 {
@@ -22,27 +35,46 @@ final class ListingRefs
     /** The width of `source_channel` and `district_code`. */
     private const int MAX_TEXT = 64;
 
-    /** Files a card legacy answered: its channel and post, its author and district; it is neither merged nor gone. */
+    /**
+     * Files a card legacy answered: its channel and post, its author and district, each kept from the row where the
+     * card does not know it (the class's rule); it is neither merged nor gone.
+     */
     public function remember(ListingDetails $card, ?AuthorKey $author): void
     {
         $preview = $card->preview;
+        $channel = self::fits($preview->sourceRef?->channel);
+        $district = self::fits($preview->districtCode);
         $now = now();
+        $update = ['merged_into', 'last_seen_at', 'gone_at'];
+
+        if ($channel !== null) {
+            array_push($update, 'source_channel', 'source_post_id');
+        }
+
+        if ($district !== null) {
+            $update[] = 'district_code';
+        }
+
+        if ($author !== null) {
+            $update['author_key'] = self::kept('author_key', $author);
+            $update['author_kind'] = self::kept('author_kind', $author);
+        }
 
         ListingRef::query()->upsert(
             [[
                 'listing_number' => $preview->number,
-                'source_channel' => self::fits($preview->sourceRef?->channel),
+                'source_channel' => $channel,
                 'source_post_id' => $preview->sourceRef?->postId,
                 'author_key' => $author?->key,
                 'author_kind' => $author?->kind,
-                'district_code' => self::fits($preview->districtCode),
+                'district_code' => $district,
                 'merged_into' => null,
                 'first_seen_at' => $now,
                 'last_seen_at' => $now,
                 'gone_at' => null,
             ]],
             ['listing_number'],
-            ['source_channel', 'source_post_id', 'author_key', 'author_kind', 'district_code', 'merged_into', 'last_seen_at', 'gone_at'],
+            $update,
         );
     }
 
@@ -118,6 +150,29 @@ final class ListingRefs
             ['listing_number'],
             ['merged_into', 'last_seen_at', 'gone_at'],
         );
+    }
+
+    /**
+     * The value of `$column` after the upsert: the new row's when the stored key is none or one `$author` replaces,
+     * else the stored one. Only fixed SQL enters the statement: the prefixes of `AuthorKey` as literals, the key itself
+     * as a bound value of the insert, read back as `excluded`.
+     *
+     * @param  'author_key'|'author_kind'  $column
+     */
+    private static function kept(string $column, AuthorKey $author): Expression
+    {
+        $when = '"listing_refs"."author_key" is null';
+
+        foreach ($author->replaces() as $prefix) {
+            $when .= match ($prefix) {
+                AuthorKey::PHONE => ' or "listing_refs"."author_key" like \'phone:%\'',
+                AuthorKey::LEGACY => ' or "listing_refs"."author_key" like \'legacy:%\'',
+                AuthorKey::SOURCE => ' or "listing_refs"."author_key" like \'source:%\'',
+                default => '',
+            };
+        }
+
+        return DB::raw("case when {$when} then excluded.\"{$column}\" else \"listing_refs\".\"{$column}\" end");
     }
 
     /** A text that fits the 64-character columns, else `null`. */

@@ -20,6 +20,8 @@ use Illuminate\Http\JsonResponse;
  * The feed and the card of `/listings` (WP-12, API-004 and API-008). HOMI's overlay (WP-42) runs on the answer of every
  * driver: the feed leaves out what the caller hid, blocked or HOMI's votes mark, and the flags are HOMI's; a full card
  * read is recorded in the caller's view history (never a preview). Both are skipped while `sources.native_stubs` is on.
+ * The overlay is taken per call, not in the constructor: the router keeps a controller, and the overlay is scoped to
+ * one request (it keeps the caller's sets for the legacy feed pager of the same request).
  */
 class ListingController extends ApiController
 {
@@ -28,7 +30,6 @@ class ListingController extends ApiController
 
     public function __construct(
         private readonly SourceManager $sources,
-        private readonly ListingOverlay $overlay,
         private readonly ViewRecorder $views,
     ) {}
 
@@ -36,12 +37,12 @@ class ListingController extends ApiController
      * `GET /listings`: one page of previews; `meta.next_cursor` null ends the list. A page may hold fewer than
      * `limit` items; the client de-duplicates by `number`.
      */
-    public function index(ListingFeedRequest $request): JsonResponse
+    public function index(ListingFeedRequest $request, ListingOverlay $overlay): JsonResponse
     {
         $context = SourceContext::fromRequest($request);
         $resolved = $this->sources->listings('source.listings.feed', $context);
         $query = $request->listingQuery();
-        $page = $this->overlay->feed($resolved->source->feed($query, $context), $query->filters, $context);
+        $page = $overlay->feed($resolved->source->feed($query, $context), $query->filters, $context);
         /** Scramble types the source's cursor as a plain string; `?? null` keeps the documented one nullable (WP-24). */
         $nextCursor = $page->nextCursor ?? null;
 
@@ -54,7 +55,7 @@ class ListingController extends ApiController
      * The full card may answer `429 rate_limited` with `reason: "daily"` and `Retry-After` when the caller reached
      * the daily limit of opened listings. Scenario `daily_limit`.
      */
-    public function show(ShowListingRequest $request, int $number): JsonResponse
+    public function show(ShowListingRequest $request, int $number, ListingOverlay $overlay): JsonResponse
     {
         if ($number < 1) {
             throw new SourceNotFound('Listing not found.');
@@ -64,14 +65,14 @@ class ListingController extends ApiController
         $resolved = $this->sources->listings('source.listings.card', $context);
 
         if ($request->wantsPreview()) {
-            return $this->sourced(new ListingPreviewResource($this->overlay->preview($resolved->source->preview($number, $context), $context)), $resolved->driver);
+            return $this->sourced(new ListingPreviewResource($overlay->preview($resolved->source->preview($number, $context), $context)), $resolved->driver);
         }
 
         if ($resolved->driver === SourceDriver::Stub && $context->scenario === 'daily_limit') {
             throw new DailyLimitReached(self::STUB_DAILY_RETRY_AFTER);
         }
 
-        $card = $this->overlay->card($resolved->source->details($number, $context), $context);
+        $card = $overlay->card($resolved->source->details($number, $context), $context);
 
         if ($context->user !== null) {
             $card = $this->views->record($context->user, $card);

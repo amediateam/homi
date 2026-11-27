@@ -120,9 +120,13 @@ final readonly class ListingSummary
         return clone ($this, ['favorite' => $favorite ?? $this->favorite, 'viewed' => $viewed ?? $this->viewed]);
     }
 
-    /** The same preview of an author HOMI's votes mark as a realtor (the overlay of WP-42, step 4): not an owner's. */
+    /**
+     * The same preview of an author HOMI's votes mark as a realtor (the overlay of WP-42, step 4): not an owner's, and
+     * not a verified owner's either, so HOMI's mark wins over a source's «Проверенный хозяин» (the Mini App's badge reads
+     * `owner_verified` before `is_owner`).
+     */
     public function asRealtors(): self
     {
-        return clone ($this, ['isOwner' => false]);
+        return clone ($this, ['isOwner' => false, 'ownerVerified' => false]);
     }
 }

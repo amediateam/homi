@@ -38,7 +38,10 @@ class SourceServiceProvider extends ServiceProvider
         // One instance per process, so each legacy fixture is read once.
         $this->app->singleton(LegacyFakeServer::class, fn (): LegacyFakeServer => new LegacyFakeServer(resource_path('fixtures/legacy')));
         // HOMI's per-user part of listing answers (WP-42): the overlay is also what the legacy feed pager leaves out.
+        // One instance per request or queued job (`scoped`), shared by the pager and the controller, so the caller's
+        // sets are read once per request and never kept across requests by a long-running worker.
         // Its data has no tables before WP-44 (favourites, hidden, blocked, votes), WP-84 and WP-85 (owner parts).
+        $this->app->scoped(ListingOverlay::class);
         $this->app->bind(ListingExclusion::class, ListingOverlay::class);
         $this->app->bind(OverlayData::class, NullOverlayData::class);
         $this->app->bind(OwnerOverlayData::class, NullOwnerOverlayData::class);

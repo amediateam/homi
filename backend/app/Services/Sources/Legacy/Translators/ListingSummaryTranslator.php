@@ -71,7 +71,7 @@ final class ListingSummaryTranslator
      *
      * @throws LegacyContractError
      */
-    public function page(array $answer, ?string $city = null, ?Coercions $seen = null): array
+    public function page(#[\SensitiveParameter] array $answer, ?string $city = null, ?Coercions $seen = null): array
     {
         $items = LegacyValue::requiredList($answer, 'items', self::PATH);
 
@@ -111,7 +111,7 @@ final class ListingSummaryTranslator
      *
      * @throws LegacyContractError
      */
-    public function toData(array $item, ?string $city = null, string $path = self::PATH, ?Coercions $seen = null): ListingSummary
+    public function toData(#[\SensitiveParameter] array $item, ?string $city = null, string $path = self::PATH, ?Coercions $seen = null): ListingSummary
     {
         return ListingSummary::fromArray($this->translate($item, $city, $path, '', $seen));
     }
@@ -126,7 +126,7 @@ final class ListingSummaryTranslator
      *
      * @throws LegacyContractError
      */
-    public function translate(array $item, ?string $city = null, string $path = self::PATH, string $prefix = '', ?Coercions $seen = null): array
+    public function translate(#[\SensitiveParameter] array $item, ?string $city = null, string $path = self::PATH, string $prefix = '', ?Coercions $seen = null): array
     {
         $number = $this->number($item, $path, $prefix);
         $photos = LegacyValue::requiredList($item, 'photos_preview', $path, $prefix);
@@ -148,7 +148,7 @@ final class ListingSummaryTranslator
      *
      * @throws LegacyContractError
      */
-    public function number(array $item, string $path, string $prefix = ''): int
+    public function number(#[\SensitiveParameter] array $item, string $path, string $prefix = ''): int
     {
         $id = Whole::of($item['id'] ?? null);
 
@@ -167,7 +167,7 @@ final class ListingSummaryTranslator
      * @param  Coercions|null  $seen  the notes of the item, already placed (`items.3.`)
      * @return array<string, mixed>
      */
-    public function fields(array $item, int $number, array $photos, ?string $city, ?Coercions $seen = null): array
+    public function fields(#[\SensitiveParameter] array $item, int $number, array $photos, ?string $city, ?Coercions $seen = null): array
     {
         $district = LegacyValue::string($item, 'district_name', $seen);
         $metro = LegacyValue::string($item, 'metro', $seen);
@@ -226,7 +226,7 @@ final class ListingSummaryTranslator
      *
      * @param  array<array-key, mixed>  $item
      */
-    private function photoCount(array $item, int $sent, int $kept, ?Coercions $seen): int
+    private function photoCount(#[\SensitiveParameter] array $item, int $sent, int $kept, ?Coercions $seen): int
     {
         $count = LegacyValue::count($item, 'photos_count', $seen) ?? $sent;
 
@@ -234,7 +234,7 @@ final class ListingSummaryTranslator
     }
 
     /** @param  array<array-key, mixed>  $item  `deal_type` when it is a deal, else `null` (an optional key; another value is noted) */
-    private static function deal(array $item, ?Coercions $seen): ?string
+    private static function deal(#[\SensitiveParameter] array $item, ?Coercions $seen): ?string
     {
         $deal = $item['deal_type'] ?? null;
 
@@ -247,13 +247,13 @@ final class ListingSummaryTranslator
         return $deal;
     }
 
-    private static function masked(?string $text): ?string
+    private static function masked(#[\SensitiveParameter] ?string $text): ?string
     {
         return $text === null ? null : PhoneMasker::mask($text);
     }
 
     /** @param  array<array-key, mixed>  $item */
-    private static function title(array $item, ?Coercions $seen): string
+    private static function title(#[\SensitiveParameter] array $item, ?Coercions $seen): string
     {
         $short = LegacyValue::string($item, 'short_title', $seen);
         $title = LegacyValue::string($item, 'title', $seen);
@@ -269,7 +269,7 @@ final class ListingSummaryTranslator
      * @param  array<array-key, mixed>  $item
      * @return array{label: string, when: string, at: string|null}
      */
-    private static function posted(array $item, ?Coercions $seen): array
+    private static function posted(#[\SensitiveParameter] array $item, ?Coercions $seen): array
     {
         $age = LegacyValue::string($item, 'age', $seen);
         $parts = $age === null ? ['', ''] : array_map(trim(...), preg_split(self::SEPARATOR, $age, 2) ?: []);

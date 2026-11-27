@@ -53,7 +53,7 @@ final class PhoneMasker
     /**
      * @param  list<string>  $codes  the codes a number without a prefix may start with; tests add the synthetic `00`
      */
-    public static function mask(string $text, array $codes = self::CODES): string
+    public static function mask(#[\SensitiveParameter] string $text, array $codes = self::CODES): string
     {
         if (preg_match_all(self::LINK, $text, $links, PREG_OFFSET_CAPTURE) === 0) {
             return self::maskText($text, $codes);
@@ -75,7 +75,7 @@ final class PhoneMasker
      *
      * @param  list<string>  $codes
      */
-    private static function maskText(string $text, array $codes): string
+    private static function maskText(#[\SensitiveParameter] string $text, array $codes): string
     {
         if ($text === '') {
             return '';
@@ -98,19 +98,19 @@ final class PhoneMasker
      * A link as written when `LinkGuard` keeps it (a link without a scheme or with `http` is judged as `https`), else
      * with every digit but the last two replaced by `*`. A masked link has two digits left, so it masks to itself.
      */
-    private static function maskLink(string $link): string
+    private static function maskLink(#[\SensitiveParameter] string $link): string
     {
         $judged = 'https://'.(string) preg_replace('~^https?://~i', '', $link);
 
         return LinkGuard::safe($judged) !== null ? $link : (string) preg_replace('/\d(?=(?:\D*\d){2})/u', '*', $link);
     }
 
-    private static function lastTwo(string $number): string
+    private static function lastTwo(#[\SensitiveParameter] string $number): string
     {
         return substr(self::digits($number), -2);
     }
 
-    private static function digits(string $number): string
+    private static function digits(#[\SensitiveParameter] string $number): string
     {
         return (string) preg_replace('/\D/', '', $number);
     }
