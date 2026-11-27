@@ -4,11 +4,13 @@ use App\Enums\Access\AccessGrantState;
 use App\Enums\Access\AdmittedVia;
 use App\Events\Listings\ContactDisclosed;
 use App\Events\Listings\ContactQuotaExceeded;
+use App\Exceptions\Sources\SourceNotFound;
 use App\Models\AccessGrant;
 use App\Models\User;
 use App\Services\Listings\CallLinkService;
 use App\Services\Listings\ContactDisclosure;
 use App\Services\Listings\ContactService;
+use App\Services\Sources\Legacy\LegacyListingSource;
 use App\Services\Sources\SourceContext;
 use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Contracts\Encryption\DecryptException;
@@ -388,7 +390,89 @@ it('forgets the contact entry of a listing legacy has withdrawn, also when gone 
     $this->getJson('/api/v1/listings/100001', ['Accept-Language' => 'ru'])->assertNotFound();
 
     expect(Cache::has('legacy:v1:listings:contact:100001'))->toBeFalse();
-    contactOf(100001, ['Accept-Language' => 'ru'])->assertNotFound()->assertJsonPath('code', 'not_found');
+    contactOf(100001, ['Accept-Language' => 'ru'])->assertNotFound()->assertJsonPath('code', 'contact_unavailable');
+    expect(LegacyListingsHttp::sent('/api/listings/100001'))->toHaveCount(3);
+});
+
+it('lets no card read in flight during a 404 file a usable contact, also when gone numbers are not remembered', function (): void {
+    config(['legacy.cache.not_found' => 0]);
+    onLegacyContact();
+    $phase = 'in flight';
+    LegacyListingsHttp::answer(function (Request $request) use (&$phase): ?PromiseInterface {
+        if (LegacyListingsHttp::path($request) !== '/api/listings/100001') {
+            return null;
+        }
+
+        if ($phase === 'in flight') {
+            // While the English read waits for legacy, a Russian one is answered 404; then the English one gets the card.
+            $phase = 'withdrawn';
+            expect(fn () => app(LegacyListingSource::class)->details(100001, new SourceContext('ru', 'USD')))->toThrow(SourceNotFound::class);
+
+            return null;
+        }
+
+        return Factory::response(['detail' => 'Not found.'], 404);
+    });
+
+    app(LegacyListingSource::class)->details(100001, new SourceContext('en', 'USD'));
+
+    expect($phase)->toBe('withdrawn')
+        ->and(Cache::has('legacy:v1:listings:contact:100001'))->toBeFalse();
+    contactOf(100001)->assertNotFound()->assertJsonPath('code', 'contact_unavailable');
+    expect(LegacyListingsHttp::sent('/api/listings/100001'))->toHaveCount(2);
+});
+
+it('files a merged duplicate\'s contact once, under the surviving number, and only a pointer to it under the asked one', function (): void {
+    onLegacyContact();
+
+    $this->getJson('/api/v1/listings/100016')->assertOk()->assertJsonPath('data.number', 100001);
+
+    expect(json_decode(Crypt::decryptString(Cache::get('legacy:v1:listings:contact:100016')), true))->toBe(['m' => 100001])
+        ->and(json_decode(Crypt::decryptString(Cache::get('legacy:v1:listings:contact:100001')), true))->toHaveKey('p', '+998000000067');
+    contactOf(100016)->assertOk()->assertJsonPath('data.phone', '+998000000067');
+    contactOf(100001)->assertOk()->assertJsonPath('data.phone', '+998000000067');
+    expect(LegacyListingsHttp::sent('/api/listings/100016'))->toHaveCount(1)
+        ->and(LegacyListingsHttp::sent('/api/listings/100001'))->toBe([]);
+});
+
+it('answers a merged duplicate whose survivor legacy has withdrawn 404 contact_unavailable, without a legacy call', function (int $notFound): void {
+    config(['legacy.cache.not_found' => $notFound]);
+    onLegacyContact();
+    Event::fake([ContactDisclosed::class]);
+    $withdrawn = false;
+    LegacyListingsHttp::answer(function (Request $request) use (&$withdrawn): ?PromiseInterface {
+        return $withdrawn && preg_match('#^/api/listings/(100016|100001)(/|$)#', LegacyListingsHttp::path($request)) === 1 ? Factory::response(['detail' => 'Not found.'], 404) : null;
+    });
+
+    $this->getJson('/api/v1/listings/100016')->assertOk()->assertJsonPath('data.number', 100001);
+    $withdrawn = true;
+    $this->getJson('/api/v1/listings/100001', ['Accept-Language' => 'en'])->assertNotFound();
+    $sent = count(Http::recorded());
+
+    contactOf(100016)->assertNotFound()->assertJsonPath('code', 'contact_unavailable');
+    expect(count(Http::recorded()))->toBe($sent);
+    Event::assertNotDispatched(ContactDisclosed::class);
+
+    // The asked number withdrawn too: still no number, whatever its card read says.
+    contactOf(100001)->assertNotFound()->assertJsonPath('code', 'contact_unavailable');
+    expect(count(Http::recorded()))->toBe($sent);
+})->with(['gone numbers remembered' => [60], 'gone numbers not remembered' => [0]]);
+
+it('discloses a listing legacy answers again once its withdrawal has passed', function (): void {
+    config(['legacy.cache.not_found' => 0]);
+    onLegacyContact();
+    $withdrawn = true;
+    LegacyListingsHttp::answer(function (Request $request) use (&$withdrawn): ?PromiseInterface {
+        return $withdrawn && LegacyListingsHttp::path($request) === '/api/listings/100001' ? Factory::response(['detail' => 'Not found.'], 404) : null;
+    });
+
+    $this->getJson('/api/v1/listings/100001')->assertNotFound();
+    $withdrawn = false;
+    contactOf(100001)->assertNotFound()->assertJsonPath('code', 'contact_unavailable');
+
+    // `legacy.cache.card` (60 s) and one read with every attempt (47 s with the defaults) later.
+    $this->travel(108)->seconds();
+    contactOf(100001)->assertOk()->assertJsonPath('data.phone', '+998001234567');
 });
 
 it('variant B answers 503 when legacy fails and 404 contact_unavailable when legacy has no link, dispatching nothing', function (int $legacyStatus, int $status, string $code): void {

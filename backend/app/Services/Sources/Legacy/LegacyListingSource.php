@@ -108,6 +108,8 @@ use LogicException;
  * cache entry beside the card's, `legacy:v1:listings:contact:<number>` (per number only: a phone does not depend on
  * the language or the currency), for `legacy.cache.card` s, as a string encrypted with `Crypt` (the application key):
  * the card's own entry holds no number, and under the mode `link` the entry holds none either (`LegacyContact::kept()`).
+ * The entry is filed once, under the number legacy answered with; a merged duplicate's own entry is a pointer to it
+ * (`{"m": <survivor>}`), so a `404` of the survivor leaves no copy of its phone (`file()`).
  * `contact()` decides the variant per card under `legacy.contact.mode`: variant A answers the phone and its display
  * (`callUrl` and `expiresAt` blank: `ContactService` answers HOMI's own call link) without a legacy call while the
  * entry is cached; on a miss — expired, or unreadable after the application key changed — one caller reads the card
@@ -116,8 +118,10 @@ use LogicException;
  * `legacy.base_url`, an absolute one only `https` on legacy's host and port or a host and port of
  * `legacy.contact.link_hosts` (`callUrl()`)
  * — valid for `legacy.contact.link_ttl` s, with legacy's `phone_display` only when it reads as one number; a `404`
- * there, or a link to another host, is `404 contact_unavailable`. A card without either is `ContactUnavailable`, and
- * so is a number legacy answered `404` for (its entry is dropped then). `hasContact()` is the first half of
+ * there, or a link to another host or port, is `404 contact_unavailable`. A card without either is
+ * `ContactUnavailable`, and so is a number legacy answered `404` for, or a duplicate merged into one, for
+ * `legacy.cache.card` s and one read's time after that `404` whatever `legacy.cache.not_found` says (its entry is
+ * dropped, and nothing is filed for it meanwhile: `rememberGone()`). `hasContact()` is the first half of
  * `contact()`: the entry, else the card read, never the call link, so `ContactService` asks the quota before
  * variant B spends a legacy call.
  *
@@ -511,10 +515,11 @@ final class LegacyListingSource implements ListingSource
     }
 
     /**
-     * A card or its preview form read from legacy and translated, with the author's contact of a full card (filed by
-     * `file()`); legacy's daily limit is passed on only where `$daily` says so.
+     * A card or its preview form read from legacy and translated, with the author's contact of a full card and the
+     * number legacy answered with (filed by `file()`; the asked one for a preview); legacy's daily limit is passed on
+     * only where `$daily` says so.
      *
-     * @return array{card: array<string, mixed>, contact: LegacyContact|null}
+     * @return array{card: array<string, mixed>, contact: LegacyContact|null, answered: int}
      *
      * @throws SourceNotFound|SourceUnavailable|DailyLimitReached
      */
@@ -539,53 +544,71 @@ final class LegacyListingSource implements ListingSource
                 : $details->translate($answer, $seen),
         ));
 
-        return ['card' => $card, 'contact' => $preview ? null : $this->file($number, $card, $answer)];
+        if ($preview) {
+            return ['card' => $card, 'contact' => null, 'answered' => $number];
+        }
+
+        return ['card' => $card, ...$this->file($number, $card, $answer)];
     }
 
     /**
      * Files a full card legacy answered (a cache miss, so once per listing, language and currency a minute: the card
      * cache's key and `legacy.cache.card`): in `listing_refs` the author key read from the raw answer, which still holds
      * the number the translated card no longer has (DEC-52), and the merge when legacy answered another number; and the
-     * author's contact in its encrypted entry, under the asked number and the answered one. A preview carries no phone
-     * or post link, so it files nothing.
+     * author's contact in its encrypted entry, once, under the answered number, with a pointer to it (`{"m":
+     * <answered>}`, sealed alike, no copy of the phone) under an asked number legacy merged into it — so the `404` of
+     * the survivor leaves no copy of its phone behind. Nothing is filed while either number is withdrawn
+     * (`withdrawnKey()`): a read that was in flight when legacy answered `404` for it cannot file a usable entry. A
+     * preview carries no phone or post link, so it files nothing.
      *
      * @param  array<array-key, mixed>  $card  the translated card
      * @param  array<array-key, mixed>  $answer  legacy's raw answer
+     * @return array{contact: LegacyContact, answered: int}
      */
-    private function file(int $asked, #[\SensitiveParameter] array $card, #[\SensitiveParameter] array $answer): LegacyContact
+    private function file(int $asked, #[\SensitiveParameter] array $card, #[\SensitiveParameter] array $answer): array
     {
         $details = ListingDetails::fromArray($card);
+        $answered = $details->preview->number;
         $this->refs->remember($details, AuthorKey::fromCard($answer));
-        $this->refs->markMerged($asked, $details->preview->number);
+        $this->refs->markMerged($asked, $answered);
 
         $contact = LegacyContact::fromCard($answer)->kept(Config::string('legacy.contact.mode'));
         $seconds = Config::integer('legacy.cache.card');
 
-        if ($seconds > 0) {
-            $sealed = Crypt::encryptString(json_encode($contact->toArray(), JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE));
+        if ($seconds > 0 && ! $this->withdrawn($asked) && ! $this->withdrawn($answered)) {
+            $this->cache->put($this->contactKey($answered), self::sealed($contact->toArray()), $seconds);
 
-            foreach (array_unique([$asked, $details->preview->number]) as $number) {
-                $this->cache->put($this->contactKey($number), $sealed, $seconds);
+            if ($asked !== $answered) {
+                $this->cache->put($this->contactKey($asked), self::sealed(['m' => $answered]), $seconds);
             }
         }
 
-        return $contact;
+        return ['contact' => $contact, 'answered' => $answered];
     }
 
     /**
-     * The author's contact of a listing: its encrypted entry, else the card read again, by one caller at a time
-     * (`singleFlight()` on the entry's key, as `cached()` fills a card). A number legacy answered `404` for is
-     * `ContactUnavailable` at once, whatever entry is left (`rememberGone()` drops it too).
+     * What a contact entry holds, encrypted with `Crypt` (the application key): a contact (`LegacyContact::toArray()`)
+     * or a pointer to the surviving number's entry.
+     *
+     * @param  array{p: string|null, d: string|null, l: bool}|array{m: int}  $data
+     */
+    private static function sealed(#[\SensitiveParameter] array $data): string
+    {
+        return Crypt::encryptString(json_encode($data, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * The author's contact of a listing: its encrypted entry (through the pointer of a merged duplicate to its
+     * survivor's), else the card read again, by one caller at a time (`singleFlight()` on the entry's key, as
+     * `cached()` fills a card). A number legacy answered `404` for, and a duplicate whose survivor it answered `404`
+     * for, is `ContactUnavailable` at once, whatever entry is left (`refuseWithdrawn()`).
      *
      * @throws ContactUnavailable|SourceNotFound|SourceUnavailable
      */
     private function contactEntry(int $number, SourceContext $context): LegacyContact
     {
         self::refuseNative($number);
-
-        if ($this->cache->has($this->goneKey($number))) {
-            throw new ContactUnavailable;
-        }
+        $this->refuseWithdrawn($number);
 
         if (Config::integer('legacy.cache.card') <= 0) {
             return $this->contactFromCard($number, $context);
@@ -601,25 +624,74 @@ final class LegacyListingSource implements ListingSource
     /**
      * The contact of a full card read again (its entry missed; `file()` stores the new entry); the card is cached as
      * `details()` would cache it, so the card or preview read that usually follows (the call page's title) needs no
-     * second call. Legacy's daily limit is `503` here: only the card method passes it on.
+     * second call. A card that answers with a withdrawn survivor's number gives no contact (`refuseWithdrawn()`).
+     * Legacy's daily limit is `503` here: only the card method passes it on.
+     *
+     * @throws ContactUnavailable|SourceNotFound|SourceUnavailable
      */
     private function contactFromCard(int $number, SourceContext $context): LegacyContact
     {
-        ['card' => $card, 'contact' => $contact] = $this->readCard($number, $context, false, daily: false);
+        ['card' => $card, 'contact' => $contact, 'answered' => $answered] = $this->readCard($number, $context, false, daily: false);
         $seconds = Config::integer('legacy.cache.card');
 
         if ($seconds > 0) {
             $this->cache->put($this->cardKey('card', $number, $context), $card, $seconds);
         }
 
+        $this->refuseWithdrawn($answered);
+
         return $contact ?? throw new LogicException('A full card files its contact.');
     }
 
     /**
-     * The author's contact of a listing from its encrypted entry; `null` when there is none, or it cannot be read (the
-     * application key changed, another shape): then the entry is dropped and the card is read again.
+     * The author's contact of a listing from its encrypted entry, or from its survivor's when the entry is a merged
+     * duplicate's pointer (one step: the survivor's entry must hold a contact); `null` when there is none, or it cannot
+     * be read (the application key changed, another shape): then the entry is dropped and the card is read again. A
+     * pointer to a withdrawn survivor is `ContactUnavailable`.
+     *
+     * @throws ContactUnavailable
      */
     private function cachedContact(int $number): ?LegacyContact
+    {
+        $data = $this->unsealed($number);
+
+        if ($data !== null && array_keys($data) === ['m']) {
+            $survivor = is_int($data['m']) && $data['m'] !== $number ? $data['m'] : null;
+
+            if ($survivor === null) {
+                $this->cache->forget($this->contactKey($number));
+
+                return null;
+            }
+
+            $this->refuseWithdrawn($survivor);
+            $number = $survivor;
+            $data = $this->unsealed($survivor);
+
+            if ($data !== null && array_keys($data) === ['m']) {
+                return null;
+            }
+        }
+
+        if ($data === null) {
+            return null;
+        }
+
+        try {
+            return LegacyContact::fromArray($data);
+        } catch (InvalidArgumentException) {
+            $this->cache->forget($this->contactKey($number));
+
+            return null;
+        }
+    }
+
+    /**
+     * The decrypted contact entry of a number, `null` when there is none or it cannot be read (then it is dropped).
+     *
+     * @return array<array-key, mixed>|null
+     */
+    private function unsealed(int $number): ?array
     {
         $key = $this->contactKey($number);
         $sealed = $this->cache->get($key);
@@ -630,13 +702,17 @@ final class LegacyListingSource implements ListingSource
 
         try {
             $data = json_decode(Crypt::decryptString($sealed), true, 2, JSON_THROW_ON_ERROR);
+        } catch (DecryptException|JsonException) {
+            $data = null;
+        }
 
-            return is_array($data) ? LegacyContact::fromArray($data) : throw new InvalidArgumentException('Not an object.');
-        } catch (DecryptException|JsonException|InvalidArgumentException) {
+        if (! is_array($data)) {
             $this->cache->forget($key);
 
             return null;
         }
+
+        return $data;
     }
 
     /**
@@ -1189,13 +1265,43 @@ final class LegacyListingSource implements ListingSource
         return self::PREFIX."gone:{$number}";
     }
 
+    /** The marker of a number legacy answered `404` for, which the contact keeps whatever `legacy.cache.not_found` says. */
+    private function withdrawnKey(int $number): string
+    {
+        return self::PREFIX."withdrawn:{$number}";
+    }
+
+    /** Whether legacy answered `404` for the number lately: its gone marker or its withdrawn marker is set. */
+    private function withdrawn(int $number): bool
+    {
+        return $this->cache->has($this->goneKey($number)) || $this->cache->has($this->withdrawnKey($number));
+    }
+
     /**
-     * A number legacy answered `404` for: not asked again for a while, gone in `listing_refs`, and its contact entry
-     * dropped, so the contact method answers no number of a withdrawn listing even while gone numbers are not kept.
+     * No contact for a number legacy answered `404` for lately (`withdrawn()`): the number asked, or the survivor a
+     * merged duplicate's entry or card points to.
+     *
+     * @throws ContactUnavailable
+     */
+    private function refuseWithdrawn(int $number): void
+    {
+        if ($this->withdrawn($number)) {
+            throw new ContactUnavailable;
+        }
+    }
+
+    /**
+     * A number legacy answered `404` for: gone in `listing_refs`, not asked again for `legacy.cache.not_found` s (its
+     * gone marker), and withdrawn for its contact (its withdrawn marker, written first, whatever `not_found` says) for
+     * `legacy.cache.card` s and one read with every attempt (`fillSeconds()`) — longer than any contact entry filed
+     * before the `404` lives, and than any read in flight during it takes — before its contact entry is dropped. So
+     * the contact method answers no number of a withdrawn listing, nor of a duplicate merged into it, even while gone
+     * numbers are not kept: `file()` files nothing for it, and `contactEntry()` refuses it.
      */
     private function rememberGone(int $number): void
     {
         $this->refs->markGone($number);
+        $this->cache->put($this->withdrawnKey($number), 1, max(0, Config::integer('legacy.cache.card')) + self::fillSeconds());
         $this->cache->forget($this->contactKey($number));
         $seconds = Config::integer('legacy.cache.not_found');
 
