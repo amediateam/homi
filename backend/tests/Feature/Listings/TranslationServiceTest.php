@@ -121,3 +121,25 @@ it('refuses the miss over rate_limits.translation.per_hour with Retry-After and 
     expect(translateFor($this->user, 100012, 'uz'))->toBeString()
         ->and(RateLimiter::attempts(TranslationService::limiterKey($this->user)))->toBe(2);
 });
+
+it('answers a stub scenario on the stub driver every time, past the cache, and caches nothing for it', function (): void {
+    translateFor($this->user, 100001, 'uz');
+
+    expect(fn () => translateFor($this->user, 100001, 'uz', 'translation_unavailable'))->toThrow(TranslationUnavailable::class);
+
+    Cache::forget('stub:translation:100001:uz');
+    translateFor($this->user, 100001, 'uz', 'some_scenario');
+    expect(Cache::has('stub:translation:100001:uz'))->toBeFalse()
+        ->and(RateLimiter::attempts(TranslationService::limiterKey($this->user)))->toBe(3);
+});
+
+it('keeps the cache of the legacy driver whatever scenario a request names', function (): void {
+    LegacyListingsHttp::fake();
+    Feature::globally()->activate('source.listings.translation', ['everyone' => 'legacy']);
+
+    translateFor($this->user, 100001, 'uz', 'translation_unavailable');
+    translateFor($this->user, 100001, 'uz', 'translation_unavailable');
+
+    expect(LegacyListingsHttp::sent('/api/listings/100001/translate'))->toHaveCount(1)
+        ->and(Cache::has('legacy:translation:100001:uz'))->toBeTrue();
+});

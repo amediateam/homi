@@ -11,6 +11,7 @@ use App\Services\Listings\ContactService;
 use App\Services\Listings\LinkGuard;
 use App\Services\Listings\PhoneMasker;
 use App\Services\Listings\TranslationService;
+use App\Services\Sources\Data\ListingTranslation;
 use App\Services\Sources\Legacy\LegacyContact;
 use App\Services\Sources\Legacy\LegacyListingSource;
 use App\Services\Telegram\PreparedShare;
@@ -31,8 +32,9 @@ use App\Services\Telegram\TelegramClient;
  * (`$event` and `$raw` name no parameter yet; a later one must carry the attribute). WP-43 adds `$token` (a call
  * token) and `$display` (the display of an author's number), and the classes of the contact: `LegacyContact`,
  * `ContactService`, `ContactDisclosure`, `CallLinkService`, `CallLink`, `CallLinkClaims` and `CallPageController`;
- * its stage B the classes of the translation and the share: `TranslationService`, `TelegramClient` (`$token`, the bot
- * token), `TelegramException`, `ShareService` and `PreparedShare`.
+ * its stage B the classes of the translation and the share: `TranslationService`, `ListingTranslation` (whose
+ * `fromArray()` takes legacy's translated text before it is masked), `TelegramClient` (`$token`, the bot token),
+ * `TelegramException`, `ShareService` and `PreparedShare`.
  * Left out by name: `$number`,
  * `$path`, `$key`, `$city` and the like, which are listing numbers, path templates, field names and codes; and by
  * type: a parameter that takes an object (`SourceManager $sources`). A data object's `fromArray()` takes the
@@ -62,7 +64,7 @@ function sensitiveFrameClasses(): array
         ...$translators, AuthorKey::class, LinkGuard::class, PhoneMasker::class, LegacyListingSource::class,
         LegacyContact::class, ContactService::class, ContactDisclosure::class, CallLinkService::class, CallLink::class,
         CallLinkClaims::class, CallPageController::class, TranslationService::class, TelegramClient::class,
-        TelegramException::class, ShareService::class, PreparedShare::class,
+        TelegramException::class, ShareService::class, PreparedShare::class, ListingTranslation::class,
     ];
 
     return $classes;
@@ -127,6 +129,8 @@ it('finds the translators and the masking classes, and enough frames to mean som
             'TelegramClient::result($token)',
             'TelegramClient::path($token)',
             'TelegramException::scrub($text)',
+            'ListingTranslation::fromArray($data)',
+            'ListingTranslation::__construct($text)',
         )
         ->and($frames)->not->toContain('LegacyListingSource::__construct($sources)');
 });

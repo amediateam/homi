@@ -2,6 +2,7 @@
 
 use App\Exceptions\Listings\ShareFailed;
 use App\Exceptions\Sources\SourceNotFound;
+use App\Exceptions\Sources\SourceUnavailable;
 use App\Exceptions\TelegramException;
 use App\Models\User;
 use App\Services\Sources\Legacy\LegacyFakeServer;
@@ -188,6 +189,17 @@ it('escapes the HTML of the text and keeps it literal in the article title, with
     expect($result['input_message_content']['message_text'])->toBe('<b>&lt;b&gt;Loft&lt;/b&gt; &amp; sky &gt; 5 «тел. +998 ** *** ** 67»</b> · $600/мес · A&amp;B')
         ->and($result['title'])->toBe('<b>Loft</b> & sky > 5 «тел. +998 ** *** ** 67»')
         ->and(json_encode(botRequests()[0]->data(), JSON_UNESCAPED_UNICODE))->not->toContain('001234567');
+});
+
+it('answers a stub scenario of the stub card source every time, past the cache, and caches nothing for it', function (): void {
+    fakeBotApi();
+    $prepare = fn (?string $scenario): string => app(ShareService::class)->prepare($this->user, 100012, new SourceContext('ru', 'USD', $this->user, $scenario))->id;
+
+    expect($prepare(null))->toBe('prepared-1')
+        ->and(fn () => $prepare('source_unavailable'))->toThrow(SourceUnavailable::class)
+        ->and($prepare('some_scenario'))->toBe('prepared-2')
+        ->and($prepare(null))->toBe('prepared-1')
+        ->and(botRequests())->toHaveCount(2);
 });
 
 it('answers 404 for a listing the card source does not know, without a Bot API request', function (): void {

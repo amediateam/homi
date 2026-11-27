@@ -2,6 +2,7 @@
 
 namespace App\Services\Telegram;
 
+use App\Enums\SourceDriver;
 use App\Exceptions\Listings\ShareFailed;
 use App\Exceptions\TelegramException;
 use App\Models\User;
@@ -34,8 +35,9 @@ use Illuminate\Support\Facades\Log;
  * Any Bot API error or timeout, a blank or malformed token or bot username (`TELEGRAM_BOT_TOKEN`,
  * `TELEGRAM_BOT_USERNAME`), a caller without a Telegram id, or an answer without an id and an expiry is `502
  * share_failed`, so the client falls back to its `t.me` link; a warning names the internal user id, the listing number
- * and Telegram's error code, never the text, the Telegram id or the token. While `sources.native_stubs` is on, the
- * route's stub answers instead and nothing here runs (`NativeStubs`, WP-40).
+ * and Telegram's error code, never the text, the Telegram id or the token. A request with a stub scenario while the
+ * card source is the stub driver neither reads nor writes the cache, so the scenario is answered every time. While
+ * `sources.native_stubs` is on, the route's stub answers instead and nothing here runs (`NativeStubs`, WP-40).
  */
 final readonly class ShareService
 {
@@ -59,13 +61,15 @@ final readonly class ShareService
     public function prepare(User $user, int $number, SourceContext $context): PreparedShare
     {
         $key = self::key($user, $number, $context->locale);
-        $cached = $this->cached($key);
+        $resolved = $this->sources->listings('source.listings.card', $context);
+        $cacheable = $resolved->driver !== SourceDriver::Stub || $context->scenario === null;
+        $cached = $cacheable ? $this->cached($key) : null;
 
         if ($cached !== null) {
             return $cached;
         }
 
-        $listing = $this->sources->listings('source.listings.card', $context)->source->preview($number, $context);
+        $listing = $resolved->source->preview($number, $context);
         $username = self::botUsername();
 
         if ($user->telegram_user_id === null || $username === null) {
@@ -93,7 +97,7 @@ final readonly class ShareService
 
         $seconds = $expires - CarbonImmutable::now()->getTimestamp() - self::MARGIN_SECONDS;
 
-        if ($seconds > 0) {
+        if ($cacheable && $seconds > 0) {
             $this->cache->put($key, ['id' => $id, 'expires' => $expires], $seconds);
         }
 

@@ -31,8 +31,9 @@ use InvalidArgumentException;
  *
  * The text lives only in that cache entry: it is never written to the database or a log line, and Telescope keeps
  * neither the entry nor the answer's `data.text` (`TelescopeServiceProvider`). Two concurrent first requests may both
- * ask the source; the second answer overwrites the first. While `sources.native_stubs` is on, the route's stub
- * answers instead and nothing here runs (`NativeStubs`, WP-40).
+ * ask the source; the second answer overwrites the first. A request with a stub scenario on the stub driver neither
+ * reads nor writes the cache, so the scenario is answered every time (the limit still counts it). While
+ * `sources.native_stubs` is on, the route's stub answers instead and nothing here runs (`NativeStubs`, WP-40).
  */
 final readonly class TranslationService
 {
@@ -57,7 +58,8 @@ final readonly class TranslationService
 
         $resolved = $this->sources->listings('source.listings.translation', $context);
         $key = self::key($resolved->driver, $number, $context->locale);
-        $cached = $this->cached($key);
+        $cacheable = $resolved->driver !== SourceDriver::Stub || $context->scenario === null;
+        $cached = $cacheable ? $this->cached($key) : null;
 
         if ($cached !== null) {
             return $cached;
@@ -67,7 +69,7 @@ final readonly class TranslationService
         $translation = $resolved->source->translation($number, $context);
         $seconds = Config::integer('legacy.cache.translation');
 
-        if ($seconds > 0) {
+        if ($cacheable && $seconds > 0) {
             $this->cache->put($key, ['text' => $translation->text, 'locale' => $translation->locale], $seconds);
         }
 
