@@ -16,6 +16,7 @@ use App\Models\ListingView;
 use App\Models\ListingVote;
 use App\Models\User;
 use App\Models\VoteDecision;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -93,6 +94,14 @@ it('allows a mark row without its time, so a recount can lock it before it marks
     expect(ListingMark::query()->sole()->rented_at)->toBeNull()
         ->and(AuthorMark::query()->sole()->realtor_marked_at)->toBeNull();
 });
+
+it('never fills the owner of a personal row from an attribute array (review A, F5)', function (string $model): void {
+    /** @var Model $row */
+    $row = new $model;
+
+    expect($row->isFillable('user_id'))->toBeFalse()
+        ->and($row->fill(['user_id' => 7])->getAttribute('user_id'))->toBeNull();
+})->with([Favorite::class, HiddenListing::class, BlockedAuthor::class, FoundAnswer::class, ListingVote::class]);
 
 it('gives a blocked author an upper-case ULID, the form of the WP-13 contract', function (): void {
     $entry = BlockedAuthor::factory()->create();

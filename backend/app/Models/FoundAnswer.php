@@ -30,7 +30,8 @@ class FoundAnswer extends Model
 
     public const UPDATED_AT = null;
 
-    protected $fillable = ['user_id', 'answer', 'trigger', 'where'];
+    /** No `user_id`: a row gets its owner only through the user's relation or an explicit insert (review of WP-44 A, F5). */
+    protected $fillable = ['answer', 'trigger', 'where'];
 
     /**
      * @return array<string, string>

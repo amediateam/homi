@@ -34,7 +34,8 @@ class BlockedAuthor extends Model
 
     public const UPDATED_AT = null;
 
-    protected $fillable = ['user_id', 'author_key', 'kind', 'label', 'listing_number', 'source_channel', 'source_post_id'];
+    /** No `user_id`: a row gets its owner only through the user's relation or an explicit insert (review of WP-44 A, F5). */
+    protected $fillable = ['author_key', 'kind', 'label', 'listing_number', 'source_channel', 'source_post_id'];
 
     /** An upper-case ULID: Laravel's default is lower-case, the contract of WP-13 names Crockford's upper case. */
     public function newUniqueId(): string

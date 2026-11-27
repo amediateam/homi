@@ -27,7 +27,8 @@ class Favorite extends Model
 
     public const UPDATED_AT = null;
 
-    protected $fillable = ['user_id', 'listing_number', 'source_channel', 'source_post_id'];
+    /** No `user_id`: a row gets its owner only through the user's relation or an explicit insert (review of WP-44 A, F5). */
+    protected $fillable = ['listing_number', 'source_channel', 'source_post_id'];
 
     /**
      * @return array<string, string>

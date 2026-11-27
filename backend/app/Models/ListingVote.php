@@ -34,9 +34,9 @@ class ListingVote extends Model
 
     public const UPDATED_AT = null;
 
+    /** No `user_id`: a row gets its owner only through the user's relation or an explicit insert (review of WP-44 A, F5). */
     protected $fillable = [
-        'user_id', 'listing_number', 'source_channel', 'source_post_id', 'author_key', 'reason', 'detail', 'weight',
-        'withdrawn_at',
+        'listing_number', 'source_channel', 'source_post_id', 'author_key', 'reason', 'detail', 'weight', 'withdrawn_at',
     ];
 
     /**
