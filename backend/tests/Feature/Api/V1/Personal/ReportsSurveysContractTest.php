@@ -1,9 +1,19 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 
+/*
+ * The reports and the «Нашли жильё?» survey of WP-13 as the native stubs answer them (WP-44, brief decision 10): while
+ * `sources.native_stubs` is on, `NativeStubs` answers the stub bodies and stores nothing, as the end-to-end suite
+ * expects (`listing-actions.spec.ts`, `journeys/moderation.spec.ts`, `radar-forms.spec.ts`,
+ * `journeys/search-to-radar.spec.ts`); `ReportsTest` and `FoundSurveyTest` cover the real methods.
+ */
+
 beforeEach(function (): void {
+    Http::preventStrayRequests();
+    config(['sources.native_stubs' => true]);
     Sanctum::actingAs(User::factory()->create(), ['app:read', 'app:write']);
 });
 

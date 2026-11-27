@@ -12,6 +12,9 @@ use App\Exceptions\Sources\SourceNotFound;
 use App\Exceptions\Sources\SourceUnavailable;
 use App\Http\Requests\Api\V1\Auth\TelegramSignInRequest;
 use App\Http\Requests\Api\V1\Personal\ListPersonalRequest;
+use App\Http\Requests\Api\V1\Personal\StoreFoundAnswerRequest;
+use App\Http\Requests\Api\V1\Personal\StoreFoundWhereRequest;
+use App\Http\Requests\Api\V1\Personal\StoreReportRequest;
 use App\Http\Requests\Api\V1\UpdateSettingsRequest;
 use App\Http\Resources\Api\V1\BlockedAuthorResultResource;
 use App\Http\Resources\Api\V1\ContactResource;
@@ -20,6 +23,7 @@ use App\Http\Resources\Api\V1\HiddenOverviewResource;
 use App\Http\Resources\Api\V1\ListingPreviewResource;
 use App\Http\Resources\Api\V1\MeResource;
 use App\Http\Resources\Api\V1\PreparedShareResource;
+use App\Http\Resources\Api\V1\ReportResultResource;
 use App\Http\Resources\Api\V1\SessionResource;
 use App\Http\Resources\Api\V1\SettingsResource;
 use App\Http\Resources\Api\V1\TranslationResource;
@@ -58,7 +62,10 @@ use Symfony\Component\HttpFoundation\Response;
  * WP-44 moved here the personal lists of WP-13 (brief decision 10): favourites, history, hidden listings, blocked
  * authors and the hidden overview answer the fixtures of `favorites/`, `history/` and `hidden/` and store nothing, so
  * the end-to-end suite stays stateless (a write never changes a list, a clear never empties one) — and no query
- * touches HOMI's personal tables while the switch is on.
+ * touches HOMI's personal tables while the switch is on. Its stage B moved here the reports and the «Нашли жильё?»
+ * survey of WP-13: a report answers `hidden` by its reason and `agent_marked` only for `agent` in the scenario
+ * `agent_marked`, a withdrawal `204`, both for a listing the card source knows (`404`, `503`); the survey validates and
+ * answers `204`. Nothing is counted or stored.
  */
 final readonly class NativeStubs
 {
@@ -109,6 +116,10 @@ final readonly class NativeStubs
         'api.v1.hidden.index' => 'hidden',
         'api.v1.hidden.authors.destroy' => 'removeBlockedAuthor',
         'api.v1.hidden.destroy' => 'clearHidden',
+        'api.v1.listings.reports.store' => 'report',
+        'api.v1.listings.reports.destroy' => 'withdrawReport',
+        'api.v1.surveys.found.store' => 'foundAnswer',
+        'api.v1.surveys.found.where' => 'foundWhere',
     ];
 
     public function __construct(private Container $container) {}
@@ -354,6 +365,48 @@ final readonly class NativeStubs
 
     /** `DELETE /hidden` on stubs (WP-13): `204`; nothing is cleared. */
     public function clearHidden(Request $request, StubResponder $stubs): Response
+    {
+        $stubs->check($request);
+
+        return response()->noContent();
+    }
+
+    /**
+     * `POST /listings/{number}/reports` on stubs (WP-13): `hidden` says whether the listing is now hidden for the
+     * reporter; `agent_marked` is `true` only for an `agent` report in the scenario `agent_marked`. The stub is
+     * stateless: it never marks an author by itself.
+     */
+    public function report(StoreReportRequest $request, StubResponder $stubs, StubListingRefs $refs): JsonResponse
+    {
+        $context = $stubs->check($request);
+        $refs->preview(self::positive($request), $context);
+        $agentMarked = $request->namesAgent() && $context->scenario === 'agent_marked';
+
+        return $this->sourced(new ReportResultResource($request->hides(), $agentMarked));
+    }
+
+    /**
+     * `DELETE /listings/{number}/reports` on stubs (WP-13, DEC-68): `204`, also when there is nothing to withdraw; the
+     * listing must exist (`404`), or be checkable (`503`).
+     */
+    public function withdrawReport(Request $request, StubResponder $stubs, StubListingRefs $refs): Response
+    {
+        $context = $stubs->check($request);
+        $refs->preview(self::positive($request), $context);
+
+        return response()->noContent();
+    }
+
+    /** `POST /surveys/found` on stubs (WP-13, API-032): validates and answers `204`. */
+    public function foundAnswer(StoreFoundAnswerRequest $request, StubResponder $stubs): Response
+    {
+        $stubs->check($request);
+
+        return response()->noContent();
+    }
+
+    /** `POST /surveys/found/where` on stubs (WP-13, API-033): validates and answers `204`. */
+    public function foundWhere(StoreFoundWhereRequest $request, StubResponder $stubs): Response
     {
         $stubs->check($request);
 

@@ -91,6 +91,10 @@ it('leaves every personal row as it was', function (): void {
     $this->deleteJson('/api/v1/hidden')->assertNoContent();
     $this->deleteJson('/api/v1/history')->assertNoContent();
     $this->postJson('/api/v1/listings/100013/reports', ['reason' => 'rented'])->assertOk();
+    $this->postJson('/api/v1/listings/100012/reports', ['reason' => 'agent'], ['X-Stub-Scenario' => 'agent_marked'])->assertOk()->assertJsonPath('data.agent_marked', true);
+    $this->deleteJson('/api/v1/listings/100012/reports')->assertNoContent();
+    $this->postJson('/api/v1/surveys/found', ['answer' => 'elsewhere', 'trigger' => 'delete'])->assertNoContent();
+    $this->postJson('/api/v1/surveys/found/where', ['where' => 'olx'])->assertNoContent();
 
     expect(array_map(fn (string $table): int => DB::table($table)->count(), PERSONAL_TABLES))->toBe($before);
 });

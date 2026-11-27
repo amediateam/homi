@@ -213,7 +213,8 @@ it('names only registered routes in its map', function (): void {
         'api.v1.listings.translation', 'api.v1.listings.share', 'api.v1.favorites.index', 'api.v1.favorites.update',
         'api.v1.favorites.destroy', 'api.v1.history.index', 'api.v1.history.destroy', 'api.v1.hidden.listings.update',
         'api.v1.hidden.listings.destroy', 'api.v1.listings.blocked-author.update', 'api.v1.listings.blocked-author.destroy',
-        'api.v1.hidden.index', 'api.v1.hidden.authors.destroy', 'api.v1.hidden.destroy',
+        'api.v1.hidden.index', 'api.v1.hidden.authors.destroy', 'api.v1.hidden.destroy', 'api.v1.listings.reports.store',
+        'api.v1.listings.reports.destroy', 'api.v1.surveys.found.store', 'api.v1.surveys.found.where',
     ]);
     foreach ($stubs->routes() as $name) {
         expect(Route::has($name))->toBeTrue()->and($stubs->answers($name))->toBeTrue();
