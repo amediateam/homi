@@ -11,6 +11,13 @@ use Illuminate\Support\Facades\Config;
  */
 final class ListingNumber
 {
+    /**
+     * A listing number in a route's path: 1 to 18 digits without a leading zero, so it always fits the `int` the
+     * controllers take and the `bigint` of the tables; any other path matches no route and answers `404 not_found`
+     * (review of WP-44 stage A, F3).
+     */
+    public const string ROUTE_PATTERN = '[1-9][0-9]{0,17}';
+
     public static function floor(): int
     {
         return Config::integer('owner.native_number_floor');
