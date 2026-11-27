@@ -10,8 +10,8 @@ use Laravel\Sanctum\Sanctum;
 
 /*
  * WP-44, step 9: the «Нашли жильё?» survey in HOMI's table (task `KV-BE-044`, API-032, API-033, BR-DATA-032). Every
- * tap is an answer — a row each, not idempotent by design; `where` fills the caller's latest `elsewhere` answer while it
- * has no place, else it is a row of its own. The wire value `homi` replaces legacy's `kvadro`.
+ * tap is an answer — a row each, not idempotent by design; `where` fills the caller's latest `elsewhere` answer that
+ * has no place yet, else it is a row of its own. The wire value `homi` replaces legacy's `kvadro`.
  */
 
 beforeEach(function (): void {
@@ -55,6 +55,15 @@ it('stores a where of its own when the latest elsewhere answer already has one, 
         [$this->user->id, 'elsewhere', 'pause', 'site'],
         [$this->user->id, null, null, 'friends'],
     ]);
+});
+
+it('fills the latest elsewhere answer that has no place yet, an older one when the newer is answered', function (): void {
+    FoundAnswer::factory()->for($this->user)->create(['answer' => FoundAnswerType::Elsewhere, 'trigger' => FoundTrigger::Pause, 'where' => null]);
+    FoundAnswer::factory()->for($this->user)->create(['answer' => FoundAnswerType::Elsewhere, 'trigger' => FoundTrigger::Delete, 'where' => FoundPlace::Olx]);
+
+    $this->postJson('/api/v1/surveys/found/where', ['where' => 'telegram'])->assertNoContent();
+
+    expect(foundRows())->toBe([[$this->user->id, 'elsewhere', 'pause', 'telegram'], [$this->user->id, 'elsewhere', 'delete', 'olx']]);
 });
 
 it('fills only an elsewhere answer: a later answer of another kind leaves where on the latest elsewhere', function (): void {
