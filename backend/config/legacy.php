@@ -31,8 +31,11 @@
 |   (WP-02 point 6); blank means none.
 | - `previews.concurrency`: card previews read in parallel; `previews.max_wait_ms` (`LEGACY_PREVIEWS_MAX_WAIT_MS`): the
 |   limiter wait one batch of previews may spend in all (DEC-110: a personal list of 20 waits for every preview rather
-|   than losing some); `feed.top_up_pages`: extra legacy pages one feed page may read when HOMI's own exclusions shrink
-|   it below half.
+|   than losing some); `previews.background_wait_ms` (`LEGACY_PREVIEWS_BACKGROUND_WAIT_MS`): the same for a background
+|   batch, which waits for its share's places instead of failing at once; `previews.deadline_ms`
+|   (`LEGACY_PREVIEWS_DEADLINE_MS`): the most one batch may take in all, waits, retries and HTTP timeouts included —
+|   blank means `max_wait_ms` plus one `timeout`; `feed.top_up_pages`: extra legacy pages one feed page may read when
+|   HOMI's own exclusions shrink it below half.
 | - `fake`: answer from `resources/fixtures/legacy` instead of the network. On by default in `local` and `testing`,
 |   off elsewhere; `SourceServiceProvider` refuses to boot with it in production.
 |
@@ -50,7 +53,11 @@ $ratePerSecond = $value('LEGACY_RATE_PER_SECOND', 5);
 $baseUrl = rtrim((string) $value('LEGACY_API_URL', 'https://legacy.invalid'), '/');
 $baseHost = parse_url($baseUrl, PHP_URL_HOST);
 $mediaHosts = $value('LEGACY_MEDIA_HOSTS', null);
+$timeout = 15;
 $previewsWait = $value('LEGACY_PREVIEWS_MAX_WAIT_MS', 4000);
+$previewsWait = is_numeric($previewsWait) && (int) $previewsWait >= 0 ? (int) $previewsWait : 4000;
+$backgroundWait = $value('LEGACY_PREVIEWS_BACKGROUND_WAIT_MS', 2000);
+$previewsDeadline = $value('LEGACY_PREVIEWS_DEADLINE_MS', null);
 
 return [
     'base_url' => $baseUrl,
@@ -72,7 +79,7 @@ return [
         'name' => (string) $value('LEGACY_CURRENCY_NAME', 'currency'),
     ],
 
-    'timeout' => 15,
+    'timeout' => $timeout,
     'connect_timeout' => 5,
 
     'retry' => [
@@ -118,7 +125,9 @@ return [
 
     'previews' => [
         'concurrency' => 5,
-        'max_wait_ms' => is_numeric($previewsWait) && (int) $previewsWait >= 0 ? (int) $previewsWait : 4000,
+        'max_wait_ms' => $previewsWait,
+        'background_wait_ms' => is_numeric($backgroundWait) && (int) $backgroundWait >= 0 ? (int) $backgroundWait : 2000,
+        'deadline_ms' => is_numeric($previewsDeadline) && (int) $previewsDeadline > 0 ? (int) $previewsDeadline : $previewsWait + $timeout * 1000,
     ],
 
     'feed' => [

@@ -56,7 +56,7 @@ use InvalidArgumentException;
  * | `map`        | `GET /api/map`                      | `legacy.cache.map` s per filters, language and currency     |
  * | `details`    | `GET /api/listings/{n}`             | `legacy.cache.card` s per number, language and currency     |
  * | `preview`    | `GET /api/listings/{n}?preview=1`   | the same, beside the card's entry; a cached card serves it  |
- * | `previews`   | `preview` reads, `legacy.previews.concurrency` at a time through `LegacyClient::pool()`, one limiter wait of `legacy.previews.max_wait_ms` for the batch | per item |
+ * | `previews`   | `preview` reads, `legacy.previews.concurrency` at a time through `LegacyClient::pool()`, one limiter wait of `legacy.previews.max_wait_ms` (`background_wait_ms` in the background) and one deadline of `legacy.previews.deadline_ms` for the batch | per item |
  *
  * A duration of 0 disables its cache. The cache holds the translated v1 arrays, never an object (the store may
  * serialise): a card is held as the translators give it — masked (DEC-52), without `phone`, `phone_display` or the
@@ -83,6 +83,11 @@ use InvalidArgumentException;
  * district matcher are made for each answer, so their counts are that answer's. The card passes legacy's daily limit on as `429 rate_limited` with `reason:
  * "daily"` (DEC-59); every other method answers it as `503`, since only the card has that limit. A system context
  * (no user) makes background calls in the limiter. `contact()` and `translation()` are WP-43's: `503` until then.
+ *
+ * A background batch of previews (a queued job, the bot: WP-46's radar matcher) waits for its share's places within
+ * `legacy.previews.background_wait_ms` instead of failing at once, and never leaves an item out silently either: when
+ * the wait or the deadline runs out it is `SourceUnavailable`, and the job backs off (releases itself with a delay)
+ * rather than retrying at once; the previews read so far are cached, so the next attempt asks only for the rest.
  */
 final class LegacyListingSource implements ListingSource
 {
@@ -238,11 +243,12 @@ final class LegacyListingSource implements ListingSource
     /**
      * The cached ones first; the others read `legacy.previews.concurrency` at a time through `LegacyClient::pool()`,
      * each through the breaker, the limiter and the outcome mapping of a single read, the whole batch sharing one
-     * limiter wait of `legacy.previews.max_wait_ms` (DEC-110). A number legacy does not know (`404`) is left out and
+     * limiter wait of `legacy.previews.max_wait_ms` (DEC-110; `legacy.previews.background_wait_ms` for a background
+     * batch) and one deadline of `legacy.previews.deadline_ms`. A number legacy does not know (`404`) is left out and
      * not asked again for `legacy.cache.not_found` s. Any other preview legacy did not give — unavailable, refused by
-     * the breaker or the limiter, legacy's daily limit, an answer that does not fit — makes the whole call `503`
-     * (legacy's pause stays `403 paused`), after the previews read so far are cached: a personal list never loses an
-     * item silently.
+     * the breaker or the limiter, not sent or not answered by the deadline, legacy's daily limit, an answer that does
+     * not fit — makes the whole call `503` (legacy's pause stays `403 paused`), after the previews read so far are
+     * cached: a personal list never loses an item silently.
      */
     public function previews(array $numbers, SourceContext $context): array
     {
@@ -391,7 +397,9 @@ final class LegacyListingSource implements ListingSource
     private function fetchPreviews(array $numbers, ListingSummaryTranslator $summary, SourceContext $context, array &$previews): void
     {
         $seconds = Config::integer('legacy.cache.card');
-        $wait = new LegacyWaitBudget(max(0, Config::integer('legacy.previews.max_wait_ms')));
+        $call = $this->call($context);
+        $wait = new LegacyWaitBudget(max(0, Config::integer($call->background ? 'legacy.previews.background_wait_ms' : 'legacy.previews.max_wait_ms')));
+        $deadline = LegacyDeadline::in(Config::integer('legacy.previews.deadline_ms'));
 
         foreach (array_chunk($numbers, max(1, Config::integer('legacy.previews.concurrency'))) as $chunk) {
             $reads = [];
@@ -401,7 +409,7 @@ final class LegacyListingSource implements ListingSource
                 $reads[$number] = [self::cardPath($number), ['preview' => 1]];
             }
 
-            foreach ($this->client->pool($reads, $this->call($context), $wait) as $number => $answer) {
+            foreach ($this->client->pool($reads, $call, $wait, $deadline) as $number => $answer) {
                 if ($answer instanceof SourceNotFound) {
                     $this->rememberGone((int) $number);
 
@@ -409,7 +417,7 @@ final class LegacyListingSource implements ListingSource
                 }
 
                 if ($answer instanceof ApiException) {
-                    $failed[] = $answer;
+                    $failed[] = $this->failure($answer);
 
                     continue;
                 }
@@ -516,13 +524,27 @@ final class LegacyListingSource implements ListingSource
     {
         try {
             return $this->client->get($path, $query, $call);
-        } catch (DailyLimitReached $limit) {
-            throw $daily ? $limit : new SourceUnavailable;
-        } catch (LegacyContractError $drift) {
-            $this->counted('contract_errors');
-
-            throw $drift;
+        } catch (ApiException $failure) {
+            throw $this->failure($failure, $daily);
         }
+    }
+
+    /**
+     * What a failed legacy read is for the caller, a single read or a pooled one alike: legacy's daily limit only where
+     * `$daily` says the method has one (the full card), else `503`; a contract error the client found is counted here
+     * (the client has logged it). Everything else as the client gave it.
+     */
+    private function failure(ApiException $failure, bool $daily = false): ApiException
+    {
+        if ($failure instanceof DailyLimitReached && ! $daily) {
+            return new SourceUnavailable;
+        }
+
+        if ($failure instanceof LegacyContractError) {
+            $this->counted('contract_errors');
+        }
+
+        return $failure;
     }
 
     /**

@@ -3,9 +3,10 @@
 namespace App\Services\Sources\Legacy;
 
 /**
- * A limiter wait shared by several legacy reads (DEC-110): `LegacyLimiter::acquire()` spends from it instead of its
- * own `legacy.rate.max_wait_ms` per read, so one batch — the card previews of a personal list — may wait up to
- * `legacy.previews.max_wait_ms` in all, across its parallel rounds and retries. Mutable; one per batch.
+ * A limiter wait shared by several legacy reads (DEC-110): `LegacyLimiter::acquire()` and `waitForNextSecond()` spend
+ * from it instead of a read's own `legacy.rate.max_wait_ms`, so one batch — the card previews of a personal list —
+ * may wait up to `legacy.previews.max_wait_ms` in all (`legacy.previews.background_wait_ms` for a background batch),
+ * across its parallel rounds and retries. Mutable; one per batch.
  */
 final class LegacyWaitBudget
 {

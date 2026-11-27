@@ -14,9 +14,13 @@ use Illuminate\Support\Sleep;
  * A user's call takes a place in the current second's bucket; when it is full, the call sleeps to the next second
  * and tries that bucket, as long as its total wait stays within `max_wait_ms` (or within what is left of a
  * `LegacyWaitBudget` several calls share, DEC-110); otherwise it fails at once with `SourceUnavailable`, so nothing
- * queues behind legacy. A background call (`LegacyCall::$background`) may fill only
- * `background_share` of a bucket, at least one place, and never waits. `RateLimiter` is not used: it reports availability in whole
+ * queues behind legacy. A background call (`LegacyCall::$background`) may fill only `background_share` of a bucket,
+ * at least one place, and never waits in `acquire()`. `RateLimiter` is not used: it reports availability in whole
  * seconds, and this limiter waits in milliseconds.
+ *
+ * `tryAcquire()` and `waitForNextSecond()` are the two halves of `acquire()` for a caller that sends several reads
+ * (`LegacyClient::pool()`): it takes the places free now, sends those reads at once, and waits for the next second
+ * only for the rest, so a read always goes out in the second whose place it took (WP-42 review, M1).
  */
 final class LegacyLimiter
 {
@@ -32,32 +36,46 @@ final class LegacyLimiter
     public function acquire(bool $background, ?LegacyWaitBudget $shared = null): void
     {
         if ($background) {
-            if (! $this->takeBackground($this->second())) {
+            if (! $this->tryAcquire(true)) {
                 throw new SourceUnavailable;
             }
 
             return;
         }
 
-        $budget = $shared?->remaining() ?? Config::integer('legacy.rate.max_wait_ms');
+        $budget = $shared ?? new LegacyWaitBudget(Config::integer('legacy.rate.max_wait_ms'));
 
-        while (true) {
-            $now = $this->nowMs();
-
-            if ($this->take(intdiv($now, 1000))) {
-                return;
-            }
-
-            $wait = 1000 - $now % 1000;
-
-            if ($wait > $budget) {
+        while (! $this->tryAcquire(false)) {
+            if (! $this->waitForNextSecond($budget)) {
                 throw new SourceUnavailable;
             }
-
-            $budget -= $wait;
-            $shared?->spend($wait);
-            Sleep::for($wait)->milliseconds();
         }
+    }
+
+    /** A place in the current second's bucket (a background call within its share), without waiting. */
+    public function tryAcquire(bool $background): bool
+    {
+        $second = $this->second();
+
+        return $background ? $this->takeBackground($second) : $this->take($second);
+    }
+
+    /**
+     * Sleeps to the start of the next second, spending the wait from `$budget`, when the budget has it and the wait is
+     * at most `$atMostMs`; else returns `false` at once without sleeping.
+     */
+    public function waitForNextSecond(LegacyWaitBudget $budget, ?int $atMostMs = null): bool
+    {
+        $wait = 1000 - $this->nowMs() % 1000;
+
+        if ($wait > $budget->remaining() || ($atMostMs !== null && $wait > $atMostMs)) {
+            return false;
+        }
+
+        $budget->spend($wait);
+        Sleep::for($wait)->milliseconds();
+
+        return true;
     }
 
     private function take(int $second): bool
