@@ -423,14 +423,16 @@ it('keeps the bot token out of the arguments of every frame of every TelegramExc
         $encoded = array_map(fn (array $frame): string => (string) json_encode($frame['args'] ?? [], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR), $frames);
         $called = array_values(array_filter($frames, fn (array $frame): bool => ($frame['class'] ?? null) === TelegramClient::class && $frame['function'] === 'call'));
 
+        $leaking = array_map(
+            fn (int $index): string => ($frames[$index]['class'] ?? '').'::'.$frames[$index]['function'],
+            array_keys(array_filter($encoded, fn (string $args): bool => str_contains($args, 'TEST-homi-synthetic-token'))),
+        );
+
         expect($called)->toHaveCount(1)
             ->and($called[0]['args'] ?? [])->toBe([ShareService::METHOD, ['user_id' => 1]])
+            ->and($leaking)->toBe([])
             ->and($failure->getMessage())->not->toContain('TEST-homi-synthetic-token')
             ->and($failure->getPrevious())->toBeNull();
-
-        foreach ($encoded as $index => $args) {
-            expect($args)->not->toContain('TEST-homi-synthetic-token', "Frame {$index} quotes the token.");
-        }
     } finally {
         ini_set('zend.exception_ignore_args', (string) $ignored);
     }
