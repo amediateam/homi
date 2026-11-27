@@ -39,6 +39,9 @@ class AppServiceProvider extends ServiceProvider
         // GD is the image driver (app.uz convention); Imagick is also installed if ever needed.
         $this->app->singleton(ImageManager::class, fn (): ImageManager => new ImageManager(new GdDriver));
 
+        // One instance, so `RecordSourceFlagChange` sees that `votes:detector` is writing (WP-44).
+        $this->app->singleton(VoteDetectors::class);
+
         // Built on each resolution, so the token and the window are read from the configuration of the moment.
         $this->app->bind(TelegramInitDataVerifier::class, fn (Application $app): TelegramInitDataVerifier => new TelegramInitDataVerifier(
             self::configString($app, 'telegram.bot.token'),
@@ -67,12 +70,13 @@ class AppServiceProvider extends ServiceProvider
 
     /**
      * The kill switches of HOMI's vote detectors (WP-44, SEC-REQ-045): on until `votes:detector` stores `false` in
-     * Pennant's global scope (`VoteDetectors`).
+     * Pennant's global scope; while no value is stored — never switched, or purged — the latest value of their audit
+     * rows, else on (`VoteDetectors::defaultValue()`), so `pennant:purge` never turns a detector back on.
      */
     protected function configureVoteDetectors(): void
     {
-        Feature::define(VoteDetectors::RENTED, true);
-        Feature::define(VoteDetectors::REALTOR, true);
+        Feature::define(VoteDetectors::RENTED, fn (): bool => VoteDetectors::defaultValue(VoteDetectors::RENTED));
+        Feature::define(VoteDetectors::REALTOR, fn (): bool => VoteDetectors::defaultValue(VoteDetectors::REALTOR));
     }
 
     /**

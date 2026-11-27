@@ -16,11 +16,14 @@ use App\Services\Personal\EloquentOverlayData;
 use App\Services\Personal\ReportOutcome;
 use App\Services\Personal\VoteDetectors;
 use App\Services\Personal\VoteService;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Laravel\Pennant\Feature;
+use Laravel\Sanctum\Sanctum;
 
 /*
  * WP-44, step 8: the detectors behind the report votes (SEC-REQ-045, task `KV-BE-043`). One tap never relabels a
@@ -92,6 +95,31 @@ function realtorMarkedAt(string $key = VOTE_AUTHOR): mixed
 function switchDetector(string $detector, bool $on): void
 {
     app(VoteDetectors::class)->set($detector, $on, 'test', 'a test');
+}
+
+/** @return list<array{string, string, mixed, mixed}> the detectors' audit rows: feature, actor, old and new value */
+function detectorAudit(): array
+{
+    return SourceFlagChange::query()->whereIn('feature', array_values(VoteDetectors::FEATURES))->orderBy('id')->get()
+        ->map(fn (SourceFlagChange $row): array => [$row->feature, $row->actor, $row->old_rule, $row->new_rule])
+        ->values()->all();
+}
+
+/**
+ * The log lines written while the callback runs, as level, message and context.
+ *
+ * @return list<array{string, string, array<string, mixed>}>
+ */
+function logsOf(Closure $callback): array
+{
+    $logged = [];
+    Event::listen(MessageLogged::class, function (MessageLogged $message) use (&$logged): void {
+        $logged[] = [$message->level, $message->message, $message->context];
+    });
+
+    $callback();
+
+    return $logged;
 }
 
 it('keeps a listing unmarked below the rented threshold', function (): void {
@@ -414,9 +442,110 @@ it('refuses a detail with any reason but wrong_data, as a programming error, and
         ->and(HiddenListing::query()->count())->toBe(0);
 })->with([ReportReason::Rented, ReportReason::Agent, ReportReason::Fraud]);
 
-it('has both detectors on until they are switched off', function (): void {
+it('has both detectors on until they are switched off, also after a purge and beside another feature\'s audit rows', function (): void {
+    SourceFlagChange::factory()->create(['feature' => 'source.listings.card', 'old_rule' => null, 'new_rule' => false]);
+
     expect(app(VoteDetectors::class)->rentedOn())->toBeTrue()
-        ->and(app(VoteDetectors::class)->realtorOn())->toBeTrue();
+        ->and(app(VoteDetectors::class)->realtorOn())->toBeTrue()
+        ->and(Feature::globally()->value(VoteDetectors::RENTED))->toBeTrue();
+
+    $this->artisan('pennant:purge')->assertSuccessful();
+    Feature::flushCache();
+
+    expect(Feature::globally()->value(VoteDetectors::RENTED))->toBeTrue()
+        ->and(Feature::globally()->value(VoteDetectors::REALTOR))->toBeTrue()
+        ->and(array_column(detectorAudit(), 3))->toBe([null, null]);
+});
+
+it('keeps a switched-off detector off through a purge of every feature, audited once per detector, the marks still ignored', function (string $command): void {
+    ListingMark::factory()->create(['listing_number' => 100012]);
+    AuthorMark::factory()->create(['author_key' => VOTE_AUTHOR]);
+    switchDetector('rented', false);
+    switchDetector('realtor', false);
+    $overlay = app(EloquentOverlayData::class);
+
+    $this->artisan($command)->assertSuccessful();
+    Feature::flushCache();
+
+    expect(Feature::globally()->value(VoteDetectors::RENTED))->toBeFalse()
+        ->and(Feature::globally()->value(VoteDetectors::REALTOR))->toBeFalse()
+        ->and(app(VoteDetectors::class)->rentedOn())->toBeFalse()
+        ->and(app(VoteDetectors::class)->realtorOn())->toBeFalse()
+        ->and($overlay->rentedByVotes([100012]))->toBe([])
+        ->and($overlay->realtorAuthorKeys())->toBe([])
+        ->and(detectorAudit())->toBe([
+            [VoteDetectors::RENTED, 'test', true, false],
+            [VoteDetectors::REALTOR, 'test', true, false],
+            [VoteDetectors::RENTED, SourceFlagChange::UNKNOWN_ACTOR, null, null],
+            [VoteDetectors::REALTOR, SourceFlagChange::UNKNOWN_ACTOR, null, null],
+        ])
+        ->and(DB::table('source_flag_changes')->whereIn('feature', array_values(VoteDetectors::FEATURES))->whereNull('new_rule')->count())->toBe(2);
+
+    reportBy(voters(4), ReportReason::Rented, 100013);
+
+    expect(rentedAt(100013))->toBeNull();
+})->with(['pennant:purge', 'pennant:clear']);
+
+it('keeps a switched-off detector off through a purge or a forget of that feature alone', function (Closure $remove): void {
+    switchDetector('realtor', false);
+
+    $remove();
+    Feature::flushCache();
+
+    expect(app(VoteDetectors::class)->realtorOn())->toBeFalse()
+        ->and(app(VoteDetectors::class)->rentedOn())->toBeTrue()
+        ->and(detectorAudit())->toBe([
+            [VoteDetectors::REALTOR, 'test', true, false],
+            [VoteDetectors::REALTOR, SourceFlagChange::UNKNOWN_ACTOR, null, null],
+        ]);
+})->with([
+    'pennant:purge of the feature' => [fn () => test()->artisan('pennant:purge', ['features' => [VoteDetectors::REALTOR]])->assertSuccessful()],
+    'Feature::purge of the feature' => [fn () => Feature::purge(VoteDetectors::REALTOR)],
+    'a forget of the global value' => [fn () => Feature::globally()->forget(VoteDetectors::REALTOR)],
+]);
+
+it('audits a direct Pennant change of a detector as unknown, with a warning that names the feature only', function (): void {
+    $logged = logsOf(function (): void {
+        Feature::globally()->deactivate(VoteDetectors::REALTOR);
+        Feature::globally()->activate(VoteDetectors::RENTED, true);
+        Feature::activateForEveryone(VoteDetectors::RENTED, false);
+    });
+
+    expect(detectorAudit())->toBe([
+        [VoteDetectors::REALTOR, SourceFlagChange::UNKNOWN_ACTOR, null, false],
+        [VoteDetectors::RENTED, SourceFlagChange::UNKNOWN_ACTOR, null, true],
+        [VoteDetectors::RENTED, SourceFlagChange::UNKNOWN_ACTOR, null, false],
+    ])
+        ->and($logged)->toBe([
+            ['warning', 'Vote detector changed outside votes:detector.', ['feature' => VoteDetectors::REALTOR]],
+            ['warning', 'Vote detector changed outside votes:detector.', ['feature' => VoteDetectors::RENTED]],
+            ['warning', 'Vote detector changed outside votes:detector.', ['feature' => VoteDetectors::RENTED]],
+        ]);
+
+    $this->artisan('pennant:purge')->assertSuccessful();
+    Feature::flushCache();
+
+    expect(app(VoteDetectors::class)->realtorOn())->toBeFalse()
+        ->and(app(VoteDetectors::class)->rentedOn())->toBeFalse();
+});
+
+it('reads the audit for a detector\'s default once, on the first feed request while no value is stored, and never again', function (): void {
+    Sanctum::actingAs(User::factory()->create(), ['app:read', 'app:write']);
+    $statements = new ArrayObject;
+    DB::listen(function (QueryExecuted $query) use ($statements): void {
+        $statements[] = $query->sql;
+    });
+    $auditReads = fn (): int => count(array_filter($statements->getArrayCopy(), fn (string $sql): bool => str_contains($sql, 'source_flag_changes')));
+
+    $this->getJson('/api/v1/listings?city=tashkent&deal=rent_long')->assertOk();
+
+    expect($auditReads())->toBe(2);
+
+    Feature::flushCache();
+    $this->getJson('/api/v1/listings?city=tashkent&deal=rent_long')->assertOk();
+
+    expect($auditReads())->toBe(2)
+        ->and(DB::table('features')->whereIn('name', array_values(VoteDetectors::FEATURES))->count())->toBe(2);
 });
 
 it('writes no rented mark while the rented detector is off, and still the votes and the voter\'s hide', function (): void {
