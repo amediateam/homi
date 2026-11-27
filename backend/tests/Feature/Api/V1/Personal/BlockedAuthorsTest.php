@@ -107,7 +107,7 @@ it('builds the label from the source\'s own label when the contact entry holds n
     $this->putJson('/api/v1/listings/100001/blocked-author')->assertOk()->assertJsonPath('data.label', '+998 ** *** ** 67');
 });
 
-it('is no disclosure: no quota, no ContactDisclosed, no call link, and no digit of the number in an answer or a log line', function (): void {
+it('is no disclosure: no quota, no ContactDisclosed, no call link, and no digit of the number nor its author key in an answer or a log line', function (): void {
     onLegacyBlocks();
     Event::fake([ContactDisclosed::class]);
     $lines = new ArrayObject;
@@ -125,6 +125,11 @@ it('is no disclosure: no quota, no ContactDisclosed, no call link, and no digit 
         foreach (BLOCK_RAW_PHONES as $digits) {
             expect($text)->not->toContain($digits);
         }
+    }
+
+    // The author key is a keyed hash of the number (rule 5): neither the answer nor a log line names it.
+    foreach ([$answer, ...$lines->getArrayCopy()] as $text) {
+        expect($text)->not->toContain(substr(rentApartmentKey(), strlen('phone:')));
     }
 });
 

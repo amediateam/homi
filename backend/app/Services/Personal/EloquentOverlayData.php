@@ -29,7 +29,8 @@ use Illuminate\Support\Facades\Cache;
  * A write of the user flushes nothing shared: the listing caches hold no per-user data, and only the realtor keys,
  * the same for everyone, are cached here — as a list of strings, never an object (`serializable_classes => false`),
  * read back only when it still is one. A mark row without its time marks nothing (stage B locks such a row while it
- * recounts). The kill switches of the two detectors (stage B) are checked before these reads.
+ * recounts). Stage B of WP-44 adds the kill switches of the two detectors: `rentedByVotes` and `realtorAuthorKeys` are
+ * then empty while their detector is off, checked before the realtor keys' cache; until then every mark counts.
  */
 final class EloquentOverlayData implements OverlayData
 {
