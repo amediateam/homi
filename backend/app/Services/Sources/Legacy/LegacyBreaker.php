@@ -21,6 +21,10 @@ use LogicException;
  * it opened cannot. What counts as a failure is the client's decision: an answered call that is not one (a `2xx`, a
  * `404`, a contract error, a pause, the daily limit) resets the count. State changes are
  * logged at `warning`. The state lives in the cache, so every PHP process shares it.
+ *
+ * An optional call (`LegacyCall::$optional`, the translation of WP-43) asks `admitOptional()` instead: it is refused
+ * while the breaker is open or waiting for its probe, never becomes the probe, and its outcome is never reported
+ * here, so a slow translator cannot open the breaker that every listing read shares.
  */
 final class LegacyBreaker
 {
@@ -61,6 +65,19 @@ final class LegacyBreaker
         }
 
         return $lock;
+    }
+
+    /**
+     * Lets an optional call through only while the breaker is closed: an open one, or one whose time is up but whose
+     * probe has not closed it yet, refuses it. It never takes the probe, so only a regular call closes the breaker.
+     *
+     * @throws SourceUnavailable
+     */
+    public function admitOptional(): void
+    {
+        if (is_numeric($this->cache->get(self::OPEN_UNTIL))) {
+            throw new SourceUnavailable;
+        }
     }
 
     /** An answered call that is not a failure: the count starts again, and the probe's success closes the breaker. */

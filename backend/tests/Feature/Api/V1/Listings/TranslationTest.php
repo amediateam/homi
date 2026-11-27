@@ -162,6 +162,57 @@ it('answers 503 translation_unavailable when legacy cannot translate, caches not
     'legacy\'s daily limit' => [fn (): PromiseInterface => Factory::response(['detail' => 'too many today'], 429)],
 ]);
 
+it('leaves the shared breaker closed and the feed answering after six translation timeouts in 30 s', function (Closure $answer): void {
+    onLegacyTranslation(fn (Request $request): ?PromiseInterface => str_ends_with(LegacyListingsHttp::path($request), '/translate') ? $answer($request) : null);
+    Feature::globally()->activate('source.listings.feed', ['everyone' => 'legacy']);
+
+    foreach ([100001, 100002, 100003, 100004, 100005, 100006] as $number) {
+        translationOf($number, 'uz')->assertStatus(503)->assertJsonPath('code', 'translation_unavailable');
+        $this->travel(5)->seconds();
+    }
+
+    expect(Cache::has('legacy:breaker:open_until'))->toBeFalse()
+        ->and(Cache::has('legacy:breaker:failures'))->toBeFalse()
+        ->and(count(Http::recorded(fn (Request $request): bool => str_ends_with(LegacyListingsHttp::path($request), '/translate'))))->toBe(6);
+    $this->getJson('/api/v1/listings?city=tashkent&deal=rent_long')->assertOk()->assertJsonPath('meta.source', 'legacy');
+})->with([
+    'timeouts' => [fn (Request $request): PromiseInterface => (Http::failedConnection())($request)],
+    'server errors' => [fn (): PromiseInterface => Factory::response(['detail' => 'x'], 502)],
+]);
+
+it('neither counts nor resets the failures of the breaker with a translation', function (): void {
+    onLegacyTranslation();
+    Cache::put('legacy:breaker:failures', 4, 30);
+
+    translationOf(100001, 'uz')->assertOk();
+
+    expect(Cache::get('legacy:breaker:failures'))->toBe(4);
+});
+
+it('is refused by an open breaker without a request', function (): void {
+    onLegacyTranslation();
+    Cache::put('legacy:breaker:open_until', now()->getTimestamp() + 30, 86_430);
+
+    translationOf(100001, 'uz')->assertStatus(503)->assertJsonPath('code', 'translation_unavailable');
+
+    expect(LegacyListingsHttp::sent('/api/listings/100001/translate'))->toBe([]);
+});
+
+it('never probes a breaker whose time is up: only a regular call closes it, then the translation goes through', function (): void {
+    onLegacyTranslation();
+    Feature::globally()->activate('source.listings.card', ['everyone' => 'legacy']);
+    Cache::put('legacy:breaker:open_until', now()->getTimestamp() - 1, 86_400);
+
+    translationOf(100001, 'uz')->assertStatus(503)->assertJsonPath('code', 'translation_unavailable');
+    expect(LegacyListingsHttp::sent('/api/listings/100001/translate'))->toBe([])
+        ->and(Cache::has('legacy:breaker:open_until'))->toBeTrue();
+
+    $this->getJson('/api/v1/listings/100001')->assertOk();
+    expect(Cache::has('legacy:breaker:open_until'))->toBeFalse();
+
+    translationOf(100001, 'uz')->assertOk()->assertJsonPath('data.text', MASKED_TRANSLATIONS['uz']);
+});
+
 it('takes 15 s at most for legacy\'s answer', function (): void {
     $timeouts = new ArrayObject;
     onLegacyTranslation(function (Request $request, array $options) use ($timeouts): ?PromiseInterface {

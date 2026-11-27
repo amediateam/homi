@@ -67,7 +67,7 @@ use LogicException;
  * | `previews`   | `preview` reads, `legacy.previews.concurrency` at a time through `LegacyClient::pool()`, one limiter wait of `legacy.previews.max_wait_ms` (`background_wait_ms` in the background) and one deadline of `legacy.previews.deadline_ms` for the batch | per item |
  * | `hasContact` | the contact entry, else `GET /api/listings/{n}` again                                           | the contact entry per number, `legacy.cache.card` s |
  * | `contact`    | variant A: the contact entry, else `GET /api/listings/{n}` again; variant B: `GET /api/listings/{n}/call` | the contact entry per number, `legacy.cache.card` s |
- * | `translation`| `POST /api/listings/{n}/translate`, the language per `legacy.translation.via` (WP-43)         | none here: `TranslationService` keeps it per number and locale |
+ * | `translation`| `POST /api/listings/{n}/translate`, the language per `legacy.translation.via`, an optional call for the breaker (WP-43) | none here: `TranslationService` keeps it per number and locale |
  *
  * Every cache here is shared between users, so a cold key is filled once (single-flight, WP-42 review M2): the first
  * caller takes the lock `{key}:fill` (held at most as long as one read may take) and reads legacy; a caller that finds
@@ -373,7 +373,8 @@ final class LegacyListingSource implements ListingSource
     /**
      * The original text in the context's language, machine-translated by legacy (API-010): `POST
      * /api/listings/{n}/translate` with the target language per `legacy.translation.via`, never retried, within the
-     * client's `legacy.timeout` (15 s). Nothing is cached here: `TranslationService` keeps the answer per listing and
+     * client's `legacy.timeout` (15 s), as an optional call (`LegacyCall::$optional`): an open breaker refuses it, and
+     * nothing it answers — a timeout, a `5xx` — counts for the breaker shared by every legacy call. Nothing is cached here: `TranslationService` keeps the answer per listing and
      * locale. Legacy's `404` (an unknown listing, or one without an original text) is `404 not_found`, and the number
      * is not marked gone, since its card may still answer; `unsupported`, an empty text, an answer that does not fit
      * (logged as a contract error naming `text`) and every other failure, legacy's daily limit included, are `503
@@ -398,7 +399,7 @@ final class LegacyListingSource implements ListingSource
         $language = [Config::string('legacy.translation.name') => LegacyLocale::toLegacy($context->locale)];
 
         try {
-            $answer = $this->client->post(self::cardPath($number).'/translate', $via === 'body' ? $language : [], $this->call($context), $via === 'query' ? $language : []);
+            $answer = $this->client->post(self::cardPath($number).'/translate', $via === 'body' ? $language : [], $this->call($context, optional: true), $via === 'query' ? $language : []);
         } catch (SourceNotFound|AccessDenied $passed) {
             throw $passed;
         } catch (ApiException $failure) {
@@ -1086,13 +1087,13 @@ final class LegacyListingSource implements ListingSource
     }
 
     /**
-     * How a call of this context is made: its language, the currency given or its own, and in the background when no
-     * user asks (a queued job, the bot) unless the context says a person waits (`SourceContext::foreground()`, the call
-     * page).
+     * How a call of this context is made: its language, the currency given or its own, in the background when no user
+     * asks (a queued job, the bot) unless the context says a person waits (`SourceContext::foreground()`, the call
+     * page), and optional for the breaker where `$optional` says so (the translation: `LegacyCall::$optional`).
      */
-    private function call(SourceContext $context, ?string $currency = null): LegacyCall
+    private function call(SourceContext $context, ?string $currency = null, bool $optional = false): LegacyCall
     {
-        return new LegacyCall($context->locale, $currency ?? $context->currency, $context->user === null && ! $context->foreground);
+        return new LegacyCall($context->locale, $currency ?? $context->currency, $context->user === null && ! $context->foreground, $optional);
     }
 
     /** @param  array<string, scalar|list<scalar>>  $query */
