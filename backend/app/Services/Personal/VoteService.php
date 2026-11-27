@@ -47,7 +47,8 @@ use InvalidArgumentException;
  * next report — and `agent_marked` is `false`; a withdrawal that falls below a threshold still removes the mark. The
  * weights are summed in hundredths, never as floats. The author key of a vote is the one `listing_refs` files for the
  * listing when it is cast (the caller of an `agent` report files it first, `ListingResolver::fileAuthor()`); a vote
- * without one has no author effect. The back-fill of the listing's channel and post is queued after the commit.
+ * without one has no author effect until its voter repeats it once the author is filed. The back-fill of the
+ * listing's channel and post is queued after the commit.
  */
 final readonly class VoteService
 {
@@ -170,7 +171,11 @@ final readonly class VoteService
         return filter_var(Config::get('votes.agent_marked.already_marked', true), FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) ?? true;
     }
 
-    /** The vote row, or the first one again: a repeat after a withdrawal counts it anew. */
+    /**
+     * The vote row, or the first one again: a repeat after a withdrawal counts it anew, and a repeat of a vote stored
+     * without an author key — cast before `listing_refs` filed the author — takes the key filed now, so it counts for
+     * that author; a stored key is never overwritten.
+     */
     private function cast(User $user, ListingPointer $pointer, ReportReason $reason, ?ReportDetail $detail, ?string $author): void
     {
         $inserted = ListingVote::query()->insertOrIgnore([
@@ -189,6 +194,11 @@ final readonly class VoteService
         if ($inserted === 0) {
             $user->listingVotes()->where('listing_number', $pointer->number)->where('reason', $reason->value)
                 ->whereNotNull('withdrawn_at')->update(['withdrawn_at' => null]);
+
+            if ($author !== null) {
+                $user->listingVotes()->where('listing_number', $pointer->number)->where('reason', $reason->value)
+                    ->whereNull('author_key')->update(['author_key' => $author]);
+            }
         }
     }
 

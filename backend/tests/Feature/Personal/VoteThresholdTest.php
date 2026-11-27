@@ -336,6 +336,37 @@ it('counts each user once per author key: one user on three listings of the auth
         ->and(decisions())->toBe([['author', VOTE_AUTHOR, 'agent', 3, '4.50', '4.50', 'marked']]);
 });
 
+it('files the author of an agent vote cast before the author was filed when its voter repeats it, so it counts', function (): void {
+    ListingRef::factory()->create(['listing_number' => 100012, 'author_key' => null, 'author_kind' => null]);
+    [$early] = voters(1, VOTE_FREE);
+    reportBy([$early], ReportReason::Agent);
+
+    expect(ListingVote::query()->sole()->author_key)->toBeNull();
+
+    ListingRef::query()->whereKey(100012)->update(['author_key' => VOTE_AUTHOR, 'author_kind' => 'phone']);
+    $outcomes = reportBy(voters(2, VOTE_FREE), ReportReason::Agent);
+
+    expect(realtorMarkedAt())->toBeNull();
+
+    $outcomes = [...$outcomes, ...reportBy([$early], ReportReason::Agent)];
+
+    expect(ListingVote::query()->where('user_id', $early->id)->sole()->author_key)->toBe(VOTE_AUTHOR)
+        ->and(realtorMarkedAt())->not->toBeNull()
+        ->and(decisions())->toBe([['author', VOTE_AUTHOR, 'agent', 3, '4.50', '4.50', 'marked']])
+        ->and(array_map(fn (ReportOutcome $outcome): bool => $outcome->agentMarked, $outcomes))->toBe([false, false, true]);
+});
+
+it('never overwrites the author key a vote stored when its voter repeats it', function (): void {
+    ListingRef::factory()->ofAuthor(VOTE_AUTHOR)->create(['listing_number' => 100012]);
+    [$voter] = voters(1);
+    reportBy([$voter], ReportReason::Agent);
+
+    ListingRef::query()->whereKey(100012)->update(['author_key' => 'source:other_channel', 'author_kind' => 'source']);
+    reportBy([$voter], ReportReason::Agent);
+
+    expect(ListingVote::query()->sole()->author_key)->toBe(VOTE_AUTHOR);
+});
+
 it('stores a vote on an author already marked and marks nothing twice', function (): void {
     ListingRef::factory()->ofAuthor(VOTE_AUTHOR)->create(['listing_number' => 100001]);
     $mark = AuthorMark::factory()->create(['author_key' => VOTE_AUTHOR, 'realtor_marked_at' => now()->subDay()]);
