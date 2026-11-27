@@ -107,10 +107,10 @@ use LogicException;
  * the card's own entry holds no number. `contact()` decides the variant per card under `legacy.contact.mode`:
  * variant A answers the phone and its display (`callUrl` and `expiresAt` blank: `ContactService` answers HOMI's own
  * call link) without a legacy call while the entry is cached; on a miss — expired, or unreadable after the application
- * key changed — it reads the card again (legacy's daily limit is then `503`, not the card's `429`). Variant B asks
- * `GET /api/listings/{n}/call` and answers its `url`, made absolute against `legacy.base_url` (an absolute one must be
- * `https`), valid for `legacy.contact.link_ttl` s, with legacy's `phone_display` if any; a `404` there is `404
- * contact_unavailable`. A card without either is `ContactUnavailable`.
+ * key changed — it reads the card again and caches it (legacy's daily limit is then `503`, not the card's `429`).
+ * Variant B asks `GET /api/listings/{n}/call` and answers its `url`, made absolute against `legacy.base_url` (an
+ * absolute one must be `https`), valid for `legacy.contact.link_ttl` s, with legacy's `phone_display` if any; a `404`
+ * there is `404 contact_unavailable`. A card without either is `ContactUnavailable`.
  *
  * A background batch of previews (a queued job, the bot: WP-46's radar matcher) waits for its share's places within
  * `legacy.previews.background_wait_ms` instead of failing at once, and never leaves an item out silently either: when
@@ -342,7 +342,7 @@ final class LegacyListingSource implements ListingSource
     {
         self::refuseNative($number);
 
-        $contact = $this->cachedContact($number) ?? $this->readCard($number, $context, false, daily: false)['contact'];
+        $contact = $this->cachedContact($number) ?? $this->contactFromCard($number, $context);
 
         return match ($contact?->variant(Config::string('legacy.contact.mode'))) {
             LegacyContact::PHONE => new ListingContact('', '', $contact->phone, $contact->phoneDisplay()),
@@ -461,6 +461,23 @@ final class LegacyListingSource implements ListingSource
             foreach (array_unique([$asked, $details->preview->number]) as $number) {
                 $this->cache->put($this->contactKey($number), $sealed, $seconds);
             }
+        }
+
+        return $contact;
+    }
+
+    /**
+     * The contact of a full card read again (its entry missed); the card is cached as `details()` would cache it, so
+     * the card or preview read that usually follows (the call page's title) needs no second call. Legacy's daily limit
+     * is `503` here: only the card method passes it on.
+     */
+    private function contactFromCard(int $number, SourceContext $context): ?LegacyContact
+    {
+        ['card' => $card, 'contact' => $contact] = $this->readCard($number, $context, false, daily: false);
+        $seconds = Config::integer('legacy.cache.card');
+
+        if ($seconds > 0) {
+            $this->cache->put($this->cardKey('card', $number, $context), $card, $seconds);
         }
 
         return $contact;

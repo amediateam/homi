@@ -24,6 +24,9 @@ use Illuminate\Support\Sleep;
 use Illuminate\Testing\TestResponse;
 use Laravel\Pennant\Feature;
 use Laravel\Sanctum\Sanctum;
+use Laravel\Telescope\Telescope;
+use Laravel\Telescope\Watchers\RequestWatcher;
+use Symfony\Component\HttpFoundation\Response;
 use Tests\Support\ContractShapes;
 use Tests\Support\FailingCacheStore;
 use Tests\Support\JsonShape;
@@ -315,4 +318,14 @@ it('writes no phone number, call token or link of either variant into a log line
     foreach ($tokens as $url) {
         expect($serialised)->not->toContain(substr($url, strrpos($url, '/') + 1));
     }
+});
+
+it('keeps no number and no call link of the answer in a Telescope request entry', function (): void {
+    $response = contactOf(100001)->assertOk();
+    $watcher = new RequestWatcher([]);
+    $kept = (fn (Response $answer): mixed => $this->response($answer))->call($watcher, $response->baseResponse);
+
+    expect(Telescope::$hiddenResponseParameters)->toContain('data.phone', 'data.phone_display', 'data.call_url')
+        ->and($kept['data'])->toMatchArray(['phone' => '********', 'phone_display' => '********', 'call_url' => '********'])
+        ->and(json_encode($kept))->not->toContain('000000067');
 });

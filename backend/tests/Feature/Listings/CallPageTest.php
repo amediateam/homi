@@ -2,12 +2,19 @@
 
 use App\Models\User;
 use App\Services\Listings\CallLinkService;
+use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Sleep;
 use Illuminate\Testing\TestResponse;
+use Laravel\Pennant\Feature;
+use Laravel\Sanctum\Sanctum;
 use Laravel\Telescope\EntryType;
 use Laravel\Telescope\IncomingEntry;
 use Laravel\Telescope\Telescope;
+use Tests\Support\LegacyFixtures;
+use Tests\Support\LegacyListingsHttp;
 
 /*
  * WP-43, RES-005, SEC-REQ-026: HOMI's call page on the stub catalogue (`100001` has the stub number +998000000067).
@@ -180,4 +187,40 @@ it('keeps no Telescope entry of a call page, whatever the environment records', 
     expect($keeps(IncomingEntry::make(['uri' => '/call/abc.def', 'response_status' => 200])->type(EntryType::REQUEST)))->toBeFalse()
         ->and($keeps(IncomingEntry::make(['uri' => '/call/abc.def', 'response_status' => 503])->type(EntryType::REQUEST)))->toBeFalse()
         ->and($keeps(IncomingEntry::make(['uri' => '/api/v1/reference', 'response_status' => 200])->type(EntryType::REQUEST)))->toBeTrue();
+});
+
+it('opens a link issued through the legacy driver with the legacy number, on the drivers of the token\'s user', function (): void {
+    LegacyListingsHttp::fake();
+    Sleep::fake();
+    config(['legacy.media.public_url' => LegacyFixtures::MEDIA, 'legacy.rate.per_second' => 1000]);
+    $user = User::factory()->create();
+
+    // The default stays the stub; only this user reads the card and the contact through legacy.
+    foreach (['card', 'contact'] as $method) {
+        Feature::globally()->activate("source.listings.{$method}", ['users' => [$user->id => 'legacy']]);
+    }
+
+    Sanctum::actingAs($user, ['app:read', 'app:write']);
+    $url = $this->postJson('/api/v1/listings/100001/contact', [], ['Accept-Language' => 'uz'])->assertOk()->assertJsonPath('meta.source', 'legacy')->json('data.call_url');
+    $path = (string) parse_url($url, PHP_URL_PATH);
+    $lines = new ArrayObject;
+    Log::listen(function (MessageLogged $entry) use ($lines): void {
+        $lines[] = [$entry->level, $entry->message, $entry->context];
+    });
+
+    $page = (string) $this->get($path)->assertOk()->getContent();
+    expect($page)->toContain('href="tel:+998001234567"')
+        ->and($page)->toContain('+998 00 123-45-67')
+        ->and($page)->toContain('<html lang="uz">')
+        ->and($page)->not->toContain('000000067')
+        ->and(LegacyListingsHttp::sent('/api/listings/100001'))->toHaveCount(1);
+
+    // The card's caches have expired: the page reads the preview and the card again, and still answers.
+    $this->travel(61)->seconds();
+    expect((string) $this->get($path)->assertOk()->getContent())->toContain('href="tel:+998001234567"')
+        ->and(LegacyListingsHttp::sent('/api/listings/100001'))->toHaveCount(3);
+
+    $serialised = json_encode($lines->getArrayCopy(), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+    expect($serialised)->not->toContain(substr($path, strlen('/call/')))
+        ->and($serialised)->not->toContain('001234567');
 });

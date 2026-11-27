@@ -78,6 +78,10 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
         // request watcher masks the request headers named here. In every environment, local included.
         Telescope::hideRequestHeaders([strtolower(config()->string('legacy.auth.header'))]);
 
+        // The answer of `POST /listings/{number}/contact` (WP-43) is the one disclosure of an author's number, and its
+        // `call_url` carries a call token: none of the three is kept, in every environment, local included.
+        Telescope::hideResponseParameters(['data.phone', 'data.phone_display', 'data.call_url']);
+
         if ($this->app->environment('local')) {
             return;
         }
