@@ -13,6 +13,7 @@ use Laravel\Pennant\Events\FeatureDeleted;
 use Laravel\Pennant\Events\FeaturesPurged;
 use Laravel\Pennant\Events\FeatureUpdated;
 use Laravel\Pennant\Events\FeatureUpdatedForAllScopes;
+use Laravel\Pennant\Feature;
 use Laravel\Pennant\GlobalScope;
 
 /**
@@ -23,8 +24,9 @@ use Laravel\Pennant\GlobalScope;
  * records `new_rule` null. A source rule is recorded as stored; a detector's update as the boolean Pennant resolves
  * the stored value to (`value !== false`: a `null`, `0` or a string is on), so the row `VoteDetectors::defaultValue()`
  * reads after a purge says what the detector was, and a null `new_rule` only ever means a purge or a forget. A
- * detector's change also logs a `warning` that names the feature only. A value stored for a single scope other than
- * the global one is not recorded: no driver reads it.
+ * detector's change also logs a `warning` that names the feature only. A change is global when its scope is stored as
+ * the global one (`isGlobal()`), whatever form the caller gave it in; a value stored for any other single scope is not
+ * recorded: no driver reads it.
  */
 final class RecordSourceFlagChange
 {
@@ -40,9 +42,9 @@ final class RecordSourceFlagChange
         $detectors = array_values(VoteDetectors::FEATURES);
 
         [$features, $value, $updated] = match (true) {
-            $event instanceof FeatureUpdated => [$event->scope instanceof GlobalScope ? [$event->feature] : [], $event->value, true],
+            $event instanceof FeatureUpdated => [self::isGlobal($event->scope) ? [$event->feature] : [], $event->value, true],
             $event instanceof FeatureUpdatedForAllScopes => [[$event->feature], $event->value, true],
-            $event instanceof FeatureDeleted => [$event->scope instanceof GlobalScope ? [$event->feature] : [], null, false],
+            $event instanceof FeatureDeleted => [self::isGlobal($event->scope) ? [$event->feature] : [], null, false],
             $event instanceof FeaturesPurged => [$event->features, null, false],
             $event instanceof AllFeaturesPurged => [[...$this->config->features(), ...$detectors], null, false],
         };
@@ -59,6 +61,15 @@ final class RecordSourceFlagChange
                 Log::warning('Vote detector changed outside votes:detector.', ['feature' => $feature]);
             }
         }
+    }
+
+    /**
+     * Whether Pennant stores a value of the scope as the global one: the scope serialises as `GlobalScope` does — the
+     * `GlobalScope` object or its stored name `'__laravel_global'` given as a string (`Feature::for('__laravel_global')`).
+     */
+    private static function isGlobal(mixed $scope): bool
+    {
+        return Feature::serializeScope($scope) === (new GlobalScope)->featureScopeSerialize();
     }
 
     private function record(string $feature, mixed $value, string $reason): void

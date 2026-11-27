@@ -600,6 +600,29 @@ it('audits a direct Pennant change of a detector as unknown, with a warning that
         ->and(app(VoteDetectors::class)->rentedOn())->toBeFalse();
 });
 
+it('audits a change through the global scope\'s stored name like one through the global scope, so a purge keeps it (review C, N2)', function (): void {
+    switchDetector('realtor', false);
+
+    $logged = logsOf(function (): void {
+        Feature::for('__laravel_global')->activate(VoteDetectors::REALTOR);
+        Feature::flushCache();
+    });
+
+    expect(app(VoteDetectors::class)->realtorOn())->toBeTrue()
+        ->and(detectorAudit())->toBe([
+            [VoteDetectors::REALTOR, 'test', true, false],
+            [VoteDetectors::REALTOR, SourceFlagChange::UNKNOWN_ACTOR, null, true],
+        ])
+        ->and($logged)->toBe([['warning', 'Vote detector changed outside votes:detector.', ['feature' => VoteDetectors::REALTOR]]]);
+
+    Feature::for('__laravel_global')->deactivate(VoteDetectors::REALTOR);
+    Feature::for('__laravel_global')->forget(VoteDetectors::REALTOR);
+    Feature::flushCache();
+
+    expect(app(VoteDetectors::class)->realtorOn())->toBeFalse()
+        ->and(array_column(detectorAudit(), 3))->toBe([false, true, false, null]);
+});
+
 it('audits a direct change of a detector as the boolean Pennant resolves, so a purge after it keeps that state (review C, N3)', function (mixed $value, bool $on): void {
     switchDetector('realtor', ! $on);
 
