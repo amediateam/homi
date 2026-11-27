@@ -18,12 +18,17 @@ final readonly class LegacyDeadline
         return new self(self::nowMs() + max(0, $ms));
     }
 
-    /** The milliseconds left, never below 0. */
+    /**
+     * The milliseconds left, never below 0.
+     *
+     * @phpstan-impure
+     */
     public function remainingMs(): int
     {
         return max(0, $this->atMs - self::nowMs());
     }
 
+    /** @phpstan-impure */
     public function passed(): bool
     {
         return $this->remainingMs() === 0;

@@ -22,7 +22,8 @@
 |   while legacy fails (RK-25), and `after_failure` how long a failed refresh of either is not tried again. The
 |   listings (WP-42): `card` per number, locale and currency; `count` per filters and locale, `flow` and `map` per
 |   filters, locale and currency (0 disables each); `not_found` how long a number legacy answered `404` for is not
-|   asked again.
+|   asked again; `fill_wait_ms` (`LEGACY_CACHE_FILL_WAIT_MS`) how long a request waits for another request that is
+|   filling the same cold entry before it reads legacy itself (0: it never waits).
 | - `media`: `public_url` is HOMI's proxy of the legacy photos (`LEGACY_MEDIA_PUBLIC_URL`, for example
 |   `https://<media host>/lm`); blank means photo lists are empty. `hosts` are the legacy hosts whose absolute photo
 |   addresses are rewritten too (a relative `/media/…` address always is): `LEGACY_MEDIA_HOSTS`, comma-separated,
@@ -58,6 +59,7 @@ $previewsWait = $value('LEGACY_PREVIEWS_MAX_WAIT_MS', 4000);
 $previewsWait = is_numeric($previewsWait) && (int) $previewsWait >= 0 ? (int) $previewsWait : 4000;
 $backgroundWait = $value('LEGACY_PREVIEWS_BACKGROUND_WAIT_MS', 2000);
 $previewsDeadline = $value('LEGACY_PREVIEWS_DEADLINE_MS', null);
+$fillWait = $value('LEGACY_CACHE_FILL_WAIT_MS', 1000);
 
 return [
     'base_url' => $baseUrl,
@@ -108,6 +110,7 @@ return [
         'flow' => 60,
         'map' => 30,
         'not_found' => 60,
+        'fill_wait_ms' => is_numeric($fillWait) && (int) $fillWait >= 0 ? (int) $fillWait : 1000,
         'last_good' => 86_400,
         'after_failure' => 60,
     ],

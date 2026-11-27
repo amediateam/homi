@@ -305,7 +305,7 @@ final class LegacyClient
             $shortened = $timeout !== null && $timeout < Config::integer('legacy.timeout');
 
             foreach ($this->sendAll($reads, $placed, $call, $key, $timeout) as $id => $response) {
-                if ($shortened && is_string($response) && $deadline?->passed() === true) {
+                if ($shortened && is_string($response) && $deadline->passed()) {
                     $cut[] = $id;
                 } else {
                     $answered[$id] = $response;

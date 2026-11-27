@@ -37,10 +37,13 @@ use App\Services\Sources\Legacy\Translators\NewCountTranslator;
 use App\Services\Sources\SourceContext;
 use App\Services\Sources\SourceManager;
 use Closure;
+use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Sleep;
 use InvalidArgumentException;
+use LogicException;
 
 /**
  * The `legacy` driver of the listing capability (WP-42): the six listing reads of `08` §1.7 and §1.8 through
@@ -57,6 +60,12 @@ use InvalidArgumentException;
  * | `details`    | `GET /api/listings/{n}`             | `legacy.cache.card` s per number, language and currency     |
  * | `preview`    | `GET /api/listings/{n}?preview=1`   | the same, beside the card's entry; a cached card serves it  |
  * | `previews`   | `preview` reads, `legacy.previews.concurrency` at a time through `LegacyClient::pool()`, one limiter wait of `legacy.previews.max_wait_ms` (`background_wait_ms` in the background) and one deadline of `legacy.previews.deadline_ms` for the batch | per item |
+ *
+ * Every cache here is shared between users, so a cold key is filled once (single-flight, WP-42 review M2): the first
+ * caller takes the lock `{key}:fill` (held at most as long as one read may take) and reads legacy; a caller that finds
+ * it taken looks at the cache again every 100 ms for up to `legacy.cache.fill_wait_ms` and serves what the first one
+ * stored, or, when the wait runs out, reads legacy itself — the lock never fails a request. The feed, the new-since
+ * count and the previews batch have no shared cache entry to fill (the batch caches each preview, unlocked).
  *
  * A duration of 0 disables its cache. The cache holds the translated v1 arrays, never an object (the store may
  * serialise): a card is held as the translators give it — masked (DEC-52), without `phone`, `phone_display` or the
@@ -78,8 +87,9 @@ use InvalidArgumentException;
  *
  * Errors: a call that fails is `503 source_unavailable` and a contract error of the answer the same (logged and counted
  * here when a translator finds it). The keys of an answer whose values a translator could not use as sent
- * (`Coercions`: another type, a fraction, an unknown code, a part left out) are logged once per answer as a warning
- * with the path template and the key names, never a value, and counted (`coerced`). The photo rewriter and the
+ * (`Coercions`: another type, a fraction, an unknown code, a part left out) are logged as a warning with the path
+ * template and the key names, never a value — at most once a minute per path and set of keys without their positions
+ * (`items.3.floor` counts as `items.*.floor`) — and every such answer is counted (`coerced`). The photo rewriter and the
  * district matcher are made for each answer, so their counts are that answer's. The card passes legacy's daily limit on as `429 rate_limited` with `reason:
  * "daily"` (DEC-59); every other method answers it as `503`, since only the card has that limit. A system context
  * (no user) makes background calls in the limiter. `contact()` and `translation()` are WP-43's: `503` until then.
@@ -96,6 +106,9 @@ final class LegacyListingSource implements ListingSource
 
     /** The `v1` changes when a cached shape does. */
     private const string PREFIX = 'legacy:v1:listings:';
+
+    /** How often a caller waiting for another caller's fill looks at the cache again. */
+    private const int FILL_STEP_MS = 100;
 
     public function __construct(
         private readonly LegacyClient $client,
@@ -149,21 +162,31 @@ final class LegacyListingSource implements ListingSource
         $query = FiltersTranslator::toQuery($filters);
         $key = $this->filtersKey('count', $query, $context, false);
         $seconds = Config::integer('legacy.cache.count');
-        // Redis gives a stored number back as a numeric string, the array store as an int.
-        $cached = $seconds > 0 ? $this->cache->get($key) : null;
+        $read = function () use ($query, $context): int {
+            $answer = $this->read(NewCountTranslator::COUNT_PATH, $query, $this->call($context, 'USD'));
 
-        if (is_numeric($cached)) {
-            return (int) $cached;
+            return $this->checked(fn (): int => NewCountTranslator::count($answer, NewCountTranslator::COUNT_PATH));
+        };
+
+        if ($seconds <= 0) {
+            return $read();
         }
 
-        $answer = $this->read(NewCountTranslator::COUNT_PATH, $query, $this->call($context, 'USD'));
-        $count = $this->checked(fn (): int => NewCountTranslator::count($answer, NewCountTranslator::COUNT_PATH));
+        return $this->singleFlight(
+            $key,
+            function () use ($key): ?int {
+                // Redis gives a stored number back as a numeric string, the array store as an int.
+                $cached = $this->cache->get($key);
 
-        if ($seconds > 0) {
-            $this->cache->put($key, $count, $seconds);
-        }
+                return is_numeric($cached) ? (int) $cached : null;
+            },
+            function () use ($key, $seconds, $read): int {
+                $count = $read();
+                $this->cache->put($key, $count, $seconds);
 
-        return $count;
+                return $count;
+            },
+        );
     }
 
     public function newSince(SearchFilters $filters, int $since, SourceContext $context): int
@@ -481,10 +504,11 @@ final class LegacyListingSource implements ListingSource
     }
 
     /**
-     * The cached array as its data object, else a fresh one, cached for `$seconds` (0: not cached). An entry that no
-     * longer fits its data object (a shape changed under the same key version) is dropped and read again.
+     * The cached array as its data object, else a fresh one, cached for `$seconds` (0: not cached) and filled once
+     * (`singleFlight()`). An entry that no longer fits its data object (a shape changed under the same key version) is
+     * dropped and read again.
      *
-     * @template TData
+     * @template TData of object
      *
      * @param  Closure(): array<array-key, mixed>  $fetch
      * @param  Closure(array<array-key, mixed>): TData  $build
@@ -492,23 +516,96 @@ final class LegacyListingSource implements ListingSource
      */
     private function cached(string $key, int $seconds, Closure $fetch, Closure $build): mixed
     {
-        $cached = $seconds > 0 ? $this->cache->get($key) : null;
+        if ($seconds <= 0) {
+            return $build($fetch());
+        }
 
-        if (is_array($cached)) {
-            try {
-                return $build($cached);
-            } catch (InvalidArgumentException) {
-                $this->cache->forget($key);
+        return $this->singleFlight(
+            $key,
+            function () use ($key, $build): ?object {
+                $cached = $this->cache->get($key);
+
+                if (! is_array($cached)) {
+                    return null;
+                }
+
+                try {
+                    return $build($cached);
+                } catch (InvalidArgumentException) {
+                    $this->cache->forget($key);
+
+                    return null;
+                }
+            },
+            function () use ($key, $seconds, $fetch, $build): object {
+                $value = $fetch();
+                $this->cache->put($key, $value, $seconds);
+
+                return $build($value);
+            },
+        );
+    }
+
+    /**
+     * A shared cache entry, filled by one caller at a time: the value `$lookup` finds, else `$fill`'s under the lock
+     * `{key}:fill`. A caller that finds the lock taken looks again every `FILL_STEP_MS` for up to
+     * `legacy.cache.fill_wait_ms`, then fills without it, so the lock never fails a request. Only for entries shared
+     * between users: never for a per-user answer.
+     *
+     * @template TValue of int|object
+     *
+     * @param  Closure(): (TValue|null)  $lookup  the cached value, `null` when there is none
+     * @param  Closure(): TValue  $fill  reads legacy and stores the value
+     * @return TValue
+     */
+    private function singleFlight(string $key, Closure $lookup, Closure $fill): mixed
+    {
+        $found = $lookup();
+
+        if ($found !== null) {
+            return $found;
+        }
+
+        $lock = $this->lockProvider()->lock("{$key}:fill", self::fillSeconds());
+        $wait = max(0, Config::integer('legacy.cache.fill_wait_ms'));
+
+        for ($waited = 0; ! $lock->get(); $waited += self::FILL_STEP_MS) {
+            if ($waited >= $wait) {
+                return $fill();
+            }
+
+            Sleep::for(min(self::FILL_STEP_MS, $wait - $waited))->milliseconds();
+            $found = $lookup();
+
+            if ($found !== null) {
+                return $found;
             }
         }
 
-        $value = $fetch();
-
-        if ($seconds > 0) {
-            $this->cache->put($key, $value, $seconds);
+        try {
+            return $lookup() ?? $fill();
+        } finally {
+            $lock->release();
         }
+    }
 
-        return $build($value);
+    /**
+     * How long a fill may hold its lock: one read with every attempt, its timeouts, the pause and the limiter's waits,
+     * plus 5 s (as WP-41 sizes the lock of a reference refresh).
+     */
+    private static function fillSeconds(): int
+    {
+        $attempts = 1 + max(0, Config::integer('legacy.retry.times'));
+        $waits = Config::integer('legacy.retry.sleep_ms') + $attempts * Config::integer('legacy.rate.max_wait_ms');
+
+        return $attempts * (Config::integer('legacy.timeout') + Config::integer('legacy.connect_timeout')) + (int) ceil($waits / 1000) + 5;
+    }
+
+    private function lockProvider(): LockProvider
+    {
+        $store = $this->cache->getStore();
+
+        return $store instanceof LockProvider ? $store : throw new LogicException('The cache store of the legacy listings cannot lock.');
     }
 
     /**
@@ -590,8 +687,9 @@ final class LegacyListingSource implements ListingSource
     }
 
     /**
-     * The translation of one answer with its own `Coercions`, logged afterwards (also when it fails): one warning with
-     * the path template and the key names, never a value, and the counter `coerced`.
+     * The translation of one answer with its own `Coercions`, logged afterwards (also when it fails): the counter
+     * `coerced`, and one warning with the path template and the key names, never a value, at most once a minute per
+     * path and set of keys without their positions.
      *
      * @template TValue
      *
@@ -606,8 +704,11 @@ final class LegacyListingSource implements ListingSource
             return $translate($seen);
         } finally {
             if ($seen->count() > 0) {
-                Log::warning('A legacy answer has values HOMI could not use as sent.', ['path' => $path, 'keys' => $seen->keys(), 'count' => $seen->count()]);
                 $this->counted('coerced');
+
+                if ($this->cache->add(self::PREFIX.'once:coerced:'.sha1($path.'|'.implode(',', self::shapeOf($seen->keys()))), 1, 60)) {
+                    Log::warning('A legacy answer has values HOMI could not use as sent.', ['path' => $path, 'keys' => $seen->keys(), 'count' => $seen->count()]);
+                }
             }
         }
     }
@@ -631,6 +732,20 @@ final class LegacyListingSource implements ListingSource
 
             throw $drift;
         }
+    }
+
+    /**
+     * Key names without their positions (`items.3.floor` → `items.*.floor`), distinct and sorted.
+     *
+     * @param  list<string>  $keys
+     * @return list<string>
+     */
+    private static function shapeOf(array $keys): array
+    {
+        $shape = array_values(array_unique(array_map(fn (string $key): string => (string) preg_replace('/(?<=^|\.)\d+(?=\.|$)/', '*', $key), $keys)));
+        sort($shape);
+
+        return $shape;
     }
 
     private function drifted(LegacyContractError $drift): void

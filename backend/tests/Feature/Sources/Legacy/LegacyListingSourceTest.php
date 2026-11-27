@@ -391,6 +391,81 @@ it('files and shows no channel or handle that could be a phone number: the card,
     $this->assertDatabaseHas('listing_views', ['user_id' => $user->id, 'listing_number' => 100001, 'source_channel' => null, 'source_post_id' => null]);
 });
 
+/**
+ * The shared caches of the source: a read, its cache key and the legacy path it asks.
+ *
+ * @return array<string, array{Closure(): mixed, Closure(): string, string}>
+ */
+function sharedCaches(): array
+{
+    $filtersKey = fn (string $method, bool $currency): string => "legacy:v1:listings:{$method}:".($currency ? 'ru:USD' : 'ru').':'.sha1(LegacyClient::queryString(FiltersTranslator::toQuery(defaultFilters())));
+
+    return [
+        'card' => [fn (): mixed => legacyListings()->details(100001, userContext()), fn (): string => 'legacy:v1:listings:card:100001:ru:USD', '/api/listings/100001'],
+        'preview' => [fn (): mixed => legacyListings()->preview(100001, userContext()), fn (): string => 'legacy:v1:listings:preview:100001:ru:USD', '/api/listings/100001'],
+        'map' => [fn (): mixed => legacyListings()->map(defaultFilters(), userContext()), fn (): string => $filtersKey('map', true), '/api/map'],
+        'flow' => [fn (): mixed => legacyListings()->flow(defaultFilters(), userContext()), fn (): string => $filtersKey('flow', true), '/api/feed/flow'],
+        'count' => [fn (): mixed => legacyListings()->count(defaultFilters(), userContext()), fn (): string => $filtersKey('count', false), '/api/feed/count'],
+    ];
+}
+
+it('fills a cold shared cache once: a caller that finds another filling it waits and reads what that one stored (M2)', function (string $cache): void {
+    [$read, $key, $path] = sharedCaches()[$cache];
+    LegacyListingsHttp::fake();
+    $read();
+    $stored = Cache::get($key());
+    Cache::forget($key());
+    $filler = Cache::lock($key().':fill', 60);
+    expect($stored)->not->toBeNull()
+        ->and($filler->get())->toBeTrue();
+    Sleep::whenFakingSleep(function () use ($filler, $key, $stored): void {
+        if (! Cache::has($key())) {
+            Cache::put($key(), $stored, 60);
+            $filler->release();
+        }
+    });
+
+    $read();
+
+    expect(LegacyListingsHttp::sent($path))->toHaveCount(1);
+    Sleep::assertSleptTimes(1);
+})->with(array_keys(sharedCaches()));
+
+it('reads legacy without the lock when another caller holds it past the wait, and never fails for it (M2)', function (): void {
+    LegacyListingsHttp::fake();
+    $key = 'legacy:v1:listings:card:100001:ru:USD';
+    expect(config('legacy.cache.fill_wait_ms'))->toBe(1000)
+        ->and(Cache::lock("{$key}:fill", 60)->get())->toBeTrue();
+
+    expect(legacyListings()->details(100001, userContext())->preview->number)->toBe(100001)
+        ->and(LegacyListingsHttp::sent('/api/listings/100001'))->toHaveCount(1)
+        ->and(Cache::has($key))->toBeTrue();
+    Sleep::assertSequence(array_fill(0, 10, Sleep::for(100)->milliseconds()));
+});
+
+it('gives the fill lock back after a failed fill, and takes none while the cache is off (M2)', function (): void {
+    LegacyListingsHttp::fake(fn (Request $request): mixed => Http::response(['detail' => 'down'], 500));
+    $key = 'legacy:v1:listings:card:100001:ru:USD';
+
+    expect(fn () => legacyListings()->details(100001, userContext()))->toThrow(SourceUnavailable::class);
+    expect(Cache::lock("{$key}:fill", 60)->get())->toBeTrue();
+
+    LegacyListingsHttp::answer(null);
+    config(['legacy.cache.card' => 0]);
+    expect(legacyListings()->details(100001, userContext())->preview->number)->toBe(100001);
+    Sleep::assertSlept(fn ($duration): bool => $duration->totalMilliseconds !== 200.0, 0);
+});
+
+it('reads the wait for another caller\'s fill from the environment, a blank value as the default', function (): void {
+    $wait = fn (?string $value): mixed => EnvOverride::with('LEGACY_CACHE_FILL_WAIT_MS', $value, fn (): array => require config_path('legacy.php'))['cache']['fill_wait_ms'];
+
+    expect($wait(null))->toBe(1000)
+        ->and($wait(''))->toBe(1000)
+        ->and($wait('250'))->toBe(250)
+        ->and($wait('0'))->toBe(0)
+        ->and($wait('later'))->toBe(1000);
+});
+
 it('serves a preview from the cached card, and caches the preview form beside it', function (): void {
     LegacyListingsHttp::fake();
 
@@ -747,6 +822,41 @@ it('logs the keys an answer could not use as sent once per answer, with the path
         ->and($warnings[1]['context'])->toBe(['path' => '/api/listings/{n}', 'keys' => ['stats.days_listed'], 'count' => 1])
         ->and(json_encode(array_column($warnings, 'context')))->not->toContain('765')->not->toContain('2.5')
         ->and((int) Cache::get($counter))->toBe(2);
+});
+
+it('logs the coerced keys of a path at most once a minute per set of keys, and counts every such answer', function (): void {
+    $sent = new ArrayObject(['coerced' => ['floor' => 0]]);
+    LegacyListingsHttp::fake(function (Request $request) use ($sent): mixed {
+        if (LegacyListingsHttp::path($request) !== '/api/feed') {
+            return null;
+        }
+
+        $items = array_slice(LegacyFixtures::golden('feed.default')['items'], 0, 3);
+
+        foreach ($sent['coerced'] as $key => $index) {
+            $items[$index][$key] = $key === 'floor' ? 2.5 : 'many';
+        }
+
+        return Http::response(['items' => $items, 'next_cursor' => null]);
+    });
+    $counter = 'legacy:v1:listings:counter:coerced:'.now()->format('Y-m-d');
+    $feed = fn (): mixed => legacyListings()->feed(new ListingQuery(defaultFilters()), userContext());
+    $warnings = fn (array $lines): array => array_values(array_filter($lines, fn (array $line): bool => $line['message'] === 'A legacy answer has values HOMI could not use as sent.'));
+
+    $first = $warnings(logLinesOf(function () use ($feed, $sent): void {
+        $feed();
+        $sent['coerced'] = ['floor' => 2];
+        $feed();
+        $sent['coerced'] = ['floor' => 1, 'rooms' => 1];
+        $feed();
+    }));
+    $this->travel(61)->seconds();
+    $sent['coerced'] = ['floor' => 2];
+    $later = $warnings(logLinesOf($feed));
+
+    expect(array_column(array_column($first, 'context'), 'keys'))->toBe([['items.0.floor'], ['items.1.rooms', 'items.1.floor']])
+        ->and(array_column(array_column($later, 'context'), 'keys'))->toBe([['items.2.floor']])
+        ->and((int) Cache::get($counter))->toBe(4);
 });
 
 it('logs nothing as coerced for the golden answers', function (): void {
