@@ -11,8 +11,8 @@ use InvalidArgumentException;
  * phone that is not one number is not disclosed), legacy's `phone_display`, and whether the card carries a call link
  * (`call_url`). `variant()` decides per card under `legacy.contact.mode`; the card's `contact.has_phone` is that
  * variant not being `null`, so the card promises a contact only where the method has one to give — except that a
- * variant B link legacy then answers for a host HOMI does not allow (`LegacyListingSource::callUrl()`) is refused,
- * which the card cannot know.
+ * variant B link legacy then answers for a host or port HOMI does not allow (`LegacyListingSource::callUrl()`) is
+ * refused, which the card cannot know.
  *
  * | Mode    | A phone (variant A, HOMI's call link) | No phone, a call link (variant B) | Neither |
  * | ------- | ------------------------------------- | --------------------------------- | ------- |

@@ -458,6 +458,39 @@ it('answers a merged duplicate whose survivor legacy has withdrawn 404 contact_u
     expect(count(Http::recorded()))->toBe($sent);
 })->with(['gone numbers remembered' => [60], 'gone numbers not remembered' => [0]]);
 
+it('gives no contact through the card of a duplicate legacy still answers once its survivor is withdrawn', function (int $notFound): void {
+    config(['legacy.cache.not_found' => $notFound]);
+    onLegacyContact();
+    Event::fake([ContactDisclosed::class]);
+    LegacyListingsHttp::answer(fn (Request $request): ?PromiseInterface => LegacyListingsHttp::path($request) === '/api/listings/100001' ? Factory::response(['detail' => 'Not found.'], 404) : null);
+
+    $this->getJson('/api/v1/listings/100001')->assertNotFound();
+
+    // The duplicate was never read: no pointer; legacy still answers its card with the survivor's number.
+    contactOf(100016)->assertNotFound()->assertJsonPath('code', 'contact_unavailable');
+    expect(LegacyListingsHttp::sent('/api/listings/100016'))->toHaveCount(1)
+        ->and(Cache::has('legacy:v1:listings:contact:100016'))->toBeFalse()
+        ->and(Cache::has('legacy:v1:listings:contact:100001'))->toBeFalse();
+    Event::assertNotDispatched(ContactDisclosed::class);
+})->with(['gone numbers remembered' => [60], 'gone numbers not remembered' => [0]]);
+
+it('files nothing from the card of a duplicate legacy answers again while it is withdrawn, and gives no contact for it', function (): void {
+    config(['legacy.cache.not_found' => 0]);
+    onLegacyContact();
+    $withdrawn = true;
+    LegacyListingsHttp::answer(function (Request $request) use (&$withdrawn): ?PromiseInterface {
+        return $withdrawn && LegacyListingsHttp::path($request) === '/api/listings/100016' ? Factory::response(['detail' => 'Not found.'], 404) : null;
+    });
+
+    $this->getJson('/api/v1/listings/100016')->assertNotFound();
+    $withdrawn = false;
+    $this->getJson('/api/v1/listings/100016')->assertOk()->assertJsonPath('data.number', 100001);
+
+    expect(Cache::has('legacy:v1:listings:contact:100016'))->toBeFalse()
+        ->and(Cache::has('legacy:v1:listings:contact:100001'))->toBeFalse();
+    contactOf(100016)->assertNotFound()->assertJsonPath('code', 'contact_unavailable');
+});
+
 it('discloses a listing legacy answers again once its withdrawal has passed', function (): void {
     config(['legacy.cache.not_found' => 0]);
     onLegacyContact();
