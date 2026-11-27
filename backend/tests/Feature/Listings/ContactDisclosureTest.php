@@ -12,6 +12,7 @@ use App\Services\Listings\ContactDisclosure;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -169,6 +170,25 @@ it('never writes a grant for a user without one: the warning and the event still
         ->and($lines[0]['context'])->toBe(['user_id' => $user->id, 'asked' => 6, 'stored' => false]);
     Event::assertDispatchedTimes(ContactQuotaExceeded::class, 1);
     Event::assertDispatched(ContactQuotaExceeded::class, fn (ContactQuotaExceeded $event): bool => $event->userId === $user->id && $event->asked === 6);
+});
+
+it('still warns and dispatches when the flag cannot be written, reporting the failure', function (): void {
+    Event::fake([ContactQuotaExceeded::class]);
+    $user = User::factory()->create();
+    AccessGrant::query()->create(['user_id' => $user->id, 'state' => AccessGrantState::Admitted, 'admitted_via' => AdmittedVia::Invite]);
+    DB::connection()->beforeExecuting(function (string $query): void {
+        if (preg_match('/^update\s+"access_grants"/i', $query) === 1) {
+            throw new RuntimeException('The database refused the write.');
+        }
+    });
+
+    $lines = quotaLogLines(fn () => askFor($user, 1, 2, 3, 4, 5, 6));
+    $warnings = array_values(array_filter($lines, fn (array $line): bool => $line['level'] === 'warning'));
+
+    expect($warnings)->toHaveCount(1)
+        ->and($warnings[0]['context'])->toBe(['user_id' => $user->id, 'asked' => 6, 'stored' => false])
+        ->and(array_column($lines, 'level'))->toContain('error');
+    Event::assertDispatchedTimes(ContactQuotaExceeded::class, 1);
 });
 
 it('never lets a flagged user in where he was not let in before', function (string $mode, array $owners, AccessState $before, AccessState $after): void {

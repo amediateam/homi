@@ -162,7 +162,7 @@ it('answers 503 translation_unavailable when legacy cannot translate, caches not
     'legacy\'s daily limit' => [fn (): PromiseInterface => Factory::response(['detail' => 'too many today'], 429)],
 ]);
 
-it('leaves the shared breaker closed and the feed answering after six translation timeouts in 30 s', function (Closure $answer): void {
+it('leaves the shared breaker closed and the feed answering after six translation failures in 30 s', function (Closure $answer): void {
     onLegacyTranslation(fn (Request $request): ?PromiseInterface => str_ends_with(LegacyListingsHttp::path($request), '/translate') ? $answer($request) : null);
     Feature::globally()->activate('source.listings.feed', ['everyone' => 'legacy']);
 
@@ -178,6 +178,8 @@ it('leaves the shared breaker closed and the feed answering after six translatio
 })->with([
     'timeouts' => [fn (Request $request): PromiseInterface => (Http::failedConnection())($request)],
     'server errors' => [fn (): PromiseInterface => Factory::response(['detail' => 'x'], 502)],
+    'a slow-down with Retry-After' => [fn (): PromiseInterface => Factory::response(['detail' => 'slow down'], 429, ['Retry-After' => '120'])],
+    'a refused key' => [fn (): PromiseInterface => Factory::response(['detail' => 'forbidden'], 403)],
 ]);
 
 it('neither counts nor resets the failures of the breaker with a translation', function (): void {
@@ -191,7 +193,8 @@ it('neither counts nor resets the failures of the breaker with a translation', f
 
 it('is refused by an open breaker without a request', function (): void {
     onLegacyTranslation();
-    Cache::put('legacy:breaker:open_until', now()->getTimestamp() + 30, 86_430);
+    // As Redis gives it back: a numeric string.
+    Cache::put('legacy:breaker:open_until', (string) (now()->getTimestamp() + 30), 86_430);
 
     translationOf(100001, 'uz')->assertStatus(503)->assertJsonPath('code', 'translation_unavailable');
 
