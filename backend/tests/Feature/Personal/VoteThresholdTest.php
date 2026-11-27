@@ -600,6 +600,30 @@ it('audits a direct Pennant change of a detector as unknown, with a warning that
         ->and(app(VoteDetectors::class)->rentedOn())->toBeFalse();
 });
 
+it('audits a direct change of a detector as the boolean Pennant resolves, so a purge after it keeps that state (review C, N3)', function (mixed $value, bool $on): void {
+    switchDetector('realtor', ! $on);
+
+    Feature::globally()->activate(VoteDetectors::REALTOR, $value);
+    Feature::flushCache();
+
+    expect(app(VoteDetectors::class)->realtorOn())->toBe($on)
+        ->and(detectorAudit())->toBe([
+            [VoteDetectors::REALTOR, 'test', true, ! $on],
+            [VoteDetectors::REALTOR, SourceFlagChange::UNKNOWN_ACTOR, null, $on],
+        ]);
+
+    $this->artisan('pennant:purge', ['features' => [VoteDetectors::REALTOR]])->assertSuccessful();
+    Feature::flushCache();
+
+    expect(app(VoteDetectors::class)->realtorOn())->toBe($on)
+        ->and(array_column(detectorAudit(), 3))->toBe([! $on, $on, null]);
+})->with([
+    'null, on for Pennant' => [null, true],
+    'zero, on for Pennant' => [0, true],
+    'a string, on for Pennant' => ['off', true],
+    'false' => [false, false],
+]);
+
 it('reads the audit for a detector\'s default once, on the first feed request while no value is stored, and never again', function (): void {
     Sanctum::actingAs(User::factory()->create(), ['app:read', 'app:write']);
     $statements = new ArrayObject;

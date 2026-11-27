@@ -20,8 +20,11 @@ use Laravel\Pennant\GlobalScope;
  * of a configured source feature that did not come through `sources:set` or `sources:reset`, or of a vote detector
  * that did not come through `votes:detector` — a direct `Feature::…->activate()`, `pennant:purge` — is recorded with
  * actor `unknown` and `old_rule` null, because Pennant's events do not carry the previous value; a purge or a forget
- * records `new_rule` null. A detector's change also logs a `warning` that names the feature only. A value stored for a
- * single scope other than the global one is not recorded: no driver reads it.
+ * records `new_rule` null. A source rule is recorded as stored; a detector's update as the boolean Pennant resolves
+ * the stored value to (`value !== false`: a `null`, `0` or a string is on), so the row `VoteDetectors::defaultValue()`
+ * reads after a purge says what the detector was, and a null `new_rule` only ever means a purge or a forget. A
+ * detector's change also logs a `warning` that names the feature only. A value stored for a single scope other than
+ * the global one is not recorded: no driver reads it.
  */
 final class RecordSourceFlagChange
 {
@@ -36,12 +39,12 @@ final class RecordSourceFlagChange
     {
         $detectors = array_values(VoteDetectors::FEATURES);
 
-        [$features, $value] = match (true) {
-            $event instanceof FeatureUpdated => [$event->scope instanceof GlobalScope ? [$event->feature] : [], $event->value],
-            $event instanceof FeatureUpdatedForAllScopes => [[$event->feature], $event->value],
-            $event instanceof FeatureDeleted => [$event->scope instanceof GlobalScope ? [$event->feature] : [], null],
-            $event instanceof FeaturesPurged => [$event->features, null],
-            $event instanceof AllFeaturesPurged => [[...$this->config->features(), ...$detectors], null],
+        [$features, $value, $updated] = match (true) {
+            $event instanceof FeatureUpdated => [$event->scope instanceof GlobalScope ? [$event->feature] : [], $event->value, true],
+            $event instanceof FeatureUpdatedForAllScopes => [[$event->feature], $event->value, true],
+            $event instanceof FeatureDeleted => [$event->scope instanceof GlobalScope ? [$event->feature] : [], null, false],
+            $event instanceof FeaturesPurged => [$event->features, null, false],
+            $event instanceof AllFeaturesPurged => [[...$this->config->features(), ...$detectors], null, false],
         };
 
         if (! $this->store->isWriting()) {
@@ -52,7 +55,7 @@ final class RecordSourceFlagChange
 
         if (! $this->detectors->isWriting()) {
             foreach (array_intersect($features, $detectors) as $feature) {
-                $this->record($feature, $value, 'Recorded from Pennant '.class_basename($event).', outside votes:detector.');
+                $this->record($feature, $updated ? $value !== false : null, 'Recorded from Pennant '.class_basename($event).', outside votes:detector.');
                 Log::warning('Vote detector changed outside votes:detector.', ['feature' => $feature]);
             }
         }
