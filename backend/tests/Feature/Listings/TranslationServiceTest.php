@@ -43,7 +43,7 @@ it('refuses ru before it reads the cache, counts or asks a source', function ():
 it('answers the stub\'s translation masked, cached under the stub driver for every user', function (): void {
     expect(translateFor($this->user, 100001, 'uz'))->toBe('Metro yaqinida yorugʻ kvartira. Qoʻngʻiroq qiling: +998 ** *** ** 67')
         ->and(Cache::get('stub:translation:100001:uz'))->toBe(['text' => 'Metro yaqinida yorugʻ kvartira. Qoʻngʻiroq qiling: +998 ** *** ** 67', 'locale' => 'uz'])
-        ->and(TranslationService::key(SourceDriver::Legacy, 100001, 'uz'))->toBe('legacy:translation:100001:uz');
+        ->and(TranslationService::key(SourceDriver::Legacy, 100001, 'uz'))->toBe('legacy:translation:100001:uz:header:Accept-Language');
 
     // Another user is served from the same entry, and uses none of his limit.
     $other = User::factory()->telegram()->create();
@@ -118,8 +118,10 @@ it('refuses the miss over rate_limits.translation.per_hour with Retry-After and 
             ->and($refused->getStatusCode())->toBe(429);
     }
 
-    expect(translateFor($this->user, 100012, 'uz'))->toBeString()
-        ->and(RateLimiter::attempts(TranslationService::limiterKey($this->user)))->toBe(2);
+    // A refused miss is counted too (counted first, compared afterwards); a hit is not.
+    expect(RateLimiter::attempts(TranslationService::limiterKey($this->user)))->toBe(3)
+        ->and(translateFor($this->user, 100012, 'uz'))->toBeString()
+        ->and(RateLimiter::attempts(TranslationService::limiterKey($this->user)))->toBe(3);
 });
 
 it('answers a stub scenario on the stub driver every time, past the cache, and caches nothing for it', function (): void {
@@ -141,5 +143,5 @@ it('keeps the cache of the legacy driver whatever scenario a request names', fun
     translateFor($this->user, 100001, 'uz', 'translation_unavailable');
 
     expect(LegacyListingsHttp::sent('/api/listings/100001/translate'))->toHaveCount(1)
-        ->and(Cache::has('legacy:translation:100001:uz'))->toBeTrue();
+        ->and(Cache::has('legacy:translation:100001:uz:header:Accept-Language'))->toBeTrue();
 });

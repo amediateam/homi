@@ -7,6 +7,7 @@ use App\Exceptions\Listings\TranslationNotNeeded;
 use App\Models\User;
 use App\Services\Access\RateLimits;
 use App\Services\Sources\Data\ListingTranslation;
+use App\Services\Sources\Legacy\LegacyListingSource;
 use App\Services\Sources\SourceContext;
 use App\Services\Sources\SourceManager;
 use Illuminate\Contracts\Cache\Repository;
@@ -20,11 +21,13 @@ use InvalidArgumentException;
  * /listings/{number}/translation`, on every driver of `source.listings.translation` (the stub included). In this order:
  *
  * 1. the locale `ru` is `422 translation_not_needed`: the originals are Russian and the client never asks;
- * 2. the cache `<driver>:translation:<number>:<locale>` (`legacy:translation:…` on the legacy driver) for
- *    `legacy.cache.translation` s (86 400; 0 disables it): a hit is free;
+ * 2. the cache `<driver>:translation:<number>:<locale>` — on the legacy driver
+ *    `legacy:translation:<number>:<locale>:<via>[:<name>]`, the language selector legacy is asked with
+ *    (`LegacyListingSource::translationSelector()`) — for `legacy.cache.translation` s (86 400; 0 disables it): a hit
+ *    is free;
  * 3. a miss first passes the per-user limit `v1-translation` (`rate_limits.translation.per_hour`, 30 an hour; counted
- *    here, before the source is asked, so a failed miss counts too and hits never do): over it `429 rate_limited` with
- *    `Retry-After` and no `reason`;
+ *    here, first and then compared, before the source is asked, so a failed or refused miss counts too and hits never
+ *    do): over it `429 rate_limited` with `Retry-After` and no `reason`;
  * 4. the source's translation (`ListingSource::translation()`): `404 not_found` for an unknown listing or one without
  *    an original text, `503 translation_unavailable` when it cannot translate; legacy's pause stays `403 paused`;
  * 5. the answer is cached as the masked text (`ListingTranslation::fromArray()` masks it, DEC-52).
@@ -76,10 +79,22 @@ final readonly class TranslationService
         return $translation;
     }
 
-    /** The cache key of a listing's translation into a locale on a driver. */
+    /**
+     * The cache key of a listing's translation into a locale on a driver; on the legacy driver it also names how
+     * legacy is told the language (`LegacyListingSource::translationSelector()`, read now), so an entry cached under
+     * one setting is never served under another.
+     */
     public static function key(SourceDriver $driver, int $number, string $locale): string
     {
-        return "{$driver->value}:translation:{$number}:{$locale}";
+        $key = "{$driver->value}:translation:{$number}:{$locale}";
+
+        if ($driver !== SourceDriver::Legacy) {
+            return $key;
+        }
+
+        $selector = LegacyListingSource::translationSelector();
+
+        return $key.":{$selector['via']}".($selector['name'] === '' ? '' : ':'.rawurlencode($selector['name']));
     }
 
     /** The limiter key of the user's misses. */
@@ -107,8 +122,9 @@ final readonly class TranslationService
     }
 
     /**
-     * Counts one miss of the user, or refuses with `429 rate_limited` and `Retry-After` once the window holds the
-     * limit.
+     * Counts one miss of the user first, then refuses it with `429 rate_limited` and `Retry-After` when the count is
+     * over the limit: one increment (atomic on Redis) decides, so two concurrent misses can never both take the last
+     * place, and a refused miss counts too.
      *
      * @throws ThrottleRequestsException
      */
@@ -116,10 +132,8 @@ final readonly class TranslationService
     {
         $key = self::limiterKey($user);
 
-        if (RateLimiter::tooManyAttempts($key, RateLimits::value('translation.per_hour'))) {
+        if (RateLimiter::hit($key, self::WINDOW_SECONDS) > RateLimits::value('translation.per_hour')) {
             throw new ThrottleRequestsException('Too Many Attempts.', headers: ['Retry-After' => (string) max(1, RateLimiter::availableIn($key))]);
         }
-
-        RateLimiter::hit($key, self::WINDOW_SECONDS);
     }
 }

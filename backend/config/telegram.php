@@ -48,6 +48,8 @@ return [
     ],
 
     'http' => [
+        // A bare origin (WP-43, `TelegramClient`): `https` (plain `http` only in local and testing), a host and an
+        // optional port, no user, path, query or fragment; anything else fails closed before the token is sent.
         'base_url' => env('TELEGRAM_API_BASE_URL', 'https://api.telegram.org'),
         'timeout' => (int) env('TELEGRAM_HTTP_TIMEOUT', 15),
         'connect_timeout' => (int) env('TELEGRAM_HTTP_CONNECT_TIMEOUT', 5),

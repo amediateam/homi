@@ -34,14 +34,15 @@
 |   number is variant A, else a call link variant B, else no contact; any other value is `auto`. `link_ttl`: seconds
 |   a legacy call link is answered as valid (`expires_at` of variant B). `link_hosts` (`LEGACY_CONTACT_LINK_HOSTS`,
 |   comma-separated, lower-cased): the hosts besides that of `base_url` an absolute call link of variant B may point
-|   to, compared exactly; blank means only the host of `base_url`. A relative link is joined to the origin of
-|   `base_url`.
+|   to, compared exactly; blank means only the host of `base_url` (a link to another host is refused with a warning
+|   naming that host, at most once a minute per host). A relative link is joined to the origin of `base_url`.
 | - `translation` (WP-43): how `POST /api/listings/{id}/translate` names the target language under the service key
 |   (WP-02 point 8, open): `via` (`LEGACY_TRANSLATION_VIA`) `locale` (default) — the language selector of every call
-|   (`locale` above), `query` or `body` — the legacy code (`uz_Latn`, `en`) under `name` (`LEGACY_TRANSLATION_NAME`,
-|   default `lang`) in the query string or the JSON body, `unsupported` — legacy is not asked and the method answers
-|   `503 translation_unavailable`; any other value is `locale`. `cache.translation`: seconds a translation is kept per
-|   listing and locale (`TranslationService`, 0 disables).
+|   (`locale` above; while that sends no language, `locale.via` neither `header` nor `query`, translation is
+|   `unsupported`, with a warning at most once a minute), `query` or `body` — the legacy code (`uz_Latn`, `en`) under
+|   `name` (`LEGACY_TRANSLATION_NAME`, default `lang`) in the query string or the JSON body, `unsupported` — legacy is
+|   not asked and the method answers `503 translation_unavailable`; any other value is `locale`. `cache.translation`:
+|   seconds a translation is kept per listing, locale and effective selector (`TranslationService`, 0 disables).
 | - `fields.author_key`: the name of the card field that carries a stable author key, once the operator offers one
 |   (WP-02 point 6); blank means none.
 | - `previews.concurrency`: card previews read in parallel; `previews.max_wait_ms` (`LEGACY_PREVIEWS_MAX_WAIT_MS`): the

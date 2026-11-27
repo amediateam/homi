@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\SourceDriver;
 use App\Exceptions\Listings\ShareFailed;
 use App\Exceptions\Sources\SourceNotFound;
 use App\Exceptions\Sources\SourceUnavailable;
@@ -76,9 +77,9 @@ function botRequests(): array
     return array_values(Http::recorded(fn (Request $request): bool => str_contains($request->url(), 'api.telegram.org'))->map(fn (array $pair): Request => $pair[0])->all());
 }
 
-function shareFor(User $user, int $number, string $locale = 'ru'): string
+function shareFor(User $user, int $number, string $locale = 'ru', string $currency = 'USD'): string
 {
-    return app(ShareService::class)->prepare($user, $number, new SourceContext($locale, 'USD', $user))->id;
+    return app(ShareService::class)->prepare($user, $number, new SourceContext($locale, $currency, $user))->id;
 }
 
 it('prepares the message once: the caller\'s Telegram id, the article with the escaped text and the startapp button', function (): void {
@@ -130,7 +131,7 @@ it('reuses the prepared id within its lifetime without a second request, and pre
     fakeBotApi();
 
     expect(shareFor($this->user, 100012))->toBe('prepared-1')
-        ->and(Cache::get(ShareService::key($this->user, 100012, 'ru')))->toBe(['id' => 'prepared-1', 'expires' => now()->addHour()->getTimestamp()]);
+        ->and(Cache::get(ShareService::key($this->user, 100012, 'ru', 'USD', SourceDriver::Stub)))->toBe(['id' => 'prepared-1', 'expires' => now()->addHour()->getTimestamp()]);
 
     $this->travel(58)->minutes();
     expect(shareFor($this->user, 100012))->toBe('prepared-1')
@@ -146,6 +147,23 @@ it('prepares a new message for another locale and another listing', function ():
 
     expect([shareFor($this->user, 100012, 'ru'), shareFor($this->user, 100012, 'uz'), shareFor($this->user, 100001, 'ru'), shareFor($this->user, 100012, 'uz')])
         ->toBe(['prepared-1', 'prepared-2', 'prepared-3', 'prepared-2'])
+        ->and(botRequests())->toHaveCount(3);
+});
+
+it('prepares a new message for another currency and another card driver, whose text may differ', function (): void {
+    LegacyListingsHttp::fake();
+    config(['legacy.media.public_url' => LegacyFixtures::MEDIA, 'legacy.rate.per_second' => 1000]);
+    fakeBotApi();
+
+    expect([shareFor($this->user, 100001, 'ru', 'USD'), shareFor($this->user, 100001, 'ru', 'UZS'), shareFor($this->user, 100001, 'ru', 'USD')])
+        ->toBe(['prepared-1', 'prepared-2', 'prepared-1'])
+        ->and(Cache::has(ShareService::key($this->user, 100001, 'ru', 'UZS', SourceDriver::Stub)))->toBeTrue()
+        ->and(ShareService::key($this->user, 100001, 'ru', 'UZS', SourceDriver::Stub))->toBe("share:{$this->user->id}:100001:ru:UZS:stub");
+
+    Feature::globally()->activate('source.listings.card', ['everyone' => 'legacy']);
+
+    expect(shareFor($this->user, 100001, 'ru', 'USD'))->toBe('prepared-3')
+        ->and(shareFor($this->user, 100001, 'ru', 'USD'))->toBe('prepared-3')
         ->and(botRequests())->toHaveCount(3);
 });
 
@@ -165,7 +183,7 @@ it('does not cache an id that expires within a minute', function (): void {
     fakeBotApi();
 
     expect(shareFor($this->user, 100012))->toBe('short-lived')
-        ->and(Cache::has(ShareService::key($this->user, 100012, 'ru')))->toBeFalse()
+        ->and(Cache::has(ShareService::key($this->user, 100012, 'ru', 'USD', SourceDriver::Stub)))->toBeFalse()
         ->and(shareFor($this->user, 100012))->toBe('prepared-2');
 });
 
@@ -215,7 +233,7 @@ it('fails with share_failed, once and without a retry, for every Bot API error a
 
     expect(fn () => shareFor($this->user, 100012))->toThrow(ShareFailed::class)
         ->and(botRequests())->toHaveCount(1)
-        ->and(Cache::has(ShareService::key($this->user, 100012, 'ru')))->toBeFalse();
+        ->and(Cache::has(ShareService::key($this->user, 100012, 'ru', 'USD', SourceDriver::Stub)))->toBeFalse();
 })->with([
     '400' => [fn (): PromiseInterface => Factory::response(['ok' => false, 'error_code' => 400, 'description' => 'Bad Request: can\'t parse entities'], 400)],
     '403, the user blocked the bot' => [fn (): PromiseInterface => Factory::response(['ok' => false, 'error_code' => 403, 'description' => 'Forbidden: bot was blocked by the user'], 403)],
@@ -262,6 +280,34 @@ it('fails closed without a request: no usable token, no bot username, a caller w
     'a caller without a Telegram id' => [fn (): User => User::factory()->create()],
 ]);
 
+it('checks the bot settings and the caller before it reads the preview, so a share that cannot be sent costs no legacy read', function (Closure $arrange): void {
+    LegacyListingsHttp::fake();
+    config(['legacy.media.public_url' => LegacyFixtures::MEDIA, 'legacy.rate.per_second' => 1000]);
+    Feature::globally()->activate('source.listings.card', ['everyone' => 'legacy']);
+    fakeBotApi();
+    $user = $arrange($this->user);
+
+    expect(fn () => shareFor($user, 100001))->toThrow(ShareFailed::class)
+        ->and(Http::recorded())->toHaveCount(0);
+})->with([
+    'a blank token' => [function (User $user): User {
+        config(['telegram.bot.token' => '']);
+
+        return $user;
+    }],
+    'a malformed Bot API address' => [function (User $user): User {
+        config(['telegram.http.base_url' => 'https://api.telegram.org/x']);
+
+        return $user;
+    }],
+    'no bot username' => [function (User $user): User {
+        config(['telegram.bot.username' => '']);
+
+        return $user;
+    }],
+    'a caller without a Telegram id' => [fn (): User => User::factory()->create()],
+]);
+
 it('sends the token only to an https Bot API address outside local and testing', function (): void {
     fakeBotApi();
     config(['telegram.http.base_url' => 'http://api.telegram.org']);
@@ -274,6 +320,47 @@ it('sends the token only to an https Bot API address outside local and testing',
         app()['env'] = 'testing';
     }
 });
+
+it('fails closed without a request for a Bot API address that is not a bare origin', function (string $base): void {
+    fakeBotApi();
+    config(['telegram.http.base_url' => $base]);
+
+    expect(TelegramClient::problem())->toBe('TELEGRAM_API_BASE_URL is not a Bot API address')
+        ->and(fn () => app(TelegramClient::class)->call('getMe', []))->toThrow(TelegramException::class, 'not sent: TELEGRAM_API_BASE_URL is not a Bot API address')
+        ->and(fn () => shareFor($this->user, 100012))->toThrow(ShareFailed::class)
+        ->and(botRequests())->toBe([]);
+})->with([
+    'a host after a third slash' => ['https:///api.telegram.org'],
+    'a port out of range' => ['https://api.telegram.org:99999'],
+    'port 0' => ['https://api.telegram.org:0'],
+    'a user' => ['https://u@api.telegram.org'],
+    'a user and a password' => ['https://u:p@api.telegram.org'],
+    'a query' => ['https://api.telegram.org?x=1'],
+    'a fragment' => ['https://api.telegram.org#x'],
+    'a path' => ['https://api.telegram.org/tg'],
+    'a backslash' => ['https://api.telegram.org\\@evil.example'],
+    'a space' => ['https://api.telegram.org /x'],
+    'another scheme' => ['ftp://api.telegram.org'],
+    'no scheme' => ['api.telegram.org'],
+]);
+
+it('sends to a bare origin, with a port or a trailing slash, and to plain http in testing', function (string $base, string $url): void {
+    $seen = new ArrayObject;
+    config(['telegram.http.base_url' => $base]);
+    Http::fake(['*' => function (Request $request) use ($seen): PromiseInterface {
+        $seen[] = $request->url();
+
+        return Factory::response(['ok' => true, 'result' => ['id' => 'x']]);
+    }]);
+
+    expect(TelegramClient::problem())->toBeNull()
+        ->and(app(TelegramClient::class)->call('getMe', []))->toBe(['id' => 'x'])
+        ->and($seen->getArrayCopy())->toBe([$url]);
+})->with([
+    'a trailing slash' => ['https://api.telegram.org/', 'https://api.telegram.org/bot'.SHARE_TOKEN.'/getMe'],
+    'a port' => ['https://bot-api.internal.example:8443', 'https://bot-api.internal.example:8443/bot'.SHARE_TOKEN.'/getMe'],
+    'plain http in testing' => ['http://127.0.0.1:8081', 'http://127.0.0.1:8081/bot'.SHARE_TOKEN.'/getMe'],
+]);
 
 it('takes the timeouts of telegram.http, and their defaults when they are blank', function (mixed $timeout, int $expected): void {
     $seen = new ArrayObject;
@@ -306,8 +393,7 @@ it('never puts the bot token into an exception, its description or a log line', 
     } catch (TelegramException $failure) {
         expect($failure->getMessage())->not->toContain(SHARE_TOKEN)->not->toContain('TEST-homi-synthetic-token')
             ->and($failure->description)->not->toContain('TEST-homi-synthetic-token')
-            ->and($failure->getPrevious())->toBeNull()
-            ->and($failure->getTraceAsString())->not->toContain('TEST-homi-synthetic-token');
+            ->and($failure->getPrevious())->toBeNull();
     }
 
     $this->botAnswers[] = $answer;
@@ -323,6 +409,42 @@ it('never puts the bot token into an exception, its description or a log line', 
     'a connection error that quotes the address' => [fn (): never => throw new ConnectionException('cURL error 7: failed to connect to https://api.telegram.org/bot'.SHARE_TOKEN.'/savePreparedInlineMessage')],
 ]);
 
+it('keeps the bot token out of the arguments of every frame of every TelegramException', function (Closure $arrange): void {
+    $ignored = ini_get('zend.exception_ignore_args');
+    ini_set('zend.exception_ignore_args', '0');
+    $arrange();
+    fakeBotApi();
+
+    try {
+        app(TelegramClient::class)->call(ShareService::METHOD, ['user_id' => 1]);
+        $this->fail('The call did not fail.');
+    } catch (TelegramException $failure) {
+        $frames = $failure->getTrace();
+        $encoded = array_map(fn (array $frame): string => (string) json_encode($frame['args'] ?? [], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR), $frames);
+        $called = array_values(array_filter($frames, fn (array $frame): bool => ($frame['class'] ?? null) === TelegramClient::class && $frame['function'] === 'call'));
+
+        expect($called)->toHaveCount(1)
+            ->and($called[0]['args'] ?? [])->toBe([ShareService::METHOD, ['user_id' => 1]])
+            ->and($failure->getMessage())->not->toContain('TEST-homi-synthetic-token')
+            ->and($failure->getPrevious())->toBeNull();
+
+        foreach ($encoded as $index => $args) {
+            expect($args)->not->toContain('TEST-homi-synthetic-token', "Frame {$index} quotes the token.");
+        }
+    } finally {
+        ini_set('zend.exception_ignore_args', (string) $ignored);
+    }
+})->with([
+    'a description that quotes the token' => [fn () => test()->botAnswers[] = fn (): PromiseInterface => Factory::response(['ok' => false, 'error_code' => 401, 'description' => 'Unauthorized: bot'.SHARE_TOKEN], 401)],
+    'an answer that is no Bot API object' => [fn () => test()->botAnswers[] = fn (): PromiseInterface => Factory::response('<html>'.SHARE_TOKEN.'</html>', 502)],
+    'a result that is no object' => [fn () => test()->botAnswers[] = fn (): PromiseInterface => Factory::response(['ok' => true, 'result' => SHARE_TOKEN])],
+    'a connection error that quotes the address' => [fn () => test()->botAnswers[] = fn (): never => throw new ConnectionException('cURL error 7: https://api.telegram.org/bot'.SHARE_TOKEN.'/getMe')],
+    'another exception that quotes the address' => [fn () => test()->botAnswers[] = fn (): never => throw new InvalidArgumentException('Unable to parse URI: https://api.telegram.org/bot'.SHARE_TOKEN.'/getMe')],
+    'a malformed token' => [fn () => config(['telegram.bot.token' => SHARE_TOKEN.'/../getMe'])],
+    'a malformed Bot API address' => [fn () => config(['telegram.http.base_url' => 'https:///api.telegram.org'])],
+    'a port out of range' => [fn () => config(['telegram.http.base_url' => 'https://api.telegram.org:99999'])],
+]);
+
 it('scrubs any token form to bot***', function (): void {
     expect(TelegramException::scrub('see bot'.SHARE_TOKEN.'/getMe and '.SHARE_TOKEN))->toBe('see bot***/getMe and bot***')
         ->and((new TelegramException('getMe', 'echo '.SHARE_TOKEN, 400))->getMessage())->toBe('The Bot API method getMe failed (400): echo bot***');
@@ -331,21 +453,30 @@ it('scrubs any token form to bot***', function (): void {
 it('keeps no Bot API request in Telescope and groups its address in Pulse without the token', function (): void {
     config(['telescope.record_all' => true]);
     $keeps = fn (IncomingEntry $entry): bool => collect(Telescope::$filterUsing)->every(fn (callable $filter): bool => $filter($entry));
-    $groups = config('pulse.recorders.'.SlowOutgoingRequests::class.'.groups');
-    $grouped = null;
+    $grouped = function (string $uri): string {
+        foreach (config('pulse.recorders.'.SlowOutgoingRequests::class.'.groups') as $pattern => $replacement) {
+            $group = preg_replace($pattern, $replacement, $uri, count: $count);
 
-    foreach ($groups as $pattern => $replacement) {
-        $grouped = preg_replace($pattern, $replacement, 'https://api.telegram.org/bot'.SHARE_TOKEN.'/savePreparedInlineMessage', count: $count);
-
-        if ($count > 0) {
-            break;
+            if ($count > 0 && $group !== null) {
+                return $group;
+            }
         }
-    }
+
+        return $uri;
+    };
 
     expect($keeps(IncomingEntry::make(['uri' => 'https://api.telegram.org/bot'.SHARE_TOKEN.'/savePreparedInlineMessage', 'response_status' => 200])->type(EntryType::CLIENT_REQUEST)))->toBeFalse()
         ->and($keeps(IncomingEntry::make(['uri' => 'https://other.example/x', 'response_status' => 200])->type(EntryType::CLIENT_REQUEST)))->toBeTrue()
-        ->and($grouped)->toBe('https://api.telegram.org/bot***/savePreparedInlineMessage');
+        ->and($grouped('https://api.telegram.org/bot'.SHARE_TOKEN.'/savePreparedInlineMessage'))->toBe('https://api.telegram.org/bot***/savePreparedInlineMessage')
+        ->and($grouped('https://bot-api.internal.example:8443/tg/v1/bot'.SHARE_TOKEN.'/getMe'))->toBe('https://bot-api.internal.example:8443/tg/v1/bot***/getMe')
+        ->and($grouped('http://127.0.0.1:8081/bot'.SHARE_TOKEN.'/getMe'))->toBe('http://127.0.0.1:8081/bot***/getMe')
+        ->and($grouped('https://other.example/bots/list'))->toBe('https://other.example/bots/list');
 
-    config(['telegram.http.base_url' => 'https://bot-api.internal.example']);
-    expect($keeps(IncomingEntry::make(['uri' => 'https://bot-api.internal.example/bot'.SHARE_TOKEN.'/getMe', 'response_status' => 200])->type(EntryType::CLIENT_REQUEST)))->toBeFalse();
+    config(['telegram.http.base_url' => '  HTTPS://Bot-API.Internal.Example  ']);
+    expect(TelegramClient::host())->toBe('bot-api.internal.example')
+        ->and($keeps(IncomingEntry::make(['uri' => 'https://bot-api.internal.example/bot'.SHARE_TOKEN.'/getMe', 'response_status' => 200])->type(EntryType::CLIENT_REQUEST)))->toBeFalse()
+        ->and($keeps(IncomingEntry::make(['uri' => 'https://api.telegram.org/x', 'response_status' => 200])->type(EntryType::CLIENT_REQUEST)))->toBeTrue();
+
+    config(['telegram.http.base_url' => '']);
+    expect(TelegramClient::host())->toBe('api.telegram.org');
 });

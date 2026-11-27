@@ -3,9 +3,7 @@
 namespace App\Services\Telegram;
 
 use App\Exceptions\TelegramException;
-use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Http\Client\Factory;
-use Illuminate\Http\Client\HttpClientException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Config;
 use LogicException;
@@ -17,11 +15,13 @@ use Throwable;
  * `telegram.http`, no redirect and one attempt — the retries of `telegram.http` are WP-50's, for its own sends; a
  * caller that must not retry (the share of WP-43) never does.
  *
- * The token is a secret in the request path (SEC-REQ-013): a blank or malformed `telegram.bot.token` fails closed
- * before anything is sent, outside `local` and `testing` it goes only to an `https` address, and no text that leaves
- * this class quotes it — `TelegramException` replaces any token with `bot***`, and the HTTP client's exceptions, whose
- * messages quote the address, are never chained or logged. Telescope keeps no entry of a Bot API request and Pulse
- * groups its address without the token (`TelescopeServiceProvider`, `config/pulse.php`).
+ * The token is a secret in the request path (SEC-REQ-013): a blank or malformed `telegram.bot.token`, and an address
+ * that is not a bare origin (`baseUrlProblem()`), fail closed before anything is sent; outside `local` and `testing`
+ * the token goes only to an `https` address, and no text that leaves this class quotes it — `TelegramException`
+ * replaces any token with `bot***`, and whatever the HTTP client throws while sending (its exceptions quote the
+ * address) is never chained or logged: it becomes `TelegramException::transport()`, named by its class. Telescope
+ * keeps no entry of a request to `host()` and Pulse groups its address without the token (`TelescopeServiceProvider`,
+ * `config/pulse.php`).
  */
 final readonly class TelegramClient
 {
@@ -48,12 +48,17 @@ final readonly class TelegramClient
             throw new LogicException('A Bot API method is a word.');
         }
 
-        $token = self::token($method);
-        $base = self::baseUrl($method);
+        $problem = self::problem();
+
+        if ($problem !== null) {
+            throw TelegramException::notConfigured($method, $problem);
+        }
+
+        $token = self::configuredToken();
 
         try {
             $response = $this->http->createPendingRequest()
-                ->baseUrl($base)
+                ->baseUrl(self::baseUrl())
                 ->timeout(self::seconds('telegram.http.timeout', 15))
                 ->connectTimeout(self::seconds('telegram.http.connect_timeout', 5))
                 ->withoutRedirecting()
@@ -61,7 +66,7 @@ final readonly class TelegramClient
                 ->asJson()
                 ->withUserAgent('homi-api')
                 ->post(self::path($token, $method), $params);
-        } catch (HttpClientException|GuzzleException $failure) {
+        } catch (Throwable $failure) {
             throw TelegramException::transport($method, $failure::class);
         }
 
@@ -102,36 +107,77 @@ final readonly class TelegramClient
     }
 
     /**
-     * The configured bot token, or `TelegramException` when it is blank or not of Telegram's form.
-     *
-     * @throws TelegramException
+     * Why no call can be sent, or `null` when the bot token and the Bot API address are usable: the names of the env
+     * values at fault, never a value. `ShareService` asks it before it reads anything for a share.
      */
-    private static function token(string $method): string
+    public static function problem(): ?string
     {
-        $token = Config::get('telegram.bot.token');
-
-        if (! is_string($token) || preg_match(self::TOKEN_FORMAT, trim($token)) !== 1) {
-            throw TelegramException::notConfigured($method, 'TELEGRAM_BOT_TOKEN is blank or malformed');
+        if (preg_match(self::TOKEN_FORMAT, self::configuredToken()) !== 1) {
+            return 'TELEGRAM_BOT_TOKEN is blank or malformed';
         }
 
-        return trim($token);
+        return self::baseUrlProblem();
     }
 
     /**
-     * The Bot API address; outside `local` and `testing` only an `https` one, since the token travels in the path.
-     *
-     * @throws TelegramException
+     * The host of the Bot API address, trimmed and lower-cased as the HTTP client writes it, or `null` when the
+     * address has none; `TelescopeServiceProvider` keeps no request to it.
      */
-    private static function baseUrl(string $method): string
+    public static function host(): ?string
+    {
+        $host = parse_url(self::configuredBaseUrl(), PHP_URL_HOST);
+
+        return is_string($host) && trim($host) !== '' ? strtolower(trim($host)) : null;
+    }
+
+    /** The configured bot token, trimmed (`problem()` checks its form). */
+    private static function configuredToken(): string
+    {
+        $token = Config::get('telegram.bot.token');
+
+        return is_string($token) ? trim($token) : '';
+    }
+
+    /** The configured Bot API address, trimmed, else Telegram's own. */
+    private static function configuredBaseUrl(): string
     {
         $configured = Config::get('telegram.http.base_url');
-        $base = rtrim(is_string($configured) && trim($configured) !== '' ? trim($configured) : self::DEFAULT_BASE_URL, '/');
 
-        if (! str_starts_with($base, 'https://') && ! app()->environment(['local', 'testing'])) {
-            throw TelegramException::notConfigured($method, 'TELEGRAM_API_BASE_URL is not https');
+        return is_string($configured) && trim($configured) !== '' ? trim($configured) : self::DEFAULT_BASE_URL;
+    }
+
+    /**
+     * Why the Bot API address is not usable, or `null`: it must be a bare origin — `https` (plain `http` only in
+     * `local` and `testing`), a host, no user or password, no query or fragment, a port 1…65535 when one is given, no
+     * path but `/`, and no space, control character or backslash — since the token travels in its path. A port over
+     * 65 535 is no address to `parse_url()` already.
+     */
+    private static function baseUrlProblem(): ?string
+    {
+        $base = self::configuredBaseUrl();
+        $parts = preg_match('/[\x00-\x20\x7f\\\\]/', $base) === 1 ? false : parse_url($base);
+        $scheme = is_array($parts) ? strtolower($parts['scheme'] ?? '') : '';
+
+        if (! is_array($parts)
+            || ! in_array($scheme, ['https', 'http'], true)
+            || ($parts['host'] ?? '') === ''
+            || isset($parts['user']) || isset($parts['pass']) || isset($parts['query']) || isset($parts['fragment'])
+            || (isset($parts['port']) && $parts['port'] < 1)
+            || ! in_array($parts['path'] ?? '', ['', '/'], true)) {
+            return 'TELEGRAM_API_BASE_URL is not a Bot API address';
         }
 
-        return $base;
+        if ($scheme !== 'https' && ! app()->environment(['local', 'testing'])) {
+            return 'TELEGRAM_API_BASE_URL is not https';
+        }
+
+        return null;
+    }
+
+    /** The Bot API address without its trailing `/`; `problem()` has checked it. */
+    private static function baseUrl(): string
+    {
+        return rtrim(self::configuredBaseUrl(), '/');
     }
 
     private static function path(#[\SensitiveParameter] string $token, string $method): string

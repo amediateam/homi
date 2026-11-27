@@ -203,8 +203,9 @@ return [
                 // '#^http://127\.0\.0\.1:13714#', // Inertia SSR...
             ],
             'groups' => [
-                // WP-43: a Bot API address holds the bot token in its path (`/bot<token>/<method>`): kept without it.
-                '#^(https?://[^/]+)/bot[^/]*/(.*)$#' => '\1/bot***/\2',
+                // WP-43: a Bot API address holds the bot token in its path (`…/bot<id>:<secret>/<method>`), behind any
+                // path prefix: grouped by the token's shape, kept without it.
+                '~^(https?://[^?#]*?)/bot\d+:[A-Za-z0-9_-]+/~' => '\1/bot***/',
                 // '#^https://api\.github\.com/repos/.*$#' => 'api.github.com/repos/*',
                 // '#^https?://([^/]*).*$#' => '\1',
                 // '#/\d+#' => '/*',

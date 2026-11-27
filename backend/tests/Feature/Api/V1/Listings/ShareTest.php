@@ -6,10 +6,17 @@ use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Request;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
+use Laravel\Telescope\Contracts\EntriesRepository;
+use Laravel\Telescope\Telescope;
+use Laravel\Telescope\Watchers\ClientRequestWatcher;
+use Laravel\Telescope\Watchers\ExceptionWatcher;
+use Laravel\Telescope\Watchers\LogWatcher;
+use Laravel\Telescope\Watchers\RequestWatcher;
 use Tests\Support\JsonShape;
 
 /*
@@ -70,6 +77,42 @@ it('answers 502 share_failed for every Bot API failure, and never quotes the tok
     '429' => [fn (): PromiseInterface => Factory::response(['ok' => false, 'error_code' => 429, 'description' => 'Too Many Requests: retry after 3', 'parameters' => ['retry_after' => 3]], 429)],
     '500' => [fn (): PromiseInterface => Factory::response(['ok' => false, 'error_code' => 500, 'description' => 'Internal Server Error'], 500)],
     'a timeout' => [fn (Request $request): PromiseInterface => (Http::failedConnection('cURL error 28 for https://api.telegram.org/bot123456789:TEST-homi-synthetic-token/savePreparedInlineMessage'))($request)],
+]);
+
+it('answers 502 share_failed for a malformed Bot API address, and no log line, Telescope entry or exception quotes the token', function (string $base): void {
+    config(['telegram.http.base_url' => $base, 'telescope.record_all' => true]);
+    fakeShareBotApi();
+    $lines = new ArrayObject;
+    Log::listen(function (MessageLogged $entry) use ($lines): void {
+        $failure = $entry->context['exception'] ?? null;
+        $lines[] = $entry->message.' '.json_encode($entry->context, JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR)
+            .($failure instanceof Throwable ? ' '.$failure::class.' '.$failure->getMessage().' '.$failure->getTraceAsString() : '');
+    });
+
+    foreach ([new ExceptionWatcher, new LogWatcher, new ClientRequestWatcher, new RequestWatcher(['size_limit' => 64])] as $watcher) {
+        $watcher->register(app());
+    }
+
+    Telescope::startRecording(loadMonitoredTags: false);
+
+    try {
+        $response = shareOf(100012)->assertStatus(502)->assertJsonPath('code', 'share_failed');
+        Telescope::store(app(EntriesRepository::class));
+    } finally {
+        Telescope::stopRecording();
+        Telescope::flushEntries();
+    }
+
+    $stored = DB::table('telescope_entries')->pluck('content')->implode("\n");
+    Http::assertNothingSent();
+    expect($lines->count())->toBeGreaterThan(0)
+        ->and(implode("\n", $lines->getArrayCopy()))->not->toContain('TEST-homi-synthetic-token')
+        ->and($stored)->toContain('share_failed')
+        ->and($stored)->not->toContain('TEST-homi-synthetic-token')
+        ->and((string) $response->getContent())->not->toContain('TEST-homi-synthetic-token');
+})->with([
+    'a host after a third slash' => ['https:///api.telegram.org'],
+    'a port out of range' => ['https://api.telegram.org:99999'],
 ]);
 
 it('answers 404 not_found for an unknown listing without a Bot API request', function (): void {

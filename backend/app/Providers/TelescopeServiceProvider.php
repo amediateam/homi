@@ -14,6 +14,13 @@ use Laravel\Telescope\TelescopeApplicationServiceProvider;
 class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
 {
     /**
+     * The cache keys whose Redis commands are never kept (WP-42, WP-43), behind any cache prefix: a translation
+     * (`<driver>:translation:…`), the encrypted contact entry and the cached card and preview of a legacy listing
+     * (`legacy:v1:listings:{contact,card,preview}:…`), and a user's day of disclosures (`contact:<user id>:<day>`).
+     */
+    private const string SENSITIVE_REDIS_KEYS = '/[a-z]:translation:|legacy:v1:listings:(?:contact|card|preview):|contact:\d+:\d{4}-\d{2}-\d{2}/';
+
+    /**
      * Register any application services.
      */
     public function register(): void
@@ -25,7 +32,7 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
         $isLocal = $this->app->environment('local');
 
         Telescope::filter(function (IncomingEntry $entry) use ($isLocal): bool {
-            if (self::isLegacyCall($entry) || self::isCallPage($entry) || self::isBotApiCall($entry) || self::isTranslationCache($entry)) {
+            if (self::isLegacyCall($entry) || self::isCallPage($entry) || self::isBotApiCall($entry) || self::isTranslationCache($entry) || self::isSensitiveRedisCommand($entry)) {
                 return false;
             }
 
@@ -61,7 +68,8 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
 
     /**
      * An outgoing request to the Telegram Bot API (WP-43, `TelegramClient`): never kept, in any environment. Its address
-     * holds the bot token (SEC-REQ-013), and its payload a Telegram user id and a listing's text.
+     * holds the bot token (SEC-REQ-013), and its payload a Telegram user id and a listing's text. The host is the
+     * client's own (`TelegramClient::host()`: trimmed and lower-cased), so both read the address one way.
      */
     private static function isBotApiCall(IncomingEntry $entry): bool
     {
@@ -70,11 +78,10 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
         }
 
         $uri = $entry->content['uri'] ?? null;
-        $configured = config('telegram.http.base_url');
-        $api = parse_url(is_string($configured) && trim($configured) !== '' ? $configured : TelegramClient::DEFAULT_BASE_URL, PHP_URL_HOST);
+        $api = TelegramClient::host();
         $host = is_string($uri) ? parse_url($uri, PHP_URL_HOST) : null;
 
-        return is_string($host) && is_string($api) && strtolower($host) === strtolower($api);
+        return is_string($host) && $api !== null && strtolower($host) === $api;
     }
 
     /**
@@ -87,6 +94,18 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
         $key = $entry->content['key'] ?? null;
 
         return $entry->type === EntryType::CACHE && is_string($key) && preg_match('/^[a-z]+:translation:/', $key) === 1;
+    }
+
+    /**
+     * A Redis command on a translation, contact or listing card key (`SENSITIVE_REDIS_KEYS`): never kept, in any
+     * environment, since the Redis watcher keeps the whole command, the value written included — a translated text,
+     * an encrypted number, a card or the listings a user asked a number for.
+     */
+    private static function isSensitiveRedisCommand(IncomingEntry $entry): bool
+    {
+        $command = $entry->content['command'] ?? null;
+
+        return $entry->type === EntryType::REDIS && is_string($command) && preg_match(self::SENSITIVE_REDIS_KEYS, $command) === 1;
     }
 
     /**

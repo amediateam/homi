@@ -67,7 +67,7 @@ use LogicException;
  * | `previews`   | `preview` reads, `legacy.previews.concurrency` at a time through `LegacyClient::pool()`, one limiter wait of `legacy.previews.max_wait_ms` (`background_wait_ms` in the background) and one deadline of `legacy.previews.deadline_ms` for the batch | per item |
  * | `hasContact` | the contact entry, else `GET /api/listings/{n}` again                                           | the contact entry per number, `legacy.cache.card` s |
  * | `contact`    | variant A: the contact entry, else `GET /api/listings/{n}` again; variant B: `GET /api/listings/{n}/call` | the contact entry per number, `legacy.cache.card` s |
- * | `translation`| `POST /api/listings/{n}/translate`, the language per `legacy.translation.via`, an optional call for the breaker (WP-43) | none here: `TranslationService` keeps it per number and locale |
+ * | `translation`| `POST /api/listings/{n}/translate`, the language per `translationSelector()`, an optional call for the breaker (WP-43) | none here: `TranslationService` keeps it per number, locale and selector |
  *
  * Every cache here is shared between users, so a cold key is filled once (single-flight, WP-42 review M2): the first
  * caller takes the lock `{key}:fill` (held at most as long as one read may take) and reads legacy; a caller that finds
@@ -144,6 +144,9 @@ final class LegacyListingSource implements ListingSource
 
     /** The longest call link taken from legacy. */
     private const int MAX_CALL_URL = 2048;
+
+    /** The longest host a warning names (a DNS name has at most 253 characters). */
+    private const int MAX_LOGGED_HOST = 253;
 
     public function __construct(
         private readonly LegacyClient $client,
@@ -372,13 +375,16 @@ final class LegacyListingSource implements ListingSource
 
     /**
      * The original text in the context's language, machine-translated by legacy (API-010): `POST
-     * /api/listings/{n}/translate` with the target language per `legacy.translation.via`, never retried, within the
+     * /api/listings/{n}/translate` with the target language per `translationSelector()`, never retried, within the
      * client's `legacy.timeout` (15 s), as an optional call (`LegacyCall::$optional`): an open breaker refuses it, and
-     * nothing it answers — a timeout, a `5xx` — counts for the breaker shared by every legacy call. Nothing is cached here: `TranslationService` keeps the answer per listing and
-     * locale. Legacy's `404` (an unknown listing, or one without an original text) is `404 not_found`, and the number
-     * is not marked gone, since its card may still answer; `unsupported`, an empty text, an answer that does not fit
-     * (logged as a contract error naming `text`) and every other failure, legacy's daily limit included, are `503
-     * translation_unavailable`; legacy's pause stays `403 paused`, as on every legacy method.
+     * nothing it answers — a timeout, a `5xx` — counts for the breaker shared by every legacy call. Nothing is cached
+     * here: `TranslationService` keeps the answer per listing, locale and selector. Legacy's `404` (an unknown listing,
+     * or one without an original text) is `404 not_found`, and the number is not marked gone, since its card may still
+     * answer; `unsupported`, an empty text, an answer that does not fit (logged as a contract error naming `text`) and
+     * every other failure, legacy's daily limit included, are `503 translation_unavailable`; legacy's pause stays `403
+     * paused`, as on every legacy method. `locale` while the
+     * selector of every call sends no language (`legacy.locale.via` neither `header` nor `query`) is `unsupported`
+     * too, with a warning at most once a minute: legacy would answer its default language for every locale.
      *
      * @throws SourceNotFound|TranslationUnavailable|AccessDenied
      */
@@ -392,11 +398,21 @@ final class LegacyListingSource implements ListingSource
             throw new TranslationUnavailable;
         }
 
+        $selector = self::translationSelector();
+
+        if ($selector['via'] === 'unsupported') {
+            if ($this->cache->add(self::PREFIX.'once:translation_unselected', 1, 60)) {
+                Log::warning('LEGACY_TRANSLATION_VIA is locale, but LEGACY_LOCALE_VIA sends no language: translations are unavailable.');
+            }
+
+            throw new TranslationUnavailable;
+        }
+
         if ($this->cache->has($this->goneKey($number))) {
             throw new SourceNotFound('Listing not found.');
         }
 
-        $language = [Config::string('legacy.translation.name') => LegacyLocale::toLegacy($context->locale)];
+        $language = [$selector['name'] => LegacyLocale::toLegacy($context->locale)];
 
         try {
             $answer = $this->client->post(self::cardPath($number).'/translate', $via === 'body' ? $language : [], $this->call($context, optional: true), $via === 'query' ? $language : []);
@@ -415,6 +431,29 @@ final class LegacyListingSource implements ListingSource
         }
 
         return ListingTranslation::fromArray(['text' => $text, 'locale' => $context->locale]);
+    }
+
+    /**
+     * How legacy's translation is told the target language (WP-02 point 8): `via` and the `name` it goes under —
+     * `header` or `query` under `legacy.locale.name` (the selector of every call) when `legacy.translation.via` is
+     * `locale` (any value but `query`, `body` and `unsupported`), `query` or `body` under `legacy.translation.name`
+     * when it says so — or `unsupported` without a name when legacy is not asked: `legacy.translation.via` is
+     * `unsupported`, or it is `locale` while `legacy.locale.via` sends no language. Read at call time;
+     * `TranslationService` keys its cache by it, so a changed setting never serves an entry cached under the old one.
+     *
+     * @return array{via: string, name: string}
+     */
+    public static function translationSelector(): array
+    {
+        $via = Config::string('legacy.translation.via');
+        $locale = Config::string('legacy.locale.via');
+
+        return match (true) {
+            $via === 'unsupported' => ['via' => 'unsupported', 'name' => ''],
+            $via === 'query', $via === 'body' => ['via' => $via, 'name' => Config::string('legacy.translation.name')],
+            $locale === 'header', $locale === 'query' => ['via' => $locale, 'name' => Config::string('legacy.locale.name')],
+            default => ['via' => 'unsupported', 'name' => ''],
+        };
     }
 
     /**
@@ -608,7 +647,7 @@ final class LegacyListingSource implements ListingSource
             throw new ContactUnavailable;
         }
 
-        $url = $this->checked(fn (): string => self::callUrl($answer));
+        $url = $this->checked(fn (): string => $this->callUrl($answer));
 
         return new ListingContact($url, now()->addSeconds(max(1, Config::integer('legacy.contact.link_ttl')))->toIso8601String(), null, $display);
     }
@@ -618,15 +657,16 @@ final class LegacyListingSource implements ListingSource
      * `legacy.base_url` (its scheme, host and port, never its path). An absolute link must be `https` without a user
      * or a password, on the host of `legacy.base_url` or one of `legacy.contact.link_hosts`, compared lower-cased and
      * exactly (no suffix match): a link to any other host leaves the listing without a usable link
-     * (`ContactUnavailable`), with a warning that names the path template and whether the link had a host, never the
-     * address. A backslash anywhere, a control character or a space, and every other form are a contract error naming
-     * `url`.
+     * (`ContactUnavailable`), with a warning at most once a minute per host that names the path template and that
+     * host, lower-cased — never its path, query or fragment, nor the whole address — so the operator can tell which
+     * host belongs in `LEGACY_CONTACT_LINK_HOSTS`. A backslash anywhere, a control character or a space, and every
+     * other form are a contract error naming `url`.
      *
      * @param  array<array-key, mixed>  $answer
      *
      * @throws LegacyContractError|ContactUnavailable
      */
-    private static function callUrl(#[\SensitiveParameter] array $answer): string
+    private function callUrl(#[\SensitiveParameter] array $answer): string
     {
         $url = $answer['url'] ?? null;
         $refuse = fn (): LegacyContractError => LegacyContractError::key(self::CALL_PATH, 'url', 'not a call link HOMI can open');
@@ -645,8 +685,12 @@ final class LegacyListingSource implements ListingSource
             throw $refuse();
         }
 
-        if (! in_array(strtolower($parts['host']), self::linkHosts(), true)) {
-            Log::warning('Legacy gave a call link to a host HOMI does not allow: the listing has no usable link.', ['path' => self::CALL_PATH, 'has_host' => true]);
+        $host = strtolower($parts['host']);
+
+        if (! in_array($host, self::linkHosts(), true)) {
+            if ($this->cache->add(self::PREFIX.'once:link_host:'.sha1($host), 1, 60)) {
+                Log::warning('Legacy gave a call link to a host HOMI does not allow: the listing has no usable link.', ['path' => self::CALL_PATH, 'host' => substr($host, 0, self::MAX_LOGGED_HOST)]);
+            }
 
             throw new ContactUnavailable;
         }

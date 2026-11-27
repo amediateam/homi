@@ -98,7 +98,17 @@ it('answers the errors of the three methods', function (string $path, array $hea
     'translation unavailable' => ['100001/translation', ['Accept-Language' => 'uz', 'X-Stub-Scenario' => 'translation_unavailable'], 503, 'translation_unavailable'],
     'translation rate limited' => ['100001/translation', ['Accept-Language' => 'uz', 'X-Stub-Scenario' => 'rate_limited'], 429, 'rate_limited'],
     'translation of an unknown number' => ['999404/translation', ['Accept-Language' => 'uz'], 404, 'not_found'],
-    'share of an unknown number' => ['999404/share', [], 404, 'not_found'],
     'share without a Telegram id' => ['100012/share', [], 502, 'share_failed'],
+    'share of an unknown number without a Telegram id' => ['999404/share', [], 502, 'share_failed'],
+]);
+
+it('answers the errors of the share once the bot can send (WP-43: the settings and the caller are checked first)', function (string $path, array $headers, int $status, string $code): void {
+    config(['telegram.bot.username' => 'homi_contract_bot']);
+    Sanctum::actingAs(User::factory()->telegram()->create(), ['app:read']);
+    Http::preventStrayRequests();
+
+    $this->postJson("/api/v1/listings/{$path}", [], $headers)->assertStatus($status)->assertJsonPath('code', $code);
+})->with([
+    'share of an unknown number' => ['999404/share', [], 404, 'not_found'],
     'share rate limited' => ['100012/share', ['X-Stub-Scenario' => 'rate_limited'], 429, 'rate_limited'],
 ]);

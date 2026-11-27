@@ -195,27 +195,54 @@ it('variant B passes an absolute https link on and answers 503 for anything else
     'too long' => ['/call/'.str_repeat('a', 2050), 503],
 ]);
 
-it('variant B refuses a link to any host but legacy\'s and those of legacy.contact.link_hosts: 404, a warning without the address', function (string $url): void {
+it('variant B refuses a link to any host but legacy\'s and those of legacy.contact.link_hosts: 404, a warning that names the host only', function (string $url, string $host): void {
     onLegacyContact();
     Event::fake([ContactDisclosed::class]);
     LegacyListingsHttp::answer(fn (Request $request): ?PromiseInterface => str_ends_with(LegacyListingsHttp::path($request), '/call') ? Factory::response(['url' => $url]) : null);
 
     $lines = contactLogLines(fn () => contactOf(100002)->assertNotFound()->assertJsonPath('code', 'contact_unavailable'));
-    $serialised = json_encode($lines, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+    $serialised = json_encode($lines, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     $warnings = array_values(array_filter($lines, fn (array $line): bool => $line['level'] === 'warning'));
 
     expect($warnings)->toHaveCount(1)
-        ->and(array_diff_key($warnings[0]['context'], ['request_id' => true]))->toBe(['path' => '/api/listings/{n}/call', 'has_host' => true])
-        ->and($serialised)->not->toContain((string) parse_url($url, PHP_URL_HOST))
-        ->and($serialised)->not->toContain('/x');
+        ->and(array_diff_key($warnings[0]['context'], ['request_id' => true]))->toBe(['path' => '/api/listings/{n}/call', 'host' => $host])
+        ->and($serialised)->not->toContain('/x/call')
+        ->and($serialised)->not->toContain('t0ken-5f2a')
+        ->and($serialised)->not->toContain('phone=')
+        ->and($serialised)->not->toContain('https://');
+
+    foreach (RAW_PHONE_FORMS as $digits) {
+        expect($serialised)->not->toContain($digits);
+    }
+
     Event::assertNotDispatched(ContactDisclosed::class);
 })->with([
-    'another host' => ['https://attacker.example/x'],
-    'a host ending in legacy\'s' => ['https://evillegacy.test/x'],
-    'a subdomain of legacy\'s host' => ['https://call.legacy.test/x'],
-    'legacy\'s host as a subdomain' => ['https://legacy.test.attacker.example/x'],
-    'legacy\'s host with a trailing dot' => ['https://legacy.test./x'],
+    'another host' => ['https://Attacker.Example/x/call/t0ken-5f2a?phone=998001234567', 'attacker.example'],
+    'a host ending in legacy\'s' => ['https://evillegacy.test/x/call/t0ken-5f2a?phone=998001234567', 'evillegacy.test'],
+    'a subdomain of legacy\'s host' => ['https://call.legacy.test/x/call/t0ken-5f2a#+998001234567', 'call.legacy.test'],
+    'legacy\'s host as a subdomain' => ['https://legacy.test.attacker.example/x/call/t0ken-5f2a', 'legacy.test.attacker.example'],
+    'legacy\'s host with a trailing dot' => ['https://legacy.test./x/call/t0ken-5f2a', 'legacy.test.'],
 ]);
+
+it('variant B warns of a refused link host at most once a minute per host', function (): void {
+    onLegacyContact();
+    $url = 'https://attacker.example/x/call/t0ken-5f2a';
+    LegacyListingsHttp::answer(function (Request $request) use (&$url): ?PromiseInterface {
+        return str_ends_with(LegacyListingsHttp::path($request), '/call') ? Factory::response(['url' => $url]) : null;
+    });
+
+    $lines = contactLogLines(function () use (&$url): void {
+        contactOf(100002)->assertNotFound();
+        contactOf(100002)->assertNotFound();
+        $url = 'https://other.example/x/call/t0ken-5f2a';
+        contactOf(100002)->assertNotFound();
+        $this->travel(61)->seconds();
+        contactOf(100002)->assertNotFound();
+    });
+    $hosts = array_map(fn (array $line): mixed => $line['context']['host'] ?? null, array_values(array_filter($lines, fn (array $line): bool => $line['level'] === 'warning')));
+
+    expect($hosts)->toBe(['attacker.example', 'other.example', 'other.example']);
+});
 
 it('variant B passes a link to a host of legacy.contact.link_hosts, compared lower-cased and exactly', function (): void {
     onLegacyContact();
@@ -460,8 +487,12 @@ it('writes no phone number, call token or link of either variant into a log line
     });
     $serialised = json_encode($lines, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-    expect($lines)->not->toBeEmpty();
-    foreach ([...RAW_PHONE_FORMS, 'fixture-call-token', 'secret-fixture', 'kvadro.invalid', '/call/'] as $secret) {
+    // The refused host is named on its own (point 9 of the review of stage B), never as part of an address.
+    $named = array_values(array_filter($lines, fn (array $line): bool => str_contains(json_encode($line, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES), 'kvadro.invalid')));
+    expect($lines)->not->toBeEmpty()
+        ->and($named)->toHaveCount(1)
+        ->and($named[0]['context']['host'] ?? null)->toBe('kvadro.invalid');
+    foreach ([...RAW_PHONE_FORMS, 'fixture-call-token', 'secret-fixture', '//kvadro.invalid', 'kvadro.invalid/', '/call/'] as $secret) {
         expect($serialised)->not->toContain($secret);
     }
     foreach ($tokens as $url) {

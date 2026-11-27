@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\SourceDriver;
 use App\Models\User;
 use App\Services\Listings\TranslationService;
 use App\Services\Sources\Legacy\LegacyFakeServer;
@@ -127,7 +128,7 @@ it('answers legacy\'s 404 with 404 not_found and leaves the card unmarked', func
     translationOf($number, 'uz')->assertNotFound()->assertJsonPath('code', 'not_found');
     expect(LegacyListingsHttp::sent("/api/listings/{$number}/translate"))->toHaveCount(1)
         ->and(Cache::has("legacy:v1:listings:gone:{$number}"))->toBeFalse()
-        ->and(Cache::has("legacy:translation:{$number}:uz"))->toBeFalse();
+        ->and(Cache::has(TranslationService::key(SourceDriver::Legacy, $number, 'uz')))->toBeFalse();
 })->with([
     'a listing without an original text' => [100024],
     'a listing legacy does not know' => [424242],
@@ -148,7 +149,7 @@ it('answers 503 translation_unavailable when legacy cannot translate, caches not
 
     translationOf(100001, 'uz')->assertStatus(503)->assertJsonPath('code', 'translation_unavailable');
     expect(LegacyListingsHttp::sent('/api/listings/100001/translate'))->toHaveCount(1)
-        ->and(Cache::has('legacy:translation:100001:uz'))->toBeFalse();
+        ->and(Cache::has(TranslationService::key(SourceDriver::Legacy, 100001, 'uz')))->toBeFalse();
 
     $failing = false;
     translationOf(100001, 'uz')->assertOk()->assertJsonPath('data.text', MASKED_TRANSLATIONS['uz']);
@@ -236,6 +237,58 @@ it('answers unsupported with 503 translation_unavailable without asking legacy',
     expect(Http::recorded())->toHaveCount(0);
 });
 
+it('answers 503 translation_unavailable without asking legacy when the locale selector of every call sends no language', function (string $none): void {
+    config(['legacy.locale.via' => $none]);
+    onLegacyTranslation();
+    $warnings = new ArrayObject;
+    Log::listen(function (MessageLogged $entry) use ($warnings): void {
+        if ($entry->level === 'warning') {
+            $warnings[] = $entry->message;
+        }
+    });
+
+    translationOf(100001, 'uz')->assertStatus(503)->assertJsonPath('code', 'translation_unavailable');
+    translationOf(100001, 'en')->assertStatus(503)->assertJsonPath('code', 'translation_unavailable');
+    expect(LegacyListingsHttp::sent('/api/listings/100001/translate'))->toBe([])
+        ->and($warnings->getArrayCopy())->toBe(['LEGACY_TRANSLATION_VIA is locale, but LEGACY_LOCALE_VIA sends no language: translations are unavailable.']);
+
+    $this->travel(61)->seconds();
+    translationOf(100001, 'uz')->assertStatus(503);
+    expect($warnings)->toHaveCount(2);
+})->with(['none', 'something else']);
+
+it('never serves a translation cached under another language selector', function (): void {
+    onLegacyTranslation();
+
+    translationOf(100001, 'uz')->assertOk();
+    expect(LegacyListingsHttp::sent('/api/listings/100001/translate'))->toHaveCount(1)
+        ->and(TranslationService::key(SourceDriver::Legacy, 100001, 'uz'))->toBe('legacy:translation:100001:uz:header:Accept-Language');
+
+    config(['legacy.translation.via' => 'query']);
+    translationOf(100001, 'uz')->assertOk();
+    config(['legacy.translation.name' => 'target']);
+    translationOf(100001, 'uz')->assertOk();
+    config(['legacy.translation.via' => 'body']);
+    translationOf(100001, 'uz')->assertOk();
+    config(['legacy.translation.via' => 'locale', 'legacy.locale.via' => 'query', 'legacy.locale.name' => 'hl']);
+    translationOf(100001, 'uz')->assertOk();
+    expect(LegacyListingsHttp::sent('/api/listings/100001/translate'))->toHaveCount(5)
+        ->and(TranslationService::key(SourceDriver::Legacy, 100001, 'uz'))->toBe('legacy:translation:100001:uz:query:hl');
+
+    // The same request under either setting is the same entry: `query` under `lang`, cached above through
+    // `legacy.translation.via`, is served when the selector of every call asks the same way.
+    config(['legacy.locale.name' => 'lang']);
+    translationOf(100001, 'uz')->assertOk();
+    expect(LegacyListingsHttp::sent('/api/listings/100001/translate'))->toHaveCount(5);
+
+    // Back on the first selector, its entry is served again; on `unsupported` none is.
+    config(['legacy.locale.via' => 'header', 'legacy.locale.name' => 'Accept-Language']);
+    translationOf(100001, 'uz')->assertOk();
+    expect(LegacyListingsHttp::sent('/api/listings/100001/translate'))->toHaveCount(5);
+    config(['legacy.translation.via' => 'unsupported']);
+    translationOf(100001, 'uz')->assertStatus(503);
+});
+
 it('passes legacy\'s pause on as 403 paused', function (): void {
     onLegacyTranslation(fn (Request $request): ?PromiseInterface => str_ends_with(LegacyListingsHttp::path($request), '/translate') ? Factory::response(['detail' => 'paused'], 403) : null);
 
@@ -249,13 +302,18 @@ it('limits the misses of a user to 30 an hour: the 31st answers 429 without a re
         translationOf($number, 'uz')->assertOk();
     }
 
+    // The miss is counted first and compared afterwards (one atomic increment on Redis): the 31st is counted and
+    // refused, and so is every later one in the window.
     $limited = translationOf(31, 'uz')->assertTooManyRequests()
         ->assertExactJson(['success' => false, 'message' => 'Too Many Attempts.', 'code' => 'rate_limited']);
     expect((int) $limited->headers->get('Retry-After'))->toBeGreaterThan(0)->toBeLessThanOrEqual(3600)
-        ->and(LegacyListingsHttp::sent('/api/listings/31/translate'))->toBe([]);
+        ->and(LegacyListingsHttp::sent('/api/listings/31/translate'))->toBe([])
+        ->and(RateLimiter::attempts(TranslationService::limiterKey($this->user)))->toBe(31);
+    translationOf(31, 'uz')->assertTooManyRequests();
 
     translationOf(1, 'uz')->assertOk()->assertJsonPath('data.text', 'A text.');
     translationOf(30, 'uz')->assertOk();
+    expect(RateLimiter::attempts(TranslationService::limiterKey($this->user)))->toBe(32);
 
     // Another user has his own count.
     $this->app['auth']->forgetGuards();
@@ -306,9 +364,9 @@ it('keeps the translated text out of every log line, and the cache holds it mask
         ->not->toContain('Clean and cosy');
     foreach (TRANSLATED_PHONE_FORMS as $digits) {
         expect($written)->not->toContain($digits)
-            ->and(json_encode(Cache::get('legacy:translation:100001:uz'), JSON_UNESCAPED_UNICODE))->not->toContain($digits);
+            ->and(json_encode(Cache::get(TranslationService::key(SourceDriver::Legacy, 100001, 'uz')), JSON_UNESCAPED_UNICODE))->not->toContain($digits);
     }
-    expect(Cache::get('legacy:translation:100001:uz'))->toBe(['text' => MASKED_TRANSLATIONS['uz'], 'locale' => 'uz']);
+    expect(Cache::get('legacy:translation:100001:uz:header:Accept-Language'))->toBe(['text' => MASKED_TRANSLATIONS['uz'], 'locale' => 'uz']);
 });
 
 it('keeps no translated text in Telescope: neither the answer\'s data.text nor the cache entry', function (): void {
@@ -321,7 +379,7 @@ it('keeps no translated text in Telescope: neither the answer\'s data.text nor t
     expect(Telescope::$hiddenResponseParameters)->toContain('data.text')
         ->and($kept['data']['text'])->toBe('********')
         ->and(json_encode($kept, JSON_UNESCAPED_UNICODE))->not->toContain('Ijaraga')
-        ->and($keeps(IncomingEntry::make(['type' => 'set', 'key' => 'legacy:translation:100001:uz', 'value' => MASKED_TRANSLATIONS['uz']])->type(EntryType::CACHE)))->toBeFalse()
+        ->and($keeps(IncomingEntry::make(['type' => 'set', 'key' => 'legacy:translation:100001:uz:header:Accept-Language', 'value' => MASKED_TRANSLATIONS['uz']])->type(EntryType::CACHE)))->toBeFalse()
         ->and($keeps(IncomingEntry::make(['type' => 'hit', 'key' => 'stub:translation:100001:en', 'value' => 'x'])->type(EntryType::CACHE)))->toBeFalse()
         ->and($keeps(IncomingEntry::make(['type' => 'set', 'key' => 'legacy:v1:listings:count:ru:abc', 'value' => 3])->type(EntryType::CACHE)))->toBeTrue();
 });

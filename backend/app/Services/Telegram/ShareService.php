@@ -20,9 +20,12 @@ use Illuminate\Support\Facades\Log;
  * `WebApp.shareMessage`, behind `POST /listings/{number}/share`. Native: `meta.source` is `native` on every driver. In
  * this order:
  *
- * 1. the cache `share:<user id>:<number>:<locale>`: a hit answers the stored id until one minute before its expiry
- *    (LB-API-046: two taps share one message; the key names the user, so no user is ever given another's id);
- * 2. a miss reads the preview (`ListingSource::preview()` of `source.listings.card`; an unknown listing is `404
+ * 1. the cache `share:<user id>:<number>:<locale>:<currency>:<card driver>`: a hit answers the stored id until one
+ *    minute before its expiry (LB-API-046: two taps share one message; the key names the user, so no user is ever
+ *    given another's id, and the currency and the driver, whose text may differ);
+ * 2. a miss first checks what the call needs — a usable bot token and Bot API address (`TelegramClient::problem()`),
+ *    a bot username and the caller's Telegram id — so a share that cannot be sent costs no read of the listing; then
+ *    it reads the preview (`ListingSource::preview()` of `source.listings.card`; an unknown listing is `404
  *    not_found`) and calls `savePreparedInlineMessage` (Bot API 10.5) once — never retried inside the request — with
  *    `user_id` = the caller's Telegram id, an `article` result whose `input_message_content` is the text «title ·
  *    price · price kind · district» (the Mini App's `shareText()`: the empty parts left out; masked, then
@@ -32,12 +35,13 @@ use Illuminate\Support\Facades\Log;
  * 3. the returned `id` is stored for `expiration_date` − now − 60 s (not at all when that is not positive) and
  *    answered with that expiry.
  *
- * Any Bot API error or timeout, a blank or malformed token or bot username (`TELEGRAM_BOT_TOKEN`,
- * `TELEGRAM_BOT_USERNAME`), a caller without a Telegram id, or an answer without an id and an expiry is `502
- * share_failed`, so the client falls back to its `t.me` link; a warning names the internal user id, the listing number
- * and Telegram's error code, never the text, the Telegram id or the token. A request with a stub scenario while the
- * card source is the stub driver neither reads nor writes the cache, so the scenario is answered every time. While
- * `sources.native_stubs` is on, the route's stub answers instead and nothing here runs (`NativeStubs`, WP-40).
+ * Any Bot API error or timeout, a blank or malformed token, Bot API address or bot username (`TELEGRAM_BOT_TOKEN`,
+ * `TELEGRAM_API_BASE_URL`, `TELEGRAM_BOT_USERNAME`), a caller without a Telegram id, or an answer without an id and an
+ * expiry is `502 share_failed`, so the client falls back to its `t.me` link; a warning names the internal user id, the
+ * listing number and Telegram's error code, never the text, the Telegram id or the token. A request with a stub
+ * scenario while the card source is the stub driver neither reads nor writes the cache, so the scenario is answered
+ * every time. While `sources.native_stubs` is on, the route's stub answers instead and nothing here runs
+ * (`NativeStubs`, WP-40).
  */
 final readonly class ShareService
 {
@@ -60,8 +64,8 @@ final readonly class ShareService
      */
     public function prepare(User $user, int $number, SourceContext $context): PreparedShare
     {
-        $key = self::key($user, $number, $context->locale);
         $resolved = $this->sources->listings('source.listings.card', $context);
+        $key = self::key($user, $number, $context->locale, $context->currency, $resolved->driver);
         $cacheable = $resolved->driver !== SourceDriver::Stub || $context->scenario === null;
         $cached = $cacheable ? $this->cached($key) : null;
 
@@ -69,17 +73,24 @@ final readonly class ShareService
             return $cached;
         }
 
-        $listing = $resolved->source->preview($number, $context);
         $username = self::botUsername();
+        $telegramId = $user->telegram_user_id;
+        $unusable = TelegramClient::problem() ?? match (true) {
+            $username === null => 'TELEGRAM_BOT_USERNAME is blank or malformed',
+            $telegramId === null => 'the user has no Telegram id',
+            default => null,
+        };
 
-        if ($user->telegram_user_id === null || $username === null) {
-            Log::warning('A listing share was not prepared: '.($username === null ? 'TELEGRAM_BOT_USERNAME is blank or malformed.' : 'the user has no Telegram id.'), ['user' => $user->id, 'listing' => $number]);
+        if ($unusable !== null || $username === null || $telegramId === null) {
+            Log::warning("A listing share was not prepared: {$unusable}.", ['user' => $user->id, 'listing' => $number]);
 
             throw new ShareFailed;
         }
 
+        $listing = $resolved->source->preview($number, $context);
+
         try {
-            $answer = $this->telegram->call(self::METHOD, $this->message($user->telegram_user_id, $listing, $username, $context->locale));
+            $answer = $this->telegram->call(self::METHOD, $this->message($telegramId, $listing, $username, $context->locale));
         } catch (TelegramException $failure) {
             Log::warning('A listing share was not prepared: the Bot API failed.', ['user' => $user->id, 'listing' => $number, 'error_code' => $failure->errorCode]);
 
@@ -104,10 +115,10 @@ final readonly class ShareService
         return new PreparedShare($id, CarbonImmutable::createFromTimestamp($expires)->toIso8601String());
     }
 
-    /** The cache key of a user's prepared message of a listing in a locale. */
-    public static function key(User $user, int $number, string $locale): string
+    /** The cache key of a user's prepared message of a listing in a locale and a currency, read on a card driver. */
+    public static function key(User $user, int $number, string $locale, string $currency, SourceDriver $driver): string
     {
-        return "share:{$user->id}:{$number}:{$locale}";
+        return "share:{$user->id}:{$number}:{$locale}:{$currency}:{$driver->value}";
     }
 
     /**
@@ -134,7 +145,7 @@ final readonly class ShareService
      *
      * @return array<string, mixed>
      */
-    private function message(int $telegramId, ListingSummary $listing, string $username, string $locale): array
+    private function message(#[\SensitiveParameter] int $telegramId, ListingSummary $listing, string $username, string $locale): array
     {
         $parts = self::parts($listing, $locale);
         $titled = $parts !== [] && trim($listing->title) !== '';
