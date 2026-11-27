@@ -8,8 +8,10 @@ use App\Exceptions\Listings\DailyLimitReached;
 use App\Exceptions\Sources\LegacyContractError;
 use App\Exceptions\Sources\SourceNotFound;
 use App\Exceptions\Sources\SourceUnavailable;
+use App\Services\Listings\AuthorKey;
 use App\Services\Listings\Contracts\ListingExclusion;
 use App\Services\Listings\ListingNumber;
+use App\Services\Listings\ListingRefs;
 use App\Services\Listings\PhotoUrlRewriter;
 use App\Services\Search\ListingQuery;
 use App\Services\Search\SearchFilters;
@@ -64,6 +66,10 @@ use InvalidArgumentException;
  * that no longer fits its data object is dropped and read again. A number legacy answered `404` for is not asked again
  * for `legacy.cache.not_found` s, and a number at or above the native floor is never asked (`404` at once).
  *
+ * `listing_refs` (`ListingRefs`): a full card read from legacy (a cache miss) is filed with the author key of the raw
+ * answer (`AuthorKey`), which still holds the number the translated card drops; a `404` marks a number HOMI knew gone,
+ * and a card that answers with another number marks the asked one merged into it.
+ *
  * Feed paging (WP-42, "Feed paging and top-up"): one HOMI page reads the legacy page its cursor names, leaves out what
  * `ListingExclusion` excludes, resumes at the cursor's position and takes up to `limit` items; while fewer than half of
  * `limit` are collected and legacy has a next page, it reads up to `legacy.feed.top_up_pages` more. The cursor is
@@ -91,6 +97,7 @@ final class LegacyListingSource implements ListingSource
         private readonly Repository $cache,
         private readonly SourceManager $sources,
         private readonly ListingExclusion $exclusion,
+        private readonly ListingRefs $refs,
     ) {}
 
     public function feed(ListingQuery $query, SourceContext $context): ListingPage
@@ -342,12 +349,33 @@ final class LegacyListingSource implements ListingSource
             throw $missing;
         }
 
-        return $this->withTranslators($context, fn (ListingSummaryTranslator $summary, ListingDetailsTranslator $details): array => $this->noted(
+        $card = $this->withTranslators($context, fn (ListingSummaryTranslator $summary, ListingDetailsTranslator $details): array => $this->noted(
             ListingDetailsTranslator::PATH,
             fn (Coercions $seen): array => $preview
                 ? $summary->translate($answer, null, ListingDetailsTranslator::PATH, '', $seen)
                 : $details->translate($answer, $seen),
         ));
+
+        if (! $preview) {
+            $this->file($number, $card, $answer);
+        }
+
+        return $card;
+    }
+
+    /**
+     * Files a full card legacy answered in `listing_refs` (a cache miss, so at most once per `legacy.cache.card`): the
+     * author key read from the raw answer, which still holds the number the translated card no longer has (DEC-52),
+     * and the merge when legacy answered another number. A preview carries no phone or post link, so it files nothing.
+     *
+     * @param  array<array-key, mixed>  $card  the translated card
+     * @param  array<array-key, mixed>  $answer  legacy's raw answer
+     */
+    private function file(int $asked, array $card, #[\SensitiveParameter] array $answer): void
+    {
+        $details = ListingDetails::fromArray($card);
+        $this->refs->remember($details, AuthorKey::fromCard($answer));
+        $this->refs->markMerged($asked, $details->preview->number);
     }
 
     /**
@@ -653,8 +681,10 @@ final class LegacyListingSource implements ListingSource
         return self::PREFIX."gone:{$number}";
     }
 
+    /** A number legacy answered `404` for: not asked again for a while, and gone in `listing_refs`. */
     private function rememberGone(int $number): void
     {
+        $this->refs->markGone($number);
         $seconds = Config::integer('legacy.cache.not_found');
 
         if ($seconds > 0) {
