@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Http\Controllers\Pages\CallPageController;
 use App\Http\DashboardAccess;
 use App\Models\User;
 use App\Services\Telegram\TelegramClient;
@@ -14,11 +15,12 @@ use Laravel\Telescope\TelescopeApplicationServiceProvider;
 class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
 {
     /**
-     * The cache keys whose Redis commands are never kept (WP-42, WP-43), behind any cache prefix: a translation
-     * (`<driver>:translation:…`), the encrypted contact entry and the cached card and preview of a legacy listing
-     * (`legacy:v1:listings:{contact,card,preview}:…`), and a user's day of disclosures (`contact:<user id>:<day>`).
+     * The cache keys whose cache events and Redis commands are never kept (WP-42, WP-43), behind any cache prefix: a
+     * translation (`<driver>:translation:…`), the encrypted contact entry and the cached card and preview of a legacy
+     * listing (`legacy:v1:listings:{contact,card,preview}:…`), and a user's day of disclosures (`contact:<user
+     * id>:<day>`).
      */
-    private const string SENSITIVE_REDIS_KEYS = '/[a-z]:translation:|legacy:v1:listings:(?:contact|card|preview):|contact:\d+:\d{4}-\d{2}-\d{2}/';
+    private const string SENSITIVE_KEYS = '/[a-z]:translation:|legacy:v1:listings:(?:contact|card|preview):|contact:\d+:\d{4}-\d{2}-\d{2}/';
 
     /**
      * Register any application services.
@@ -32,7 +34,7 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
         $isLocal = $this->app->environment('local');
 
         Telescope::filter(function (IncomingEntry $entry) use ($isLocal): bool {
-            if (self::isLegacyCall($entry) || self::isCallPage($entry) || self::isBotApiCall($entry) || self::isTranslationCache($entry) || self::isSensitiveRedisCommand($entry)) {
+            if (self::isLegacyCall($entry) || self::isCallPage($entry) || self::isBotApiCall($entry) || self::isSensitiveCache($entry) || self::isSensitiveRedisCommand($entry)) {
                 return false;
             }
 
@@ -85,19 +87,19 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
     }
 
     /**
-     * A cache event of a listing's translation (WP-43, `TranslationService`, `<driver>:translation:<number>:<locale>`):
-     * never kept, in any environment, since the cache watcher keeps the value written — the translated text, which
-     * never reaches a log (SEC-REQ-047).
+     * A cache event on a translation, contact, listing card or day-of-disclosures key (`SENSITIVE_KEYS`): never kept,
+     * in any environment, since the cache watcher keeps the key and the value read or written — a translated text, an
+     * encrypted number, a card, or the user id and the listings a user asked a number for (SEC-REQ-047).
      */
-    private static function isTranslationCache(IncomingEntry $entry): bool
+    private static function isSensitiveCache(IncomingEntry $entry): bool
     {
         $key = $entry->content['key'] ?? null;
 
-        return $entry->type === EntryType::CACHE && is_string($key) && preg_match('/^[a-z]+:translation:/', $key) === 1;
+        return $entry->type === EntryType::CACHE && is_string($key) && preg_match(self::SENSITIVE_KEYS, $key) === 1;
     }
 
     /**
-     * A Redis command on a translation, contact or listing card key (`SENSITIVE_REDIS_KEYS`): never kept, in any
+     * A Redis command on a translation, contact or listing card key (`SENSITIVE_KEYS`): never kept, in any
      * environment, since the Redis watcher keeps the whole command, the value written included — a translated text,
      * an encrypted number, a card or the listings a user asked a number for.
      */
@@ -105,18 +107,37 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
     {
         $command = $entry->content['command'] ?? null;
 
-        return $entry->type === EntryType::REDIS && is_string($command) && preg_match(self::SENSITIVE_REDIS_KEYS, $command) === 1;
+        return $entry->type === EntryType::REDIS && is_string($command) && preg_match(self::SENSITIVE_KEYS, $command) === 1;
     }
 
     /**
      * A request of HOMI's call page (WP-43, `GET /call/{token}`): never kept, in any environment. Its address holds the
      * call token, a credential for the author's number, and its answer shows that number (SEC-REQ-026, SEC-REQ-047).
+     * Known by the controller that answered it (whatever spelling of the address reached it: the router decodes
+     * `/call%2F<token>` to the page) and, for an address no route took, by its path: decoded once, its leading slashes
+     * collapsed (`parse_url()` would read `//call/<token>` as a host), starting with `/call` in any case.
      */
     private static function isCallPage(IncomingEntry $entry): bool
     {
+        if ($entry->type !== EntryType::REQUEST) {
+            return false;
+        }
+
+        $action = $entry->content['controller_action'] ?? null;
+
+        if (is_string($action) && ($action === CallPageController::class || str_starts_with($action, CallPageController::class.'@'))) {
+            return true;
+        }
+
         $uri = $entry->content['uri'] ?? null;
 
-        return $entry->type === EntryType::REQUEST && is_string($uri) && str_starts_with((string) parse_url($uri, PHP_URL_PATH), '/call/');
+        if (! is_string($uri)) {
+            return false;
+        }
+
+        $path = (string) preg_replace('#^/+#', '/', rawurldecode(explode('?', $uri, 2)[0]));
+
+        return preg_match('#^/+call(/|$)#i', $path) === 1;
     }
 
     /**

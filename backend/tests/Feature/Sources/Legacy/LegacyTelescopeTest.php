@@ -6,13 +6,20 @@ use App\Services\Listings\ContactDisclosure;
 use App\Services\Listings\TranslationService;
 use Illuminate\Redis\Connections\Connection;
 use Illuminate\Redis\Events\CommandExecuted;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Sleep;
+use Laravel\Pennant\Feature;
+use Laravel\Sanctum\Sanctum;
 use Laravel\Telescope\Contracts\EntriesRepository;
 use Laravel\Telescope\EntryType;
 use Laravel\Telescope\IncomingEntry;
 use Laravel\Telescope\Telescope;
+use Laravel\Telescope\Watchers\CacheWatcher;
 use Laravel\Telescope\Watchers\RedisWatcher;
+use Tests\Support\LegacyFixtures;
+use Tests\Support\LegacyListingsHttp;
 
 beforeEach(function (): void {
     Http::preventStrayRequests();
@@ -85,4 +92,46 @@ it('keeps no Redis command on a translation, contact or listing card key, even w
         "incr {$prefix}v1-translation:user:{$user->id}",
     ])
         ->and(DB::table('telescope_entries')->pluck('content')->implode("\n"))->not->toContain('Ijaraga')->not->toContain('ciphertext');
+});
+
+it('keeps no cache event on a translation, contact or listing card key, even with TELESCOPE_RECORD_ALL', function (): void {
+    config(['telescope.record_all' => true, 'legacy.media.public_url' => LegacyFixtures::MEDIA, 'legacy.rate.per_second' => 1000]);
+    Sleep::fake();
+    (new CacheWatcher(['hidden' => [], 'ignore' => []]))->register(app());
+    LegacyListingsHttp::fake();
+
+    foreach (['card', 'contact'] as $method) {
+        Feature::globally()->activate("source.listings.{$method}", ['everyone' => 'legacy']);
+    }
+
+    $user = User::factory()->create();
+    Sanctum::actingAs($user, ['app:read', 'app:write']);
+    $text = ['text' => 'Ijaraga 2 xonali kvartira', 'locale' => 'uz'];
+
+    Telescope::startRecording(loadMonitoredTags: false);
+
+    try {
+        // The real flow: the card files the encrypted contact entry, the contact writes the day entry.
+        $this->getJson('/api/v1/listings/100001')->assertOk();
+        $this->postJson('/api/v1/listings/100001/contact')->assertOk();
+
+        Cache::put(TranslationService::key(SourceDriver::Legacy, 100001, 'uz'), $text, 60);
+        Cache::get(TranslationService::key(SourceDriver::Stub, 100001, 'en'));
+        Cache::put(ContactDisclosure::key($user), ['n' => [100001 => true], 'f' => false], 60);
+        Cache::get('legacy:v1:listings:contact:100002');
+        Cache::get('legacy:v1:listings:preview:100001:uz:UZS');
+        Cache::forget('legacy:v1:listings:card:100001:ru:USD');
+        Cache::put('legacy:v1:listings:count:ru:abc', 7, 60);
+
+        Telescope::store(app(EntriesRepository::class));
+    } finally {
+        Telescope::stopRecording();
+        Telescope::flushEntries();
+    }
+
+    $keys = DB::table('telescope_entries')->where('type', 'cache')->pluck('content')->map(fn (string $content): string => (string) (json_decode($content, true)['key'] ?? ''))->unique()->values()->all();
+
+    expect($keys)->toContain('legacy:v1:listings:count:ru:abc')
+        ->and(array_values(array_filter($keys, fn (string $key): bool => preg_match('/translation:|listings:(?:contact|card|preview):|^contact:/', $key) === 1)))->toBe([])
+        ->and(DB::table('telescope_entries')->pluck('content')->implode("\n"))->not->toContain('Ijaraga')->not->toContain('eyJpdiI6')->not->toContain('100001":true');
 });

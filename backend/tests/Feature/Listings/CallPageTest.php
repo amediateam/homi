@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Controllers\Pages\CallPageController;
 use App\Models\User;
 use App\Services\Listings\CallLinkService;
+use Illuminate\Contracts\Http\Kernel as HttpKernel;
+use Illuminate\Http\Request;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Date;
@@ -13,6 +16,8 @@ use Illuminate\Testing\TestResponse;
 use Laravel\Pennant\Feature;
 use Laravel\Sanctum\Sanctum;
 use Laravel\Telescope\Contracts\EntriesRepository;
+use Laravel\Telescope\EntryType;
+use Laravel\Telescope\IncomingEntry;
 use Laravel\Telescope\Telescope;
 use Laravel\Telescope\Watchers\RequestWatcher;
 use Tests\Support\LegacyFixtures;
@@ -211,6 +216,54 @@ it('keeps no Telescope entry of a call page, whatever the environment records', 
         ->and($stored)->not->toContain(substr($expired, strlen('/call/')))
         ->and($stored)->not->toContain('000000067')
         ->and($stored)->not->toContain('/call/');
+});
+
+it('keeps no Telescope entry of a call page asked by an encoded slash or a doubled slash', function (string $shape, int $status): void {
+    config(['telescope.record_all' => true]);
+    (new RequestWatcher(['size_limit' => 64]))->register(app());
+    $token = substr(callPagePath(100001), strlen('/call/'));
+    $uri = ['encoded slash' => "/call%2F{$token}", 'doubled slash' => "//call/{$token}", 'both' => "//CALL%2f{$token}?x=1"][$shape];
+    $kernel = app(HttpKernel::class);
+
+    Telescope::startRecording(loadMonitoredTags: false);
+
+    try {
+        // The raw address as nginx passes it: `Request::create()` would normalise it first.
+        $request = new Request(server: [
+            'REQUEST_URI' => $uri, 'REQUEST_METHOD' => 'GET', 'SCRIPT_NAME' => '/index.php', 'SCRIPT_FILENAME' => public_path('index.php'),
+            'PHP_SELF' => '/index.php', 'HTTP_HOST' => 'homi.test', 'SERVER_PORT' => 443, 'HTTPS' => 'on', 'REMOTE_ADDR' => '127.0.0.1',
+        ]);
+        $response = $kernel->handle($request);
+        $kernel->terminate($request, $response);
+
+        Telescope::store(app(EntriesRepository::class));
+    } finally {
+        Telescope::stopRecording();
+        Telescope::flushEntries();
+    }
+
+    $stored = DB::table('telescope_entries')->pluck('content')->implode("\n");
+
+    expect($response->getStatusCode())->toBe($status)
+        ->and(DB::table('telescope_entries')->where('type', 'request')->count())->toBe(0)
+        ->and($stored)->not->toContain($token)
+        ->and($stored)->not->toContain('000000067');
+})->with([
+    'an encoded slash, which the router decodes: the page itself' => ['encoded slash', 200],
+    'a doubled slash' => ['doubled slash', 404],
+    'both, in capitals' => ['both', 404],
+]);
+
+it('drops a request entry the call page answered whatever its address says, and one whose decoded path is the call page\'s', function (): void {
+    config(['telescope.record_all' => true]);
+    $keeps = fn (array $content): bool => collect(Telescope::$filterUsing)->every(fn (callable $filter): bool => $filter(IncomingEntry::make($content + ['response_status' => 200])->type(EntryType::REQUEST)));
+
+    expect($keeps(['uri' => '/x', 'controller_action' => CallPageController::class.'@__invoke']))->toBeFalse()
+        ->and($keeps(['uri' => '/x', 'controller_action' => CallPageController::class]))->toBeFalse()
+        ->and($keeps(['uri' => '/%63all/abc', 'controller_action' => null]))->toBeFalse()
+        ->and($keeps(['uri' => '///call', 'controller_action' => null]))->toBeFalse()
+        ->and($keeps(['uri' => '/callback', 'controller_action' => null]))->toBeTrue()
+        ->and($keeps(['uri' => '/api/v1/call/abc', 'controller_action' => null]))->toBeTrue();
 });
 
 it('counts a forged X-Forwarded-For in the bucket of the address that connected while no proxy is trusted', function (): void {
