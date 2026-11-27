@@ -112,3 +112,62 @@ it('masks a number after other asterisks, such as Markdown bold', function (stri
     'after two asterisks and a space' => ['** 998007654321', '** +998 ** *** ** 21'],
     'after a masked number and asterisks' => ['+998 ** *** ** 67 ** 998007654321', '+998 ** *** ** 67 ** +998 ** *** ** 21'],
 ]);
+
+it('masks a number after a slash or asterisks, and inside a link that LinkGuard would drop (H1)', function (string $text, string $masked): void {
+    expect(maskSynthetic($text))->toBe($masked)
+        ->and(maskSynthetic($masked))->toBe($masked);
+})->with([
+    'two numbers with a slash' => ['+998007654321/+998007654322', '+998 ** *** ** 21/+998 ** *** ** 22'],
+    'Markdown bold, bare code' => ['**00 765 43 21**', '**+998 ** *** ** 21**'],
+    'Markdown bold, prefixed' => ['**+998 00 765 43 21**', '**+998 ** *** ** 21**'],
+    'a WhatsApp link without a scheme' => ['wa.me/998007654321', 'wa.me/**********21'],
+    'a WhatsApp link in a description' => ['Звоните или https://wa.me/+998007654321 пишите', 'Звоните или https://wa.me/+**********21 пишите'],
+    'a phone link of Telegram' => ['пишите t.me/+998007654321', 'пишите t.me/+**********21'],
+    'a link with the number in its query' => ['см. https://example.com/a?phone=998007654321', 'см. https://example.com/a?phone=**********21'],
+    'a number glued to a link' => ['t.me/chan/12,+998007654321', 't.me/chan/**,+**********21'],
+    'masked numbers with a slash' => ['+998 ** *** ** 21/+998 ** *** ** 22', '+998 ** *** ** 21/+998 ** *** ** 22'],
+]);
+
+it('keeps a link LinkGuard keeps, and masks the text around it', function (): void {
+    $text = 'Пост: https://t.me/stub_channel_a/4812 и t.me/s/stub_channel_a/4813, тел +998 00 765 43 21';
+
+    expect(maskSynthetic($text))->toBe('Пост: https://t.me/stub_channel_a/4812 и t.me/s/stub_channel_a/4813, тел +998 ** *** ** 21')
+        ->and(maskSynthetic('http://t.me/stub_channel_a/4812'))->toBe('http://t.me/stub_channel_a/4812');
+});
+
+it('masks a bare nine-digit number that has a phone\'s shape, even before a currency', function (): void {
+    expect(maskSynthetic('931234567 сум'))->toBe('+998 ** *** ** 67 сум')
+        ->and(PhoneMasker::mask('931234567 сум'))->toBe('+998 ** *** ** 67 сум');
+});
+
+it('leaves the prices and areas of a listing alone', function (string $text): void {
+    expect(maskSynthetic($text))->toBe($text);
+})->with(['Цена 95 500 000 сум', '$1 429/м²', 'Юнусабад-4, ориентир Корзинка']);
+
+it('writes a masked number a client can still find after a slash or asterisks', function (): void {
+    preg_match_all(PhoneMasker::MASKED_PATTERN, maskSynthetic('**00 765 43 21**/+998007654322'), $found);
+
+    expect($found[0])->toBe(['+998 ** *** ** 21', '+998 ** *** ** 22']);
+});
+
+it('is idempotent on texts made of links, numbers and Markdown', function (): void {
+    $random = new Randomizer(new Mt19937(7));
+    $parts = ['https://', 'http://', 'wa.me/', 't.me/', 't.me/+', 'api.whatsapp.com/send?phone=', 'chan/', '+998', '998', '00', ' ', '-', '765', '43', '21', '/', '**', '*', '.', ',', 'тел ', '+', '4812'];
+    $failures = [];
+
+    for ($i = 0; $i < 20_000 && count($failures) < 5; $i++) {
+        $text = '';
+
+        for ($n = $random->getInt(2, 14); $n > 0; $n--) {
+            $text .= $parts[$random->getInt(0, count($parts) - 1)];
+        }
+
+        $once = maskSynthetic($text);
+
+        if (maskSynthetic($once) !== $once) {
+            $failures[] = $text;
+        }
+    }
+
+    expect($failures)->toBe([]);
+});

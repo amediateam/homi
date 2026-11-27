@@ -12,7 +12,8 @@ use App\Services\Listings\PhoneMasker;
  * next to the display strings and are null when the source does not know them (`25` §4.5). The nested objects of the
  * answer (`district`, `metro`, `photos`, `posted`, `market`) are flattened here; `ListingPreviewResource` nests them.
  *
- * `fromArray()` is the one way a driver builds it; it masks the phone numbers of `title` (DEC-52, `PhoneMasker`).
+ * `fromArray()` is the one way a driver builds it; it masks the phone numbers of the author-written `title`, `place` and
+ * `landmark` (DEC-52, `PhoneMasker`), never the names HOMI takes from a directory (district, metro).
  */
 final readonly class ListingSummary
 {
@@ -68,6 +69,8 @@ final readonly class ListingSummary
         $posted = Fields::object($data, 'posted');
         $market = Fields::object($data, 'market');
         $sourceRef = Fields::nullableObject($data, 'source_ref');
+        $place = Fields::nullableString($data, 'place');
+        $landmark = Fields::nullableString($data, 'landmark');
 
         return new self(
             number: Fields::int($data, 'number'),
@@ -82,8 +85,8 @@ final readonly class ListingSummary
             floorsTotal: Fields::nullableInt($data, 'floors_total'),
             districtCode: $district === null ? null : Fields::nullableString($district, 'code'),
             districtName: $district === null ? null : Fields::string($district, 'name'),
-            place: Fields::nullableString($data, 'place'),
-            landmark: Fields::nullableString($data, 'landmark'),
+            place: $place === null ? null : PhoneMasker::mask($place),
+            landmark: $landmark === null ? null : PhoneMasker::mask($landmark),
             metroName: $metro === null ? null : Fields::string($metro, 'name'),
             metroKm: $metro === null ? null : Fields::nullableFloat($metro, 'km'),
             centerKm: Fields::nullableFloat($data, 'center_km'),

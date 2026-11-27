@@ -206,8 +206,9 @@ it('writes every phone number of the legacy fixtures with the synthetic code 00,
     $real = [];
 
     foreach (glob(resource_path('fixtures/legacy').'/{,errors/}*.json', GLOB_BRACE) ?: [] as $file) {
-        // Photo signatures are 32 hex characters, whose digit runs the masker would read as numbers.
-        $text = (string) preg_replace('/\b[0-9a-f]{32}\b/', '', (string) file_get_contents($file));
+        // Photo signatures (32 hex characters) and link expiries (`?e=1795132800`): the masker would read their digit runs
+        // as numbers, and a link with nine digits in a row as a link that may carry one.
+        $text = (string) preg_replace('/\b[0-9a-f]{32}\b|(?<=[?&]e=)\d+/', '', (string) file_get_contents($file));
         preg_match_all($prefixed, $text, $numbers);
         $withoutSynthetic = (string) preg_replace_callback($prefixed, fn (array $number): string => $number[1] === '00' ? '' : $number[0], $text);
 

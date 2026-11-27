@@ -42,8 +42,8 @@ use InvalidArgumentException;
  * unknown `deal_type` or `price_kind`, a `posted_at` without a zone) reads as its empty value and is noted in the
  * `Coercions` of the answer, under its place (`items.3.floor`).
  *
- * `title` is masked here as `ListingSummary::fromArray()` masks it (DEC-52), so the array a cache keeps holds no raw
- * number either; masking is idempotent.
+ * `title`, `place` and `landmark` are masked here as `ListingSummary::fromArray()` masks them (DEC-52), so the array a
+ * cache keeps holds no raw number either; masking is idempotent.
  */
 final class ListingSummaryTranslator
 {
@@ -193,8 +193,8 @@ final class ListingSummaryTranslator
             'floor' => LegacyValue::int($item, 'floor', $seen),
             'floors_total' => LegacyValue::count($item, 'floors_total', $seen),
             'district' => $district === null ? null : ['code' => $this->districts->code($district, $city), 'name' => $district],
-            'place' => LegacyValue::string($item, 'place', $seen),
-            'landmark' => LegacyValue::string($item, 'landmark', $seen),
+            'place' => self::masked(LegacyValue::string($item, 'place', $seen)),
+            'landmark' => self::masked(LegacyValue::string($item, 'landmark', $seen)),
             'metro' => $metro === null ? null : ['name' => $metro, 'km' => LegacyValue::number($item, 'metro_km', $seen)],
             'center_km' => LegacyValue::number($item, 'center_km', $seen),
             'location' => $lat === null || $lon === null ? null : ['lat' => $lat, 'lon' => $lon],
@@ -245,6 +245,11 @@ final class ListingSummaryTranslator
         }
 
         return $deal;
+    }
+
+    private static function masked(?string $text): ?string
+    {
+        return $text === null ? null : PhoneMasker::mask($text);
     }
 
     /** @param  array<array-key, mixed>  $item */

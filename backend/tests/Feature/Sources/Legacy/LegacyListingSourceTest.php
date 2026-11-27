@@ -342,6 +342,36 @@ it('keeps the masked card in the cache, without the phone keys and the per-user 
     expect(legacyListings()->details(100001, userContext())->summary)->toBe($details->summary);
 });
 
+it('masks a number in the place, the landmark, a fact value and a nearby note, in the answer and in both cache entries', function (): void {
+    Sanctum::actingAs(User::factory()->create(), ['app:read']);
+    onLegacyListings();
+    $raw = '+998 00 765 43 21';
+    $legacy = LegacyFixtures::golden('listing.rent_apartment');
+    $legacy['place'] = "Ц-5, звоните {$raw}";
+    $legacy['landmark'] = "у Мегапланета, {$raw}";
+    $legacy['facts'][0]['value'] = "уточняйте {$raw}";
+    $legacy['nearby'][0]['note'] = "сторож {$raw}";
+    LegacyListingsHttp::fake(fn (Request $request): mixed => LegacyListingsHttp::path($request) === '/api/listings/100001' ? Http::response($legacy) : null);
+
+    $card = $this->getJson('/api/v1/listings/100001', ['Accept-Language' => 'ru'])->assertOk()->json('data');
+    $preview = $this->getJson('/api/v1/listings/100001?preview=1', ['Accept-Language' => 'ru'])->assertOk()->json('data');
+    Cache::forget('legacy:v1:listings:card:100001:ru:USD');
+    legacyListings()->preview(100001, userContext());
+    $entries = [Cache::get('legacy:v1:listings:preview:100001:ru:USD')];
+    legacyListings()->details(100001, userContext());
+    $entries[] = Cache::get('legacy:v1:listings:card:100001:ru:USD');
+
+    expect([$card['place'], $card['landmark'], $card['facts'][0]['value'], $card['nearby'][0]['note'], $preview['place'], $preview['landmark']])
+        ->each->toContain('+998 ** *** ** 21')
+        ->and($entries)->each->toBeArray()
+        ->and($entries[1]['facts'][0]['value'])->toContain('+998 ** *** ** 21')
+        ->and($entries[1]['nearby'][0]['note'])->toContain('+998 ** *** ** 21');
+
+    foreach ([$card, $preview, ...$entries] as $where) {
+        expect(json_encode($where, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE))->not->toContain('765 43 21');
+    }
+});
+
 it('serves a preview from the cached card, and caches the preview form beside it', function (): void {
     LegacyListingsHttp::fake();
 

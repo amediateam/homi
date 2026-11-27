@@ -32,9 +32,10 @@ use InvalidArgumentException;
  *   `contact_url` and `contact_paid`, and `has_phone: false` until WP-43 writes the contact method. The links
  *   `contact_url`, `offers[].url`, `original.url`, `sources[].url` and `history[].url` pass `LinkGuard` (an
  *   `https` link that cannot carry a phone number, else `null`; a source whose link is dropped is left out).
- *   `title`, `summary`, `original.text`, `offers[].text`, `price_history[].text`, `author.label`, `owner_label` and
- *   `owner.description` are masked here, as the data objects mask them (DEC-52), so the array a cache keeps holds no
- *   raw number.
+ *   `title`, `place`, `landmark`, `facts[].value`, `nearby[].note`, `summary`, `original.text`, `offers[].text`,
+ *   `price_history[].text`, `author.label`, `owner_label` and `owner.description` are masked here, as the data objects
+ *   mask them (DEC-52), so the array a cache keeps holds no raw number. Labels, directory names (district, metro, a
+ *   park's name) and formatted prices are the source's own and stay as sent.
  * - `history` → `price_history` (`channel` without `@`); `owner` → `owner_label`, without a label the tier already
  *   says (BR-API-189: «Проверенный хозяин…», «Хозяин — со слов объявления» and their uz and en texts); `market_code` →
  *   `market.code`; `original_text`, `original_url`, `post_deleted` → `original`; `nearby` keeps the first `park` and the
@@ -219,7 +220,8 @@ final class ListingDetailsTranslator
             }
 
             $value = $fact['value'] ?? null;
-            $fact = ['key' => $fact['key'] ?? null, 'label' => $fact['label'] ?? null, 'value' => is_int($value) || is_float($value) ? (string) $value : $value];
+            $value = is_int($value) || is_float($value) ? (string) $value : $value;
+            $fact = ['key' => $fact['key'] ?? null, 'label' => $fact['label'] ?? null, 'value' => is_string($value) ? PhoneMasker::mask($value) : $value];
 
             if (LegacyValue::fits(ListingFact::fromArray(...), $fact, "facts.{$index}.", $seen) && is_string($fact['key'])) {
                 $unique[$fact['key']] ??= $fact;
@@ -247,7 +249,7 @@ final class ListingDetailsTranslator
                 continue;
             }
 
-            $entry = ['kind' => $kind, 'name' => $place['name'] ?? null, 'km' => LegacyValue::number($place, 'km', $at), 'note' => LegacyValue::string($place, 'note', $at)];
+            $entry = ['kind' => $kind, 'name' => $place['name'] ?? null, 'km' => LegacyValue::number($place, 'km', $at), 'note' => self::masked(LegacyValue::string($place, 'note', $at))];
 
             if (! isset($nearby[$kind]) && LegacyValue::fits(ListingNearby::fromArray(...), $entry, "nearby.{$index}.", $seen)) {
                 $nearby[$kind] = $entry;
