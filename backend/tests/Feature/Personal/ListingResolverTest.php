@@ -16,6 +16,7 @@ use App\Services\Sources\SourceContext;
 use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Sleep;
@@ -133,6 +134,59 @@ it('names every number a row of the asked number may lie under: the number asked
     expect(resolverOf()->numbersOf(100016, new ListingPointer(100001, null, null, filed: false)))->toBe([100001, 100016])
         ->and(resolverOf()->numbersOf(100012, resolvedFor(100012)))->toBe([100012, 100013])
         ->and(resolverOf()->numbersOf(100013, resolvedFor(100013)))->toBe([100013]);
+});
+
+it('adds the numbers of the caller\'s own rows merged into a survivor of the number asked or the pointer since, one hop or several, and no other user\'s (review C, N1/N4)', function (): void {
+    $user = User::factory()->create();
+    $other = User::factory()->create();
+    ListingRef::factory()->create(['listing_number' => 100012, 'merged_into' => 100013, 'author_key' => null]);
+    ListingRef::factory()->create(['listing_number' => 100013, 'merged_into' => 100014, 'author_key' => null]);
+    ListingRef::factory()->create(['listing_number' => 100014]);
+    ListingRef::factory()->create(['listing_number' => 100015, 'merged_into' => 100001, 'author_key' => null]);
+    ListingRef::factory()->create(['listing_number' => 100001]);
+    Favorite::factory()->for($user)->create(['listing_number' => 100012]);
+    Favorite::factory()->for($user)->create(['listing_number' => 100015]);
+    Favorite::factory()->for($user)->create(['listing_number' => 100003]);
+    Favorite::factory()->for($other)->create(['listing_number' => 100013]);
+    HiddenListing::factory()->for($user)->create(['listing_number' => 100013]);
+    $favourites = fn () => $user->favorites()->toBase();
+
+    expect(resolverOf()->numbersOf(100014, null, $favourites()))->toBe([100012, 100014])
+        ->and(resolverOf()->numbersOf(100014, null, $favourites(), $user->hiddenListings()->toBase()))->toBe([100012, 100013, 100014])
+        ->and(resolverOf()->numbersOf(100013, null, $favourites()))->toBe([100012, 100013, 100014])
+        ->and(resolverOf()->numbersOf(100012, null, $favourites()))->toBe([100012, 100014])
+        ->and(resolverOf()->numbersOf(100001, null, $favourites()))->toBe([100001, 100015])
+        ->and(resolverOf()->numbersOf(100003, null, $favourites()))->toBe([100003])
+        ->and(resolverOf()->numbersOf(100016, new ListingPointer(100001, null, null, filed: false), $favourites()))->toBe([100001, 100015, 100016]);
+});
+
+it('reads the caller\'s merged rows in one query and follows their merges one query per hop, however many rows there are', function (): void {
+    $user = User::factory()->create();
+    $statements = function (int $rows) use ($user): int {
+        foreach (range(1, $rows) as $i) {
+            ListingRef::factory()->create(['listing_number' => 500000 + $i, 'merged_into' => 600000 + $i, 'author_key' => null]);
+            ListingRef::factory()->create(['listing_number' => 600000 + $i, 'merged_into' => 700000, 'author_key' => null]);
+            Favorite::factory()->for($user)->create(['listing_number' => 500000 + $i]);
+        }
+
+        $count = 0;
+        DB::listen(function () use (&$count): void {
+            $count++;
+        });
+        $numbers = resolverOf()->numbersOf(700000, null, $user->favorites()->toBase());
+
+        expect($numbers)->toHaveCount($rows + 1);
+
+        return $count;
+    };
+
+    expect($statements(2))->toBe(4);
+
+    Favorite::query()->delete();
+    ListingRef::query()->delete();
+
+    expect($statements(20))->toBe(4)
+        ->and(resolverOf()->survivors([500001, 600020, 700000, 424242]))->toBe([500001 => 700000, 600020 => 700000, 700000 => 700000, 424242 => 424242]);
 });
 
 it('queues the back-fill only for a pointer the source gave, on the default queue, once per number', function (): void {

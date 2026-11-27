@@ -49,8 +49,9 @@ final readonly class HiddenService
 
     /**
      * Shows a listing again that the user's own report of that reason hid (`DELETE /listings/{number}/reports`), under
-     * every number the caller gives — `ListingResolver::numbersOf()`: the number asked, the pointer's and the survivor
-     * `listing_refs` files for it; a row of another reason — a manual hide, another report — stays.
+     * every number the caller gives — `ListingResolver::numbersOf()`: the number asked, the pointer's, their survivors
+     * and the numbers of the user's rows merged into those survivors since; a row of another reason — a manual hide,
+     * another report — stays.
      *
      * @param  list<int>  $numbers
      */
@@ -60,12 +61,14 @@ final readonly class HiddenService
     }
 
     /**
-     * Shows the listing again — the number asked and the survivor `listing_refs` files for it — without asking the
-     * source; a listing that was not hidden changes nothing.
+     * Shows the listing again — the number asked, the survivor `listing_refs` files for it and every number of the
+     * user's hidden rows merged into that survivor since they were written (`ListingResolver::numbersOf()`), as
+     * «Скрытое» shows them under the survivor — without asking the source; a listing that was not hidden changes
+     * nothing.
      */
     public function unhide(User $user, int $number): void
     {
-        $user->hiddenListings()->whereIn('listing_number', array_values(array_unique([$number, $this->resolver->survivor($number)])))->delete();
+        $user->hiddenListings()->whereIn('listing_number', $this->resolver->numbersOf($number, null, $user->hiddenListings()->toBase()))->delete();
     }
 
     /**

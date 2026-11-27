@@ -8,6 +8,7 @@ use App\Models\ListingRef;
 use App\Services\Listings\ListingPointer;
 use App\Services\Sources\SourceContext;
 use App\Services\Sources\SourceManager;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 
 /**
  * The listing a personal write points at (WP-44, "Resolving a listing for a write"; brief decision 11): this class owns
@@ -23,8 +24,9 @@ use App\Services\Sources\SourceManager;
  *    `filed: false`. The caller writes its row and then calls `backfill()`, which queues `ResolveListingRef` — after the
  *    write, so the job finds the row (the `sync` queue of the tests runs it at once).
  *
- * A number below 1 is `404` without a query. A delete never resolves through the source: it removes the asked number
- * and its survivor (`survivor()`), so a listing the source has withdrawn can still leave a list.
+ * A number below 1 is `404` without a query. A list delete never resolves through the source: it removes the caller's
+ * rows under the asked number, its survivor and every number of the caller's rows merged into that survivor since
+ * (`numbersOf()`), so a listing the source has withdrawn, or merged after the row was written, can still leave a list.
  */
 final readonly class ListingResolver
 {
@@ -60,34 +62,92 @@ final readonly class ListingResolver
      */
     public function survivor(int $number): int
     {
-        $seen = [$number => true];
-
-        for ($hop = 0; $hop < self::MAX_HOPS; $hop++) {
-            $next = ListingRef::query()->whereKey($number)->value('merged_into');
-
-            if (! is_numeric($next) || isset($seen[(int) $next])) {
-                return $number;
-            }
-
-            $number = (int) $next;
-            $seen[$number] = true;
-        }
-
-        return $number;
+        return $this->survivors([$number])[$number];
     }
 
     /**
-     * The numbers a row the user wrote for the number asked may lie under, ascending and without repeats: the number
-     * asked, the pointer's number `resolve()` answered for it, and the survivor `listing_refs` files for the number
-     * asked. A row written through an alias the card source answered with its survivor lies under the pointer's number
-     * although no card read filed the alias; a row written before a later merge lies under the number asked. A
-     * withdrawal reads them all (`DELETE /listings/{number}/reports`: the vote and the hidden row).
+     * `survivor()` of each number, one query per hop for all of them (at most `MAX_HOPS`).
+     *
+     * @param  list<int>  $numbers
+     * @return array<int, int> each number => its survivor
+     */
+    public function survivors(array $numbers): array
+    {
+        $at = [];
+        $seen = [];
+
+        foreach ($numbers as $number) {
+            $at[$number] = $number;
+            $seen[$number] = [$number => true];
+        }
+
+        $open = array_keys($at);
+
+        for ($hop = 0; $hop < self::MAX_HOPS && $open !== []; $hop++) {
+            $next = ListingRef::query()->whereIn('listing_number', array_values(array_unique(array_map(fn (int $number): int => $at[$number], $open))))
+                ->whereNotNull('merged_into')->pluck('merged_into', 'listing_number')->all();
+            $moved = [];
+
+            foreach ($open as $number) {
+                $into = $next[$at[$number]] ?? null;
+
+                if (is_numeric($into) && ! isset($seen[$number][(int) $into])) {
+                    $at[$number] = (int) $into;
+                    $seen[$number][(int) $into] = true;
+                    $moved[] = $number;
+                }
+            }
+
+            $open = $moved;
+        }
+
+        return $at;
+    }
+
+    /**
+     * The numbers the caller's own rows for the number asked may lie under, ascending and without repeats — what a
+     * delete removes (`DELETE /favorites/{number}`, `DELETE /hidden/listings/{number}`, and the vote and the hidden row
+     * of `DELETE /listings/{number}/reports`): the number asked, the pointer's number `resolve()` answered for it (a
+     * withdrawal has one; a list delete never asks the source), the survivors `listing_refs` files for both, and every
+     * number of the caller's rows in `$rows` that `listing_refs` files as merged and whose survivor is one of those
+     * survivors. A row written through an alias the card source answered with its survivor lies under the pointer's
+     * number although no card read filed the alias; a row written before a later merge — one hop or several — lies
+     * under the number it was written for, while the lists show it as the survivor, so a delete by the survivor, the
+     * number asked or any number between finds it. `$rows` are the caller's own rows of a table with a
+     * `listing_number` column (its relation's base query): only the caller's merged rows are read, and their merges are
+     * followed in PHP, one query per hop for all of them.
      *
      * @return list<int>
      */
-    public function numbersOf(int $asked, ListingPointer $pointer): array
+    public function numbersOf(int $asked, ?ListingPointer $pointer, QueryBuilder ...$rows): array
     {
-        $numbers = array_values(array_unique([$asked, $pointer->number, $this->survivor($asked)]));
+        $base = $pointer === null ? [$asked] : [$asked, $pointer->number];
+        $merged = [];
+
+        foreach ($rows as $query) {
+            foreach ((clone $query)->whereIn('listing_number', ListingRef::query()->whereNotNull('merged_into')->select('listing_number'))->distinct()->pluck('listing_number') as $number) {
+                if (is_numeric($number)) {
+                    $merged[] = (int) $number;
+                }
+            }
+        }
+
+        $survivors = $this->survivors(array_values(array_unique([...$base, ...$merged])));
+        $targets = [];
+
+        foreach ($base as $number) {
+            $targets[$survivors[$number]] = true;
+        }
+
+        $numbers = [...$base, ...array_keys($targets)];
+
+        foreach ($merged as $number) {
+            if (isset($targets[$survivors[$number]])) {
+                $numbers[] = $number;
+            }
+        }
+
+        $numbers = array_values(array_unique($numbers));
         sort($numbers);
 
         return $numbers;

@@ -141,6 +141,41 @@ it('stores a merged duplicate under its survivor, and clears it by either number
     expect(Favorite::query()->count())->toBe(0);
 });
 
+it('clears a favourite stored before its listing was merged, one hop or two, by the number asked or a later survivor, and leaves another user\'s (review C, N1)', function (array $merges, int $asked): void {
+    $other = User::factory()->create();
+    favouriteInOrder($this->user, [100012]);
+    favouriteInOrder($other, [100012]);
+
+    foreach ($merges as $number => $into) {
+        ListingRef::factory()->create(['listing_number' => $number, 'merged_into' => $into, 'author_key' => null]);
+    }
+
+    ListingRef::factory()->create(['listing_number' => 100014]);
+
+    $this->deleteJson("/api/v1/favorites/{$asked}")->assertOk()->assertJsonPath('data.favorite', false);
+
+    expect(Favorite::query()->where('user_id', $this->user->id)->count())->toBe(0)
+        ->and(Favorite::query()->where('user_id', $other->id)->pluck('listing_number')->all())->toBe([100012]);
+})->with([
+    'one merge, by the survivor' => [[100012 => 100014], 100014],
+    'two merges, by the last survivor' => [[100012 => 100013, 100013 => 100014], 100014],
+    'two merges, by the middle number' => [[100012 => 100013, 100013 => 100014], 100013],
+    'two merges, by the number asked' => [[100012 => 100013, 100013 => 100014], 100012],
+]);
+
+it('lets a favourite listed as the survivor of a later merge leave the list by that survivor (review C, N1)', function (): void {
+    onLegacyFavourites();
+    favouriteInOrder($this->user, [100016]);
+    ListingRef::factory()->create(['listing_number' => 100001]);
+    ListingRef::factory()->create(['listing_number' => 100016, 'merged_into' => 100001, 'author_key' => null]);
+
+    expect(favouriteNumbersOf($this->getJson('/api/v1/favorites')->assertOk()))->toBe([100001]);
+
+    $this->deleteJson('/api/v1/favorites/100001')->assertOk();
+
+    expect(favouriteNumbersOf($this->getJson('/api/v1/favorites')->assertOk()))->toBe([]);
+});
+
 it('lists the favourites newest first, each a favourite, in the shape of WP-13 from the native source', function (): void {
     favouriteInOrder($this->user, [100012, 100013, 100003]);
 

@@ -35,13 +35,14 @@ final readonly class FavoriteService
     }
 
     /**
-     * Removes the listing — the number asked and the survivor `listing_refs` files for it — without asking the source,
-     * so a withdrawn listing can leave the list too; a listing that was no favourite changes nothing. Answers the
-     * state, `false`.
+     * Removes the listing — the number asked, the survivor `listing_refs` files for it and every number of the user's
+     * favourites merged into that survivor since they were saved (`ListingResolver::numbersOf()`), as the list shows
+     * them under the survivor — without asking the source, so a withdrawn listing can leave the list too; a listing
+     * that was no favourite changes nothing. Answers the state, `false`.
      */
     public function unset(User $user, int $number): bool
     {
-        $user->favorites()->whereIn('listing_number', array_values(array_unique([$number, $this->resolver->survivor($number)])))->delete();
+        $user->favorites()->whereIn('listing_number', $this->resolver->numbersOf($number, null, $user->favorites()->toBase()))->delete();
 
         return false;
     }

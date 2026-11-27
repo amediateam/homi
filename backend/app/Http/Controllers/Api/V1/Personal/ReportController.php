@@ -60,7 +60,12 @@ class ReportController extends ApiController
     {
         $user = $this->signedInUser($request);
         $pointer = $this->resolver->resolve($this->positive($number), SourceContext::fromRequest($request));
-        $numbers = $this->resolver->numbersOf($number, $pointer);
+        $numbers = $this->resolver->numbersOf(
+            $number,
+            $pointer,
+            $user->listingVotes()->where('reason', ReportReason::Rented->value)->toBase(),
+            $user->hiddenListings()->where('reason', HiddenReason::ReportRented->value)->toBase(),
+        );
 
         $this->votes->withdraw($user, $pointer, ReportReason::Rented, $numbers);
         $this->hidden->unhideReported($user, $numbers, HiddenReason::ReportRented);

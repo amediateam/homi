@@ -107,10 +107,11 @@ final readonly class VoteService
     /**
      * Withdraws the user's votes for the reason on the listing and recounts each subject that changed, once (the «Уже
      * сдано» undo of `DELETE /listings/{number}/reports`, the bot's undo buttons of WP-53). The votes are looked for
-     * under the pointer's number and every alias given — `ListingResolver::numbersOf()`: the number asked and the
-     * survivor `listing_refs` files for it — so a vote cast through an alias or before a later merge is withdrawn too,
-     * and its own subject is recounted. A vote already withdrawn, or none, changes nothing. The voter's hidden row is
-     * the caller's.
+     * under the pointer's number and every alias given — `ListingResolver::numbersOf()`: the number asked, its
+     * survivor, and the numbers of the voter's own votes and hidden rows merged into that survivor since, one hop or
+     * several — so a vote cast through an alias or before a later merge is withdrawn too, by the number asked or the
+     * survivor the lists show, and its own subject is recounted. A vote already withdrawn, or none, changes nothing.
+     * The voter's hidden row is the caller's; WP-53's undo and its «Сдано» state must read one number set.
      *
      * @param  list<int>  $aliases
      */

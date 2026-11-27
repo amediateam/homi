@@ -97,6 +97,42 @@ it('acts on the survivor of an alias number, hiding and unhiding', function (): 
     expect(hiddenNumbersOf($this->user))->toBe([]);
 });
 
+it('unhides a listing hidden before it was merged, one hop or two, by the number asked or a later survivor, and leaves another user\'s row (review C, N1)', function (array $merges, int $asked): void {
+    $other = User::factory()->create();
+    HiddenListing::factory()->for($this->user)->create(['listing_number' => 100012, 'reason' => HiddenReason::ReportRented]);
+    HiddenListing::factory()->for($other)->create(['listing_number' => 100012]);
+
+    foreach ($merges as $number => $into) {
+        ListingRef::factory()->create(['listing_number' => $number, 'merged_into' => $into, 'author_key' => null]);
+    }
+
+    ListingRef::factory()->create(['listing_number' => 100014]);
+
+    $this->deleteJson("/api/v1/hidden/listings/{$asked}")->assertNoContent();
+
+    expect(hiddenNumbersOf($this->user))->toBe([])
+        ->and(hiddenNumbersOf($other))->toBe([100012]);
+})->with([
+    'one merge, by the survivor' => [[100012 => 100014], 100014],
+    'two merges, by the last survivor' => [[100012 => 100013, 100013 => 100014], 100014],
+    'two merges, by the middle number' => [[100012 => 100013, 100013 => 100014], 100013],
+    'two merges, by the number asked' => [[100012 => 100013, 100013 => 100014], 100012],
+]);
+
+it('lets a hidden listing shown in «Скрытое» as the survivor of a later merge leave it by that survivor (review C, N1)', function (): void {
+    LegacyListingsHttp::fake();
+    Feature::globally()->activate('source.listings.card', ['everyone' => 'legacy']);
+    HiddenListing::factory()->for($this->user)->create(['listing_number' => 100016, 'reason' => HiddenReason::ReportRented]);
+    ListingRef::factory()->create(['listing_number' => 100001]);
+    ListingRef::factory()->create(['listing_number' => 100016, 'merged_into' => 100001, 'author_key' => null]);
+
+    expect(array_column($this->getJson('/api/v1/hidden')->assertOk()->json('data.listings'), 'number'))->toBe([100001]);
+
+    $this->deleteJson('/api/v1/hidden/listings/100001')->assertNoContent();
+
+    expect($this->getJson('/api/v1/hidden')->assertOk()->json('data.listings'))->toBe([]);
+});
+
 it('back-fills the channel and post of a listing hidden before HOMI had seen its card', function (): void {
     LegacyListingsHttp::fake();
     Feature::globally()->activate('source.listings.card', ['everyone' => 'legacy']);

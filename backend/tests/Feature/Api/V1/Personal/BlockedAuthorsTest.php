@@ -224,6 +224,29 @@ it('unblocks by listing and by entry the same entry', function (string $by): voi
     $this->deleteJson("/api/v1/hidden/authors/{$id}")->assertNotFound()->assertJsonPath('code', 'not_found');
 })->with(['listing', 'entry']);
 
+it('unblocks by listing the author of the listing, also after a later merge: the survivor\'s author, never the author of a listing merged into it (review C, N1)', function (): void {
+    ListingRef::factory()->ofAuthor('source:first_channel', 'source')->create(['listing_number' => 100012, 'source_channel' => 'first_channel']);
+    ListingRef::factory()->ofAuthor('source:first_channel', 'source')->create(['listing_number' => 100013, 'source_channel' => 'first_channel']);
+    ListingRef::factory()->ofAuthor('source:other_channel', 'source')->create(['listing_number' => 100014, 'source_channel' => 'other_channel']);
+    $first = $this->putJson('/api/v1/listings/100012/blocked-author')->assertOk()->json('data.id');
+    ListingRef::query()->whereKey(100012)->update(['merged_into' => 100013]);
+
+    $this->deleteJson('/api/v1/listings/100013/blocked-author')->assertNoContent();
+
+    expect(BlockedAuthor::query()->count())->toBe(0);
+
+    $first = $this->putJson('/api/v1/listings/100013/blocked-author')->assertOk()->json('data.id');
+    ListingRef::query()->whereKey(100013)->update(['merged_into' => 100014]);
+
+    $this->deleteJson('/api/v1/listings/100014/blocked-author')->assertNoContent();
+
+    expect(BlockedAuthor::query()->pluck('id')->all())->toBe([$first]);
+
+    $this->deleteJson("/api/v1/hidden/authors/{$first}")->assertNoContent();
+
+    expect(BlockedAuthor::query()->count())->toBe(0);
+});
+
 it('removes an entry by its id, lower case too, and answers 404 for a second call, a listing number and another user\'s id', function (): void {
     $entry = BlockedAuthor::factory()->for($this->user)->create();
     $foreign = BlockedAuthor::factory()->for(User::factory())->create();

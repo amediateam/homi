@@ -201,7 +201,7 @@ it('shows the listing again when «Уже сдано» is withdrawn through an a
         ->and(HiddenListing::query()->count())->toBe(0);
 });
 
-it('withdraws a rented report stored before the listing was merged, and recounts that listing\'s mark', function (): void {
+it('withdraws a rented report stored before the listing was merged, by that number or its survivor, and recounts that listing\'s mark', function (int $asked): void {
     ListingRef::factory()->create(['listing_number' => 100012]);
     ListingRef::factory()->create(['listing_number' => 100013]);
     $this->postJson('/api/v1/listings/100012/reports', ['reason' => 'rented'])->assertOk();
@@ -215,14 +215,65 @@ it('withdraws a rented report stored before the listing was merged, and recounts
 
     ListingRef::query()->whereKey(100012)->update(['merged_into' => 100013]);
     actAsReporter($this->user);
-    $this->deleteJson('/api/v1/listings/100012/reports')->assertNoContent();
+    $this->deleteJson("/api/v1/listings/{$asked}/reports")->assertNoContent();
 
     $vote = ListingVote::query()->where('user_id', $this->user->id)->sole();
     expect([$vote->listing_number, $vote->withdrawn_at !== null])->toBe([100012, true])
         ->and(HiddenListing::query()->where('user_id', $this->user->id)->count())->toBe(0)
+        ->and(HiddenListing::query()->where('user_id', '!=', $this->user->id)->pluck('listing_number')->all())->toBe([100012, 100012, 100012])
+        ->and(ListingVote::query()->where('user_id', '!=', $this->user->id)->whereNull('withdrawn_at')->count())->toBe(3)
         ->and(ListingMark::query()->find(100012)?->rented_at)->toBeNull()
         ->and(VoteDecision::query()->orderBy('id')->get()->map(fn (VoteDecision $row): array => [$row->subject, $row->voters, $row->weight_sum, $row->outcome])->all())
         ->toBe([['100012', 4, '4.00', 'marked'], ['100012', 3, '3.00', 'unmarked']]);
+})->with([
+    'by the number it was stored under' => 100012,
+    'by the survivor the merge gave (review C, N1)' => 100013,
+]);
+
+it('withdraws a rented report cast through an alias once its listing is merged again, by the alias or the last survivor (review C, N4)', function (int $asked): void {
+    ListingRef::factory()->create(['listing_number' => 100012, 'merged_into' => 100013, 'author_key' => null]);
+    ListingRef::factory()->create(['listing_number' => 100013]);
+    ListingRef::factory()->create(['listing_number' => 100014]);
+    $this->postJson('/api/v1/listings/100012/reports', ['reason' => 'rented'])->assertOk();
+
+    foreach (range(1, 3) as $vote) {
+        actAsReporter();
+        $this->postJson('/api/v1/listings/100013/reports', ['reason' => 'rented'])->assertOk();
+    }
+
+    expect(ListingVote::query()->where('user_id', $this->user->id)->sole()->listing_number)->toBe(100013)
+        ->and(ListingMark::query()->find(100013)?->rented_at)->not->toBeNull();
+
+    ListingRef::query()->whereKey(100013)->update(['merged_into' => 100014]);
+    actAsReporter($this->user);
+    $this->deleteJson("/api/v1/listings/{$asked}/reports")->assertNoContent();
+
+    $vote = ListingVote::query()->where('user_id', $this->user->id)->sole();
+    expect([$vote->listing_number, $vote->withdrawn_at !== null])->toBe([100013, true])
+        ->and(HiddenListing::query()->where('user_id', $this->user->id)->count())->toBe(0)
+        ->and(HiddenListing::query()->where('user_id', '!=', $this->user->id)->pluck('listing_number')->all())->toBe([100013, 100013, 100013])
+        ->and(ListingVote::query()->where('user_id', '!=', $this->user->id)->whereNull('withdrawn_at')->count())->toBe(3)
+        ->and(ListingMark::query()->find(100013)?->rented_at)->toBeNull()
+        ->and(VoteDecision::query()->orderBy('id')->get()->map(fn (VoteDecision $row): array => [$row->subject, $row->voters, $row->weight_sum, $row->outcome])->all())
+        ->toBe([['100013', 4, '4.00', 'marked'], ['100013', 3, '3.00', 'unmarked']]);
+})->with([
+    'by the alias' => 100012,
+    'by the last survivor' => 100014,
+]);
+
+it('withdraws a rented report stored under a number merged into the survivor the source gives for an unfiled alias (review C, N1)', function (): void {
+    LegacyListingsHttp::fake();
+    Feature::globally()->activate('source.listings.card', ['everyone' => 'legacy']);
+    ListingRef::factory()->create(['listing_number' => 100001]);
+    ListingRef::factory()->create(['listing_number' => 100030, 'merged_into' => 100001, 'author_key' => null]);
+    ListingVote::factory()->for($this->user)->create(['listing_number' => 100030, 'reason' => ReportReason::Rented, 'withdrawn_at' => null]);
+    HiddenListing::factory()->for($this->user)->create(['listing_number' => 100030, 'reason' => HiddenReason::ReportRented]);
+
+    $this->deleteJson('/api/v1/listings/100016/reports')->assertNoContent();
+
+    expect(ListingRef::query()->find(100016))->toBeNull()
+        ->and(ListingVote::query()->sole()->withdrawn_at)->not->toBeNull()
+        ->and(HiddenListing::query()->count())->toBe(0);
 });
 
 it('hides a rented listing from the reporter\'s feed at once, and from everybody\'s only at the threshold', function (): void {
