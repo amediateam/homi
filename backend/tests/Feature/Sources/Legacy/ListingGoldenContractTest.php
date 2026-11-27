@@ -2,6 +2,7 @@
 
 use App\Exceptions\Sources\LegacyContractError;
 use App\Models\User;
+use App\Services\Listings\PhoneMasker;
 use App\Services\Sources\Data\ListingDetails;
 use App\Services\Sources\Legacy\Translators\FlowTranslator;
 use App\Services\Sources\Legacy\Translators\ListingDetailsTranslator;
@@ -198,6 +199,30 @@ it('masks the owner\'s own description too, and the masked card masks to itself'
     expect($card['owner']['description'])->toBe('Без посредников. Звонить после 18:00: +998 ** *** ** 21')
         ->and(json_encode($card, JSON_UNESCAPED_UNICODE))->not->toContain('765 43 21')
         ->and(ListingDetails::fromArray($card)->owner->description)->toBe($card['owner']['description']);
+});
+
+it('writes every phone number of the legacy fixtures with the synthetic code 00, never an operator\'s', function (): void {
+    $prefixed = '/(?<!\d)(?:\+?998|8)[ \-.()]{0,2}(\d{2})[ \-.()]{0,2}\d{3}[ \-.()]{0,2}\d{2}[ \-.()]{0,2}\d{2}(?!\d)/';
+    $real = [];
+
+    foreach (glob(resource_path('fixtures/legacy').'/{,errors/}*.json', GLOB_BRACE) ?: [] as $file) {
+        // Photo signatures are 32 hex characters, whose digit runs the masker would read as numbers.
+        $text = (string) preg_replace('/\b[0-9a-f]{32}\b/', '', (string) file_get_contents($file));
+        preg_match_all($prefixed, $text, $numbers);
+        $withoutSynthetic = (string) preg_replace_callback($prefixed, fn (array $number): string => $number[1] === '00' ? '' : $number[0], $text);
+
+        foreach ($numbers[1] as $code) {
+            if ($code !== '00') {
+                $real[] = basename($file).": +998 {$code} …";
+            }
+        }
+
+        if (PhoneMasker::mask($withoutSynthetic) !== $withoutSynthetic) {
+            $real[] = basename($file).': a number with an operator code and no prefix';
+        }
+    }
+
+    expect($real)->toBe([]);
 });
 
 it('points every photo of the translated fixtures at HOMI\'s media host in the form the client derives the small variant from', function (): void {

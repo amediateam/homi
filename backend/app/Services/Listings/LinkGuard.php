@@ -10,8 +10,9 @@ namespace App\Services\Listings;
  * Dropped: any scheme but `https` (`tel:`, `http:`); a WhatsApp link (`wa.me`, `api.whatsapp.com`); a Telegram phone
  * link (`t.me/+…`, `telegram.me/+…`); and any link with nine digits in a row once it is percent-decoded and the
  * separators a number is written with are left out (whitespace, `-`, `.`, `_`, `(`, `)`, `+`), so
- * `https://wa.me/+998-00-765-43-21` and `…?phone=%2B998%2000…` are caught whatever their host. A slash is not such a
- * separator: a post link keeps its channel and post id apart (`https://t.me/chan_2024/1234567` is kept).
+ * `https://wa.me/+998-00-765-43-21` and `…?phone=%2B998%2000…` are caught whatever their host; and a link that does
+ * not decode to valid UTF-8, which cannot be checked. A slash is not such a separator: a post link keeps its channel
+ * and post id apart (`https://t.me/chan_2024/1234567` is kept).
  */
 final class LinkGuard
 {
@@ -33,10 +34,12 @@ final class LinkGuard
         $decoded = self::decoded($url);
         $host = strtolower((string) parse_url($url, PHP_URL_HOST));
         $path = (string) parse_url($decoded, PHP_URL_PATH);
+        $flat = preg_replace('/[\s\-._()+]+/u', '', $decoded);
 
-        if (in_array($host, self::PHONE_HOSTS, true)
+        if ($flat === null
+            || in_array($host, self::PHONE_HOSTS, true)
             || (in_array($host, self::TELEGRAM_HOSTS, true) && str_starts_with($path, '/+'))
-            || preg_match('/\d{9,}/', (string) preg_replace('/[\s\-._()+]+/u', '', $decoded)) === 1) {
+            || preg_match('/\d{9,}/', $flat) === 1) {
             return null;
         }
 

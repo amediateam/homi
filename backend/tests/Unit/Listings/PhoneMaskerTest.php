@@ -98,6 +98,17 @@ it('is idempotent on any text: a masked text masks to itself', function (array $
 ]);
 
 it('starts no number on the last two digits of a masked one', function (): void {
-    expect(PhoneMasker::mask('Тел: 99 123 45 90 1234567 сум'))->toBe(PhoneMasker::mask(PhoneMasker::mask('Тел: 99 123 45 90 1234567 сум')))
-        ->and(PhoneMasker::mask('+998 ** *** ** 62)4999099'))->toBe('+998 ** *** ** 62)4999099');
+    $once = maskSynthetic('Тел: 00 123 45 00 1234567 сум');
+
+    expect($once)->toBe('Тел: +998 ** *** ** 00 1234567 сум')
+        ->and(maskSynthetic($once))->toBe($once)
+        ->and(maskSynthetic('+998 ** *** ** 00)4999099'))->toBe('+998 ** *** ** 00)4999099');
 });
+
+it('masks a number after other asterisks, such as Markdown bold', function (string $text, string $masked): void {
+    expect(PhoneMasker::mask($text))->toBe($masked);
+})->with([
+    'bold label' => ['**Тел:** +998 00 765 43 21', '**Тел:** +998 ** *** ** 21'],
+    'after two asterisks and a space' => ['** 998007654321', '** +998 ** *** ** 21'],
+    'after a masked number and asterisks' => ['+998 ** *** ** 67 ** 998007654321', '+998 ** *** ** 67 ** +998 ** *** ** 21'],
+]);

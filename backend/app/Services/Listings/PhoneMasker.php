@@ -28,10 +28,11 @@ final class PhoneMasker
     public const string MASKED_PATTERN = '/\+(?:998 )?\*\* \*\*\* \*\* \d{2}/';
 
     /**
-     * No number starts on the two digits that end a masked one (`** NN`), so masking a masked text changes nothing:
-     * without it, `NN` and the digits after it could make a second number.
+     * No number starts on the two digits that end a masked one (`** *** ** NN`), so masking a masked text changes
+     * nothing: without it, `NN` and the digits after it could make a second number. Only that fixed tail counts, so
+     * a number after other asterisks (`**Тел:** +998 …`, Markdown bold) is still masked.
      */
-    private const string NOT_AFTER_MASK = '(?<![\d+*\/])(?<!\*\* )';
+    private const string NOT_AFTER_MASK = '(?<![\d+*\/])(?<!\*\* \*\*\* \*\* )';
 
     /** Up to two separators between digit groups, never a line break. */
     private const string SEPARATOR = '[ \t\-._()]{0,2}';

@@ -104,7 +104,10 @@ final class LegacyFakeServer
         };
     }
 
-    /** The card of a known id, or its own preview under the card's `id`; `404` for any other id. */
+    /**
+     * The card of a known id, or its own preview under the card's `id`; `404` for any other id. A card fixture is
+     * answered as its recorded text, so a number such as `625.0` keeps its JSON type.
+     */
     private function card(int $id, bool $preview): PromiseInterface
     {
         $fixture = self::CARDS[$id] ?? null;
@@ -115,7 +118,6 @@ final class LegacyFakeServer
         }
 
         if (! $preview && $fixture !== null) {
-            // The recorded text, so a number such as `625.0` keeps its JSON type.
             return $this->respond($fixture, 200);
         }
 

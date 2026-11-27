@@ -37,5 +37,6 @@ it('drops any link that could carry a phone number, whatever its host and encodi
     'a user in the address' => ['https://user@t.me/stub_author_6'],
     'no host' => ['https:///t.me'],
     'whitespace' => ['https://t.me/stub author'],
+    'a number behind a byte that is not UTF-8' => ['https://t.me/x%FF998007654321'],
     'null' => [null],
 ]);
