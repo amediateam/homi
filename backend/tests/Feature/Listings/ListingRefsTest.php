@@ -144,6 +144,19 @@ it('finds the numbers of authors and the author key of numbers', function (): vo
         ->and(refs()->authorKeysOf([100, 200, 400, 500]))->toBe([100 => 'phone:one', 200 => 'source:two']);
 });
 
+it('finds the newest live numbers of one author, ascending, up to the limit (WP-44, review A F4)', function (): void {
+    foreach ([100, 200, 300, 400, 500] as $number) {
+        ListingRef::factory()->ofAuthor('phone:one')->create(['listing_number' => $number]);
+    }
+    ListingRef::factory()->ofAuthor('phone:one')->gone()->create(['listing_number' => 600]);
+    ListingRef::factory()->ofAuthor('phone:one')->create(['listing_number' => 700, 'merged_into' => 100]);
+    ListingRef::factory()->ofAuthor('source:two', 'source')->create(['listing_number' => 800]);
+
+    expect(refs()->liveNumbersOfAuthor('phone:one', 3))->toBe([300, 400, 500])
+        ->and(refs()->liveNumbersOfAuthor('phone:one', 10))->toBe([100, 200, 300, 400, 500])
+        ->and(refs()->liveNumbersOfAuthor('phone:none', 10))->toBe([]);
+});
+
 it('marks a known number gone, and files nothing for a number it does not know', function (): void {
     ListingRef::factory()->create(['listing_number' => 100777]);
 

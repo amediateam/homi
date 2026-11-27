@@ -15,7 +15,7 @@ use Illuminate\Http\Response;
 /**
  * Blocking the author of a listing in HOMI's table (WP-44; the shapes of WP-13). The author is the key `listing_refs`
  * files for the listing (`404 not_found` when it has none — always on the stub driver, brief decision 14); the answer
- * lists the author's listings HOMI knows. Both calls are idempotent. While `sources.native_stubs` is on, `NativeStubs`
+ * lists the author's newest live listings HOMI knows (`BlockResult`). Both calls are idempotent. While `sources.native_stubs` is on, `NativeStubs`
  * answers the stub bodies of WP-13 instead.
  */
 class BlockedAuthorController extends ApiController

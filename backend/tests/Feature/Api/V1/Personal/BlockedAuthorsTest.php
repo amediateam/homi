@@ -55,7 +55,7 @@ function rentApartmentKey(): string
     return AuthorKey::fromCard(['phone' => '+998001234567'])?->key ?? throw new LogicException('No key derived.');
 }
 
-it('blocks a phone author: an entry with the masked label, the card\'s count and the author\'s listings HOMI knows', function (): void {
+it('blocks a phone author: an entry with the masked label, the card\'s count and the author\'s live listings HOMI knows', function (): void {
     onLegacyBlocks();
     ListingRef::factory()->ofAuthor(rentApartmentKey())->create(['listing_number' => 100777]);
     ListingRef::factory()->ofAuthor(rentApartmentKey())->gone()->create(['listing_number' => 100778]);
@@ -69,7 +69,7 @@ it('blocks a phone author: an entry with the masked label, the card\'s count and
         'kind' => 'phone',
         'label' => '+998 ** *** ** 67',
         'count' => 3,
-        'listing_numbers' => [100001, 100777, 100778],
+        'listing_numbers' => [100001, 100777],
     ])
         ->and($entry->id)->toMatch('/^[0-9A-HJKMNP-TV-Z]{26}$/')
         ->and([$entry->user_id, $entry->author_key, $entry->kind, $entry->label])->toBe([$this->user->id, rentApartmentKey(), 'phone', '+998 ** *** ** 67'])
@@ -85,6 +85,30 @@ it('blocks a source author by its channel', function (): void {
         ->and($response->json('data.label'))->toBe('@stub_channel_b')
         ->and($response->json('data.listing_numbers'))->toBe([100002])
         ->and(BlockedAuthor::query()->sole()->author_key)->toBe('source:stub_channel_b');
+});
+
+it('answers at most the 500 newest live listings of a large author, and the one asked (review A, F4)', function (): void {
+    onLegacyBlocks();
+    $rows = [];
+    $live = [];
+    foreach (range(0, 649) as $i) {
+        $gone = $i % 13 === 0;
+        $merged = $i % 13 === 1;
+        $rows[] = [
+            'listing_number' => 200000 + $i, 'author_key' => 'source:stub_channel_b', 'author_kind' => 'source', 'first_seen_at' => now(), 'last_seen_at' => now(),
+            'gone_at' => $gone ? now() : null, 'merged_into' => $merged ? 100002 : null,
+        ];
+        if (! $gone && ! $merged) {
+            $live[] = 200000 + $i;
+        }
+    }
+    ListingRef::query()->insert($rows);
+
+    $numbers = $this->putJson('/api/v1/listings/100002/blocked-author')->assertOk()->json('data.listing_numbers');
+
+    expect($live)->toHaveCount(550)
+        ->and($numbers)->toBe([100002, ...array_slice($live, -500)])
+        ->and(ListingRef::query()->whereIn('listing_number', $numbers)->where(fn ($query) => $query->whereNotNull('gone_at')->orWhereNotNull('merged_into'))->count())->toBe(0);
 });
 
 it('answers the same entry for a repeat, without reading the source again', function (): void {

@@ -145,14 +145,15 @@ final readonly class BlockedAuthorService
     }
 
     /**
-     * The numbers `listing_refs` files under the key, with the ones asked, ascending and once each.
+     * The newest `BlockResult::MAX_LISTINGS` live numbers `listing_refs` files under the key, with the ones asked (the
+     * number and its survivor), ascending and once each.
      *
      * @param  list<int>  $asked
      * @return list<int>
      */
     private function numbers(string $key, array $asked): array
     {
-        $numbers = array_values(array_unique([...$this->refs->numbersOfAuthors([$key]), ...$asked]));
+        $numbers = array_values(array_unique([...$this->refs->liveNumbersOfAuthor($key, BlockResult::MAX_LISTINGS), ...$asked]));
         sort($numbers);
 
         return $numbers;
