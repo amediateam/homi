@@ -4,6 +4,7 @@ use App\Enums\Access\AccessGrantState;
 use App\Enums\Access\AdmittedVia;
 use App\Events\Listings\ContactDisclosed;
 use App\Events\Listings\ContactQuotaExceeded;
+use App\Exceptions\Listings\ContactUnavailable;
 use App\Exceptions\Sources\SourceNotFound;
 use App\Models\AccessGrant;
 use App\Models\User;
@@ -14,6 +15,7 @@ use App\Services\Sources\Legacy\LegacyListingSource;
 use App\Services\Sources\SourceContext;
 use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Database\QueryException;
 use Illuminate\Encryption\Encrypter;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Request;
@@ -24,6 +26,7 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Sleep;
 use Illuminate\Testing\TestResponse;
 use Laravel\Pennant\Feature;
@@ -191,6 +194,9 @@ it('variant B passes an absolute https link on and answers 503 for anything else
     'a backslash in a path' => ['/\\attacker.example/x', 503],
     'a user before legacy\'s host' => ['https://attacker.example@legacy.test/x', 503],
     'a user and a password' => ['https://u:p@legacy.test/x', 503],
+    'a port with a letter after it' => ['https://legacy.test:443x/call/abc', 503],
+    'a port with a sign' => ['https://legacy.test:+443/call/abc', 503],
+    'an empty port' => ['https://legacy.test:/call/abc', 200],
     'empty' => ['', 503],
     'not a string' => [42, 503],
     'missing' => [null, 503],
@@ -231,6 +237,9 @@ it('variant B refuses a link to any host and port but legacy\'s and those of leg
     'a number as the host' => ['https://+998901234567/x', ['host_invalid' => true]],
     'an encoded path and query in the host' => ['https://evil.example%2f998901234567%3ft=SECRET/x', ['host_invalid' => true]],
     'a run of seven digits in a host name' => ['https://call-9012345.attacker.example/x', ['host_invalid' => true]],
+    'a number split by hyphens in a host name' => ['https://998-90-123-45-67.attacker.example/x', ['host_invalid' => true]],
+    'a number split by dots in a host name' => ['https://998.90.123.45.67.attacker.example/x', ['host_invalid' => true]],
+    'six digits in a host name' => ['https://call-901234.attacker.example/x', ['host' => 'call-901234.attacker.example']],
 ]);
 
 it('variant B warns of refused links whose host it does not name at most once a minute in all', function (): void {
@@ -489,6 +498,74 @@ it('files nothing from the card of a duplicate legacy answers again while it is 
     expect(Cache::has('legacy:v1:listings:contact:100016'))->toBeFalse()
         ->and(Cache::has('legacy:v1:listings:contact:100001'))->toBeFalse();
     contactOf(100016)->assertNotFound()->assertJsonPath('code', 'contact_unavailable');
+});
+
+it('gives no contact through a duplicate\'s card read in flight while legacy answers 404 for the duplicate', function (int $notFound): void {
+    config(['legacy.cache.not_found' => $notFound]);
+    onLegacyContact();
+    $phase = 'in flight';
+    LegacyListingsHttp::answer(function (Request $request) use (&$phase): ?PromiseInterface {
+        if (LegacyListingsHttp::path($request) !== '/api/listings/100016') {
+            return null;
+        }
+
+        if ($phase === 'in flight') {
+            // While the contact's card read waits for legacy, another read of the duplicate is answered 404; then the
+            // contact's read gets the duplicate's card, which answers with the survivor's number.
+            $phase = 'withdrawn';
+            expect(fn () => app(LegacyListingSource::class)->details(100016, new SourceContext('ru', 'USD')))->toThrow(SourceNotFound::class);
+
+            return null;
+        }
+
+        return Factory::response(['detail' => 'Not found.'], 404);
+    });
+
+    expect(fn () => app(LegacyListingSource::class)->contact(100016, new SourceContext('en', 'USD')))->toThrow(ContactUnavailable::class)
+        ->and($phase)->toBe('withdrawn')
+        ->and(Cache::has('legacy:v1:listings:contact:100016'))->toBeFalse()
+        ->and(Cache::has('legacy:v1:listings:contact:100001'))->toBeFalse();
+})->with(['gone numbers remembered' => [60], 'gone numbers not remembered' => [0]]);
+
+it('withdraws the contact of a listing legacy answers 404 for before it records the listing gone, so a failing write leaves no number', function (): void {
+    config(['legacy.cache.not_found' => 0]);
+    onLegacyContact();
+    $gone = false;
+    LegacyListingsHttp::answer(function (Request $request) use (&$gone): ?PromiseInterface {
+        return $gone && LegacyListingsHttp::path($request) === '/api/listings/100001' ? Factory::response(['detail' => 'Not found.'], 404) : null;
+    });
+    $source = app(LegacyListingSource::class);
+    $source->details(100001, new SourceContext('en', 'USD'));
+    expect(Cache::has('legacy:v1:listings:contact:100001'))->toBeTrue();
+
+    // Recording the listing gone fails (here: its table is missing).
+    Schema::drop('listing_refs');
+    $gone = true;
+
+    expect(fn () => $source->details(100001, new SourceContext('ru', 'USD')))->toThrow(QueryException::class)
+        ->and(Cache::has('legacy:v1:listings:withdrawn:100001'))->toBeTrue()
+        ->and(Cache::has('legacy:v1:listings:contact:100001'))->toBeFalse()
+        ->and(fn () => $source->contact(100001, new SourceContext('en', 'USD')))->toThrow(ContactUnavailable::class);
+});
+
+it('refuses a contact entry left beside a withdrawal while the caller waited for the fill lock', function (): void {
+    onLegacyContact();
+    expect(Cache::lock('legacy:v1:listings:contact:100001:fill', 60)->get())->toBeTrue();
+    $planted = false;
+    Sleep::whenFakingSleep(function () use (&$planted): void {
+        if ($planted) {
+            return;
+        }
+
+        // While the caller waits: legacy answers 404 for the number, and a read racing it has just filed an entry.
+        $planted = true;
+        Cache::put('legacy:v1:listings:withdrawn:100001', 1, 107);
+        Cache::put('legacy:v1:listings:contact:100001', Crypt::encryptString(json_encode(['p' => '+998001234567', 'd' => null, 'l' => false], JSON_THROW_ON_ERROR)), 60);
+    });
+
+    expect(fn () => app(LegacyListingSource::class)->contact(100001, new SourceContext('en', 'USD')))->toThrow(ContactUnavailable::class)
+        ->and($planted)->toBeTrue()
+        ->and(LegacyListingsHttp::sent('/api/listings/100001'))->toBe([]);
 });
 
 it('discloses a listing legacy answers again once its withdrawal has passed', function (): void {

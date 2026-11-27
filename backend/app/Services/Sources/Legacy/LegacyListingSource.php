@@ -152,8 +152,11 @@ final class LegacyListingSource implements ListingSource
 
     /**
      * A host a warning may name: a DNS name of at most 253 characters, lower-case labels of letters, digits and inner
-     * hyphens, no trailing dot (`callUrl()` also refuses one with a run of seven digits or more).
+     * hyphens, no trailing dot (`callUrl()` also refuses one with seven digits or more in all).
      */
+    /** The authority of an absolute call link: a host (a bracketed IPv6 literal too) and an optional port of digits only. */
+    private const string LINK_AUTHORITY = '#^https://(\[[0-9a-f:.]+\]|[^/?\#:\[\]]+)(:\d{0,5})?(?=[/?\#]|$)#iD';
+
     private const string LOGGABLE_HOST = '/^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/D';
 
     /** The port of an `https` address that names none. */
@@ -624,21 +627,22 @@ final class LegacyListingSource implements ListingSource
     /**
      * The contact of a full card read again (its entry missed; `file()` stores the new entry); the card is cached as
      * `details()` would cache it, so the card or preview read that usually follows (the call page's title) needs no
-     * second call. A card that answers with a withdrawn survivor's number gives no contact (`refuseWithdrawn()`).
-     * Legacy's daily limit is `503` here: only the card method passes it on.
+     * second call. While the asked number or the survivor a card answers with is withdrawn (`refuseWithdrawn()`) —
+     * legacy answered `404` while this read was in flight — the card gives no contact and is not cached. Legacy's
+     * daily limit is `503` here: only the card method passes it on.
      *
      * @throws ContactUnavailable|SourceNotFound|SourceUnavailable
      */
     private function contactFromCard(int $number, SourceContext $context): LegacyContact
     {
         ['card' => $card, 'contact' => $contact, 'answered' => $answered] = $this->readCard($number, $context, false, daily: false);
+        $this->refuseWithdrawn($number);
+        $this->refuseWithdrawn($answered);
         $seconds = Config::integer('legacy.cache.card');
 
         if ($seconds > 0) {
             $this->cache->put($this->cardKey('card', $number, $context), $card, $seconds);
         }
-
-        $this->refuseWithdrawn($answered);
 
         return $contact ?? throw new LogicException('A full card files its contact.');
     }
@@ -647,12 +651,14 @@ final class LegacyListingSource implements ListingSource
      * The author's contact of a listing from its encrypted entry, or from its survivor's when the entry is a merged
      * duplicate's pointer (one step: the survivor's entry must hold a contact); `null` when there is none, or it cannot
      * be read (the application key changed, another shape): then the entry is dropped and the card is read again. A
-     * pointer to a withdrawn survivor is `ContactUnavailable`.
+     * withdrawn number, and a pointer to a withdrawn survivor, is `ContactUnavailable` — asked again here, since
+     * `singleFlight()` looks the entry up once more after waiting for another caller's fill.
      *
      * @throws ContactUnavailable
      */
     private function cachedContact(int $number): ?LegacyContact
     {
+        $this->refuseWithdrawn($number);
         $data = $this->unsealed($number);
 
         if ($data !== null && array_keys($data) === ['m']) {
@@ -744,10 +750,11 @@ final class LegacyListingSource implements ListingSource
      * port are refused. A link to any other host or port leaves the listing without a usable link
      * (`ContactUnavailable`), with a warning that names the path template and the host, lower-cased — never its port,
      * path, query or fragment, nor the whole address — at most once a minute per host, so the operator can tell which
-     * host belongs in `LEGACY_CONTACT_LINK_HOSTS`; only a host name (`LOGGABLE_HOST`) without a run of seven digits or
-     * more (a phone number) is named: any other host is logged as `host_invalid: true`, at most once a minute for all
-     * of them. A backslash anywhere, a control character or a space, and every other form are a contract error naming
-     * `url`.
+     * host belongs in `LEGACY_CONTACT_LINK_HOSTS`; only a host name (`LOGGABLE_HOST`) with fewer than seven digits in
+     * all (a phone number split by hyphens or dots is still one) is named: any other host is logged as
+     * `host_invalid: true`, at most once a minute for all of them. A backslash anywhere, a control character or a
+     * space, a port that is not digits only (`parse_url()` reads `:443x` as 443; a browser refuses it), and every
+     * other form are a contract error naming `url`.
      *
      * @param  array<array-key, mixed>  $answer
      *
@@ -772,10 +779,14 @@ final class LegacyListingSource implements ListingSource
             throw $refuse();
         }
 
+        if (preg_match(self::LINK_AUTHORITY, $url) !== 1) {
+            throw $refuse();
+        }
+
         $host = strtolower($parts['host']);
 
         if (! in_array($host.':'.($parts['port'] ?? self::HTTPS_PORT), self::linkOrigins(), true)) {
-            $named = preg_match(self::LOGGABLE_HOST, $host) === 1 && preg_match('/\d{7,}/', $host) === 0;
+            $named = preg_match(self::LOGGABLE_HOST, $host) === 1 && preg_match_all('/\d/', $host) < 7;
 
             if ($this->cache->add(self::PREFIX.'once:link_host:'.($named ? sha1($host) : 'invalid'), 1, 60)) {
                 Log::warning('Legacy gave a call link to a host HOMI does not allow: the listing has no usable link.', ['path' => self::CALL_PATH, ...($named ? ['host' => $host] : ['host_invalid' => true])]);
@@ -1294,15 +1305,16 @@ final class LegacyListingSource implements ListingSource
      * A number legacy answered `404` for: gone in `listing_refs`, not asked again for `legacy.cache.not_found` s (its
      * gone marker), and withdrawn for its contact (its withdrawn marker, written first, whatever `not_found` says) for
      * `legacy.cache.card` s and one read with every attempt (`fillSeconds()`) — longer than any contact entry filed
-     * before the `404` lives, and than any read in flight during it takes — before its contact entry is dropped. So
+     * before the `404` lives, and than any read in flight during it takes — before its contact entry is dropped; both
+     * come before the write to `listing_refs`, so a failing write leaves no number behind. So
      * the contact method answers no number of a withdrawn listing, nor of a duplicate merged into it, even while gone
      * numbers are not kept: `file()` files nothing for it, and `contactEntry()` refuses it.
      */
     private function rememberGone(int $number): void
     {
-        $this->refs->markGone($number);
         $this->cache->put($this->withdrawnKey($number), 1, max(0, Config::integer('legacy.cache.card')) + self::fillSeconds());
         $this->cache->forget($this->contactKey($number));
+        $this->refs->markGone($number);
         $seconds = Config::integer('legacy.cache.not_found');
 
         if ($seconds > 0) {
