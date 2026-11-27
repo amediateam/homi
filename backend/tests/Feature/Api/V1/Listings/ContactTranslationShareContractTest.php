@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Services\Listings\CallLinkService;
+use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 use Tests\Support\ContractShapes;
 use Tests\Support\JsonShape;
@@ -64,11 +65,28 @@ it('translates through the stub fixtures of WP-12 while the native stubs are on 
     $this->postJson('/api/v1/listings/100001/translation', [], ['Accept-Language' => 'ru'])->assertStatus(422)->assertJsonPath('code', 'translation_not_needed');
 });
 
-it('prepares a share message', function (): void {
+it('prepares a share message of HOMI\'s bot (WP-43)', function (): void {
+    Http::preventStrayRequests();
+    config(['telegram.bot.username' => 'homi_contract_bot']);
+    $this->app['auth']->forgetGuards();
+    Sanctum::actingAs(User::factory()->telegram()->create(), ['app:read']);
+    Http::fake(['api.telegram.org/*' => Http::response(['ok' => true, 'result' => ['id' => 'prepared-contract-1', 'expiration_date' => time() + 3600]])]);
+
     $response = $this->postJson('/api/v1/listings/100012/share')->assertOk();
 
     JsonShape::assertSame(['success' => 'bool', 'data' => ['prepared_message_id' => 'string', 'expires_at' => 'string'], 'meta' => ['source' => 'string']], JsonShape::of($response->json()));
-    $response->assertJsonPath('meta.source', 'stub');
+    $response->assertJsonPath('data.prepared_message_id', 'prepared-contract-1')->assertJsonPath('meta.source', 'native');
+});
+
+it('prepares the stub share message of WP-12 while the native stubs are on (the e2e suite)', function (): void {
+    config(['sources.native_stubs' => true]);
+
+    $response = $this->postJson('/api/v1/listings/100012/share')->assertOk();
+
+    JsonShape::assertSame(['success' => 'bool', 'data' => ['prepared_message_id' => 'string', 'expires_at' => 'string'], 'meta' => ['source' => 'string']], JsonShape::of($response->json()));
+    $response->assertJsonPath('data.prepared_message_id', 'stub-prepared-100012')->assertJsonPath('meta.source', 'stub');
+    $this->postJson('/api/v1/listings/100012/share', [], ['X-Stub-Scenario' => 'share_failed'])->assertStatus(502)->assertJsonPath('code', 'share_failed');
+    $this->postJson('/api/v1/listings/999404/share')->assertStatus(404)->assertJsonPath('code', 'not_found');
 });
 
 it('answers the errors of the three methods', function (string $path, array $headers, int $status, string $code): void {
@@ -81,6 +99,6 @@ it('answers the errors of the three methods', function (string $path, array $hea
     'translation rate limited' => ['100001/translation', ['Accept-Language' => 'uz', 'X-Stub-Scenario' => 'rate_limited'], 429, 'rate_limited'],
     'translation of an unknown number' => ['999404/translation', ['Accept-Language' => 'uz'], 404, 'not_found'],
     'share of an unknown number' => ['999404/share', [], 404, 'not_found'],
-    'share failed' => ['100012/share', ['X-Stub-Scenario' => 'share_failed'], 502, 'share_failed'],
+    'share without a Telegram id' => ['100012/share', [], 502, 'share_failed'],
     'share rate limited' => ['100012/share', ['X-Stub-Scenario' => 'rate_limited'], 429, 'rate_limited'],
 ]);

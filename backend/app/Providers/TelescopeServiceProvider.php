@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Http\DashboardAccess;
 use App\Models\User;
+use App\Services\Telegram\TelegramClient;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Telescope\EntryType;
 use Laravel\Telescope\IncomingEntry;
@@ -24,7 +25,7 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
         $isLocal = $this->app->environment('local');
 
         Telescope::filter(function (IncomingEntry $entry) use ($isLocal): bool {
-            if (self::isLegacyCall($entry) || self::isCallPage($entry) || self::isTranslationCache($entry)) {
+            if (self::isLegacyCall($entry) || self::isCallPage($entry) || self::isBotApiCall($entry) || self::isTranslationCache($entry)) {
                 return false;
             }
 
@@ -56,6 +57,24 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
 
         // Guzzle writes the request's host in lower case; the configured one may not be.
         return is_string($host) && is_string($legacy) && strtolower($host) === strtolower($legacy);
+    }
+
+    /**
+     * An outgoing request to the Telegram Bot API (WP-43, `TelegramClient`): never kept, in any environment. Its address
+     * holds the bot token (SEC-REQ-013), and its payload a Telegram user id and a listing's text.
+     */
+    private static function isBotApiCall(IncomingEntry $entry): bool
+    {
+        if ($entry->type !== EntryType::CLIENT_REQUEST) {
+            return false;
+        }
+
+        $uri = $entry->content['uri'] ?? null;
+        $configured = config('telegram.http.base_url');
+        $api = parse_url(is_string($configured) && trim($configured) !== '' ? $configured : TelegramClient::DEFAULT_BASE_URL, PHP_URL_HOST);
+        $host = is_string($uri) ? parse_url($uri, PHP_URL_HOST) : null;
+
+        return is_string($host) && is_string($api) && strtolower($host) === strtolower($api);
     }
 
     /**

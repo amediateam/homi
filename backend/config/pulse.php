@@ -148,9 +148,11 @@ return [
                 '/^listing-opens:/',
                 '/^access:decision:/',
                 '/^auth:/',
-                // WP-43: the day's set of listings a user asked a contact for (`contact:<id>:<day>`) and its lock, and
-                // a user's count of translation misses (`v1-translation:user:<id>`).
+                // WP-43: the day's set of listings a user asked a contact for (`contact:<id>:<day>`) and its lock, a
+                // user's prepared share messages (`share:<id>:…`) and his count of translation misses
+                // (`v1-translation:user:<id>`).
                 '/^contact:/',
+                '/^share:/',
                 '/^v1-translation:/',
             ],
             'groups' => [
@@ -201,6 +203,8 @@ return [
                 // '#^http://127\.0\.0\.1:13714#', // Inertia SSR...
             ],
             'groups' => [
+                // WP-43: a Bot API address holds the bot token in its path (`/bot<token>/<method>`): kept without it.
+                '#^(https?://[^/]+)/bot[^/]*/(.*)$#' => '\1/bot***/\2',
                 // '#^https://api\.github\.com/repos/.*$#' => 'api.github.com/repos/*',
                 // '#^https?://([^/]*).*$#' => '\1',
                 // '#/\d+#' => '/*',

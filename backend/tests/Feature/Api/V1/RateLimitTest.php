@@ -76,7 +76,9 @@ it('limits each route class at its configured count, per period, and names no re
     // WP-43: `v1-translation` counts only the misses of `TranslationService` (`TranslationTest`); the route is read
     // under `v1-reads`, so a cached translation is counted there.
     'v1-reads, a translation' => ['reads.per_minute', true, 'POST', 'listings/100001/translation', [], 60, 200],
-    'v1-share' => ['share.per_hour', true, 'POST', 'listings/100001/share', [], 3600, 200],
+    // WP-43: the share runs `ShareService`; the limited user has no Telegram id, so each share is `502 share_failed`
+    // before any Bot API call, and the limiter still counts every request.
+    'v1-share' => ['share.per_hour', true, 'POST', 'listings/100001/share', [], 3600, 502],
     'v1-lists' => ['lists.per_minute', true, 'PUT', 'favorites/100001', [], 60, 200],
     'v1-reports' => ['reports.per_day', true, 'POST', 'listings/100001/reports', ['reason' => 'rented'], 86400, 200],
     'v1-radars' => ['radars.per_minute', true, 'PATCH', 'settings', [], 60, 200],

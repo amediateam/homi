@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\Auth\TelegramAuthController;
 use App\Http\Controllers\Api\V1\Listings\ListingContactController;
+use App\Http\Controllers\Api\V1\Listings\ListingShareController;
 use App\Http\Controllers\Api\V1\Listings\ListingTranslationController;
 use App\Http\Controllers\Api\V1\MeController;
 use App\Http\Controllers\Api\V1\ReferenceController;
@@ -35,6 +36,7 @@ dataset('native stub routes', [
     'settings update' => ['PATCH', '/api/v1/settings', ['currency' => 'UZS', 'quiet_hours' => null], SettingsController::class, 'update'],
     'listing contact' => ['POST', '/api/v1/listings/100001/contact', [], ListingContactController::class, '__invoke'],
     'listing translation' => ['POST', '/api/v1/listings/100001/translation', [], ListingTranslationController::class, '__invoke'],
+    'listing share' => ['POST', '/api/v1/listings/100001/share', [], ListingShareController::class, '__invoke'],
 ]);
 
 function actAsNativeStubUser(array $abilities = ['app:read', 'app:write']): void
@@ -158,7 +160,7 @@ it('validates the form request of a stub as the controller did', function (): vo
 it('names only registered routes in its map', function (): void {
     $stubs = app(NativeStubs::class);
 
-    expect($stubs->routes())->toBe(['api.v1.auth.telegram', 'api.v1.me.show', 'api.v1.settings.show', 'api.v1.settings.update', 'api.v1.listings.contact', 'api.v1.listings.translation']);
+    expect($stubs->routes())->toBe(['api.v1.auth.telegram', 'api.v1.me.show', 'api.v1.settings.show', 'api.v1.settings.update', 'api.v1.listings.contact', 'api.v1.listings.translation', 'api.v1.listings.share']);
     foreach ($stubs->routes() as $name) {
         expect(Route::has($name))->toBeTrue()->and($stubs->answers($name))->toBeTrue();
     }
