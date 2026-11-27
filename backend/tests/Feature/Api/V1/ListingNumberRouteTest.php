@@ -78,7 +78,8 @@ it('lets the largest number of the pattern through to the controller, which neve
     foreach (listingNumberRoutes() as $call) {
         $status = $this->json($call['method'], '/'.str_replace('{number}', '999999999999999999', $call['uri']), ['reason' => 'agent'])->status();
 
-        // The share answers its own `502 share_failed` here: the test user has no Telegram account (WP-43).
+        // The share answers its own `502 share_failed` here before it reads the listing: this test configures no bot
+        // and its user has no Telegram id (`ShareService::prepare()`, WP-43).
         expect($status)->not->toBe(500, "{$call['method']} {$call['uri']}");
     }
 })->with([
