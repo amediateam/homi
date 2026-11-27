@@ -28,6 +28,11 @@
 |   `https://<media host>/lm`); blank means photo lists are empty. `hosts` are the legacy hosts whose absolute photo
 |   addresses are rewritten too (a relative `/media/…` address always is): `LEGACY_MEDIA_HOSTS`, comma-separated,
 |   else the host of `base_url`.
+| - `contact` (WP-43): `mode` (`LEGACY_CONTACT_MODE`) is what the service key gets for a contact (Q-API-062, WP-02
+|   point 7): `phone` — the raw number in the card (variant A: HOMI issues its own call link), `link` — only a call
+|   link (variant B: `GET /api/listings/{id}/call`), `auto` (default) — decided per card: a phone that reads as one
+|   number is variant A, else a call link variant B, else no contact; any other value is `auto`. `link_ttl`: seconds
+|   a legacy call link is answered as valid (`expires_at` of variant B).
 | - `fields.author_key`: the name of the card field that carries a stable author key, once the operator offers one
 |   (WP-02 point 6); blank means none.
 | - `previews.concurrency`: card previews read in parallel; `previews.max_wait_ms` (`LEGACY_PREVIEWS_MAX_WAIT_MS`): the
@@ -61,6 +66,7 @@ $previewsWait = is_numeric($previewsWait) && (int) $previewsWait >= 0 ? (int) $p
 $backgroundWait = $value('LEGACY_PREVIEWS_BACKGROUND_WAIT_MS', 2000);
 $previewsDeadline = $value('LEGACY_PREVIEWS_DEADLINE_MS', null);
 $fillWait = $value('LEGACY_CACHE_FILL_WAIT_MS', 1000);
+$contactMode = strtolower(trim((string) $value('LEGACY_CONTACT_MODE', 'auto')));
 
 return [
     'base_url' => $baseUrl,
@@ -121,6 +127,11 @@ return [
         'hosts' => is_string($mediaHosts)
             ? array_values(array_filter(array_map(fn (string $host): string => strtolower(trim($host)), explode(',', $mediaHosts)), fn (string $host): bool => $host !== ''))
             : (is_string($baseHost) && $baseHost !== '' ? [strtolower($baseHost)] : []),
+    ],
+
+    'contact' => [
+        'mode' => in_array($contactMode, ['auto', 'phone', 'link'], true) ? $contactMode : 'auto',
+        'link_ttl' => 600,
     ],
 
     'fields' => [

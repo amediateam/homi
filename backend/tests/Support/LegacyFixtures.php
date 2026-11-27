@@ -89,9 +89,9 @@ final class LegacyFixtures
         return new ListingSummaryTranslator(new PhotoUrlRewriter($media, ['legacy.invalid']), new DistrictMatcher($reference ?? self::reference()), self::NATIVE_FLOOR);
     }
 
-    public static function detailsTranslator(string $media = self::MEDIA, bool $relay = false): ListingDetailsTranslator
+    public static function detailsTranslator(string $media = self::MEDIA, bool $relay = false, string $contactMode = 'auto'): ListingDetailsTranslator
     {
-        return new ListingDetailsTranslator(new PhotoUrlRewriter($media, ['legacy.invalid']), new DistrictMatcher(self::reference()), self::NATIVE_FLOOR, $relay);
+        return new ListingDetailsTranslator(new PhotoUrlRewriter($media, ['legacy.invalid']), new DistrictMatcher(self::reference()), self::NATIVE_FLOOR, $relay, $contactMode);
     }
 
     /**

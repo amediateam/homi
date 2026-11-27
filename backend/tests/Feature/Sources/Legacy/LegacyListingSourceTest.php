@@ -119,7 +119,7 @@ it('answers the listing reads through the legacy driver in the shapes of WP-12, 
     $card = $this->getJson('/api/v1/listings/100001', $headers)->assertOk()->assertJsonPath('meta.source', 'legacy');
     JsonShape::assertSame(ContractShapes::LISTING_DETAILS, JsonShape::of($card->json('data')));
     expect($card->json('data.number'))->toBe(100001)
-        ->and($card->json('data.contact.has_phone'))->toBeFalse();
+        ->and($card->json('data.contact.has_phone'))->toBeTrue();
 
     $preview = $this->getJson('/api/v1/listings/100001?preview=1', $headers)->assertOk()->assertJsonPath('meta.source', 'legacy');
     JsonShape::assertSame(ContractShapes::LISTING_PREVIEW, JsonShape::of($preview->json('data')));
@@ -209,14 +209,16 @@ it('answers 503 source_unavailable on every read while legacy is down', function
     'preview' => '/api/v1/listings/100001?preview=1',
 ]);
 
-it('answers 503 for the contact and the translation until WP-43 writes them', function (): void {
+it('answers the contact through legacy (WP-43) and 503 for the translation until WP-43 stage B writes it', function (): void {
     LegacyListingsHttp::fake();
     Sanctum::actingAs(User::factory()->create(), ['app:read', 'app:write']);
     onLegacyListings();
 
-    $this->postJson('/api/v1/listings/100001/contact')->assertStatus(503)->assertJsonPath('code', 'source_unavailable');
-    $this->postJson('/api/v1/listings/100001/translation')->assertStatus(503)->assertJsonPath('code', 'source_unavailable');
-    Http::assertNothingSent();
+    $this->postJson('/api/v1/listings/100001/contact')->assertOk()->assertJsonPath('meta.source', 'legacy')->assertJsonPath('data.phone', '+998001234567');
+    expect(LegacyListingsHttp::sent('/api/listings/100001'))->toHaveCount(1);
+
+    $this->postJson('/api/v1/listings/100001/translation', [], ['Accept-Language' => 'uz'])->assertStatus(503)->assertJsonPath('code', 'source_unavailable');
+    expect(Http::recorded())->toHaveCount(1);
 });
 
 it('passes legacy\'s daily limit of the card on as 429 rate_limited with reason daily, and as 503 elsewhere', function (): void {
@@ -328,7 +330,7 @@ it('keeps the masked card in the cache, without the phone keys and the per-user 
 
     expect($cached)->toBeArray()
         ->and($cached)->not->toHaveKeys(['phone', 'phone_display', 'call_url'])
-        ->and($cached['contact'])->toMatchArray(['has_phone' => false, 'request' => null])
+        ->and($cached['contact'])->toMatchArray(['has_phone' => true, 'request' => null])
         ->and($cached['contact'])->not->toHaveKeys(['phone', 'phone_display', 'call_url'])
         ->and($cached['owner'])->toMatchArray(['mine' => false, 'listing_id' => null])
         ->and($cached['owner'])->not->toHaveKey('entry')

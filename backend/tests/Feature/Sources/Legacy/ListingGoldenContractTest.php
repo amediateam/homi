@@ -104,6 +104,7 @@ it('translates every golden card into the card shape of its stub listing', funct
     'land without a district' => ['listing.land', 100011],
     'merged duplicate answers 100001' => ['listing.merged', 100001],
     'self-placed gate listing without a phone' => ['listing.no_phone', 100024],
+    'a call link without a phone (variant B)' => ['listing.link_only', 100002],
 ]);
 
 it('translates a card with only the required keys into nulls and empty values, not errors', function (): void {
@@ -190,7 +191,7 @@ it('leaves no digit of the author\'s number in a card: the phone keys are droppe
         ->and($card['original']['text'])->toContain('+998 ** *** ** 67')
         ->and($details->summary)->toBe($card['summary'])
         ->and($details->originalText)->toBe($card['original']['text'])
-        ->and($card['contact']['has_phone'])->toBeFalse();
+        ->and($card['contact']['has_phone'])->toBeTrue();
 });
 
 it('masks the owner\'s own description too, and the masked card masks to itself', function (): void {
@@ -254,7 +255,10 @@ it('points every photo of the translated fixtures at HOMI\'s media host in the f
 /** Keys of the golden fixtures that no translator reads, on purpose. */
 const UNREAD_LEGACY_KEYS = [
     'favorite', 'viewed', // legacy's flags for the service key: HOMI's overlay writes them (WP-42)
-    'phone', 'phone_display', 'call_url', // never mapped into a card (DEC-52); `phone` only picks the mode of a gate listing
+    // Never mapped into a card (DEC-52): `phone` and `call_url` only decide `contact.has_phone` (WP-43; every card with a
+    // phone also has a call link, so deleting one changes nothing; `listing.link_only` pins the link) and `phone` the mode
+    // of a gate listing; `phone_display` is read by the contact method only.
+    'phone', 'phone_display', 'call_url',
     'owner_mine', 'owner_listing_id', 'my_request', 'owner_entry', // per user under a service key: the overlay's (DEC-94)
     'title', 'short_title', // read as a pair: `short_title`, else `title` before « · »; deleted together below
     'total', 'photos_total', // `FeedPage.total` and `ListingPreview.photos_total`: never read by the client (`08` §1.8)
@@ -272,7 +276,7 @@ function translatorFixtures(): array
 {
     return [
         'card' => [
-            'fixtures' => ['listing.rent_apartment', 'listing.daily', 'listing.sale_house', 'listing.commercial', 'listing.land', 'listing.merged', 'listing.no_phone', 'listing.minimal'],
+            'fixtures' => ['listing.rent_apartment', 'listing.daily', 'listing.sale_house', 'listing.commercial', 'listing.land', 'listing.merged', 'listing.no_phone', 'listing.link_only', 'listing.minimal'],
             'translate' => fn (array $answer): array => LegacyFixtures::detailsTranslator()->translate($answer),
             'unread' => [...UNREAD_LEGACY_KEYS, ...UNREAD_CARD_KEYS],
         ],
