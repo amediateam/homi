@@ -26,8 +26,9 @@ use InvalidArgumentException;
  *   a repeat after a withdrawal counts the first row again (its weight and detail kept);
  * - its effect for the voter is at once: `rented` and `fraud` hide the listing for him (a hidden row that keeps its
  *   first reason), `agent` and `wrong_data` hide nothing; a `wrong_data` detail feeds review only;
- * - the effect for everybody needs the weighted sum of distinct voters at a threshold (`config/votes.php`) and at
- *   least `minVoters()` of them: `rented` per listing number marks `listing_marks.rented_at`; `agent` per author key —
+ * - the effect for everybody needs the weighted sum of distinct voters at the reason's threshold (`config/votes.php`)
+ *   and at least `minVoters()` of them for that reason (DEC-112: three for `rented` and `agent`, two for native `fraud`;
+ *   never fewer than two): `rented` per listing number marks `listing_marks.rented_at`; `agent` per author key —
  *   one weight per user, his heaviest vote, however many of the author's listings he reported — marks
  *   `author_marks.realtor_marked_at`; on a native number `fraud` per listing number crosses for the operators (WP-84
  *   holds the owner listing; here it is the audit row alone, and the subject's latest `vote_decisions` row says
@@ -49,7 +50,7 @@ use InvalidArgumentException;
  */
 final readonly class VoteService
 {
-    /** The distinct voters a mark needs at the least, whatever `votes.min_voters` says (SEC-REQ-045). */
+    /** The distinct voters a mark needs at the least, whatever `votes.min_voters` says for a reason (SEC-REQ-045). */
     public const int MIN_VOTERS = 2;
 
     /** The largest weight `listing_votes.weight` (decimal 4,2) holds, in hundredths. */
@@ -133,10 +134,13 @@ final readonly class VoteService
         return self::decimal($this->weightCents($user));
     }
 
-    /** The distinct voters a mark needs: `votes.min_voters`, never fewer than `MIN_VOTERS`. */
-    public static function minVoters(): int
+    /**
+     * The distinct voters a mark of the reason needs: `votes.min_voters.{reason}` (DEC-112), never fewer than
+     * `MIN_VOTERS`; a value that is missing or no number reads as `MIN_VOTERS`.
+     */
+    public static function minVoters(ReportReason $reason): int
     {
-        $configured = Config::get('votes.min_voters');
+        $configured = Config::get("votes.min_voters.{$reason->value}");
 
         return max(self::MIN_VOTERS, is_numeric($configured) ? (int) $configured : self::MIN_VOTERS);
     }
@@ -201,7 +205,7 @@ final readonly class VoteService
         $before = $this->lockAndRead($subject);
         [$voters, $cents] = $this->tally($subject);
         $threshold = $this->thresholdCents($subject->reason);
-        $reached = $voters >= self::minVoters() && $cents >= $threshold;
+        $reached = $voters >= self::minVoters($subject->reason) && $cents >= $threshold;
 
         if ($mark && $reached && ! $before && $detecting) {
             $this->write($subject, true);

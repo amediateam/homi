@@ -30,6 +30,9 @@ use Tests\Support\LegacyListingsHttp;
 
 const REPORT_AUTHOR = 'source:reported_channel';
 
+/** A free Telegram account: a username and a photo — weight 1.50, so three of them reach the agent threshold of 4.5. */
+const REPORT_FREE = ['has_username' => true, 'has_photo' => true];
+
 beforeEach(function (): void {
     Http::preventStrayRequests();
     Sleep::fake();
@@ -38,10 +41,11 @@ beforeEach(function (): void {
     Sanctum::actingAs($this->user, ['app:read', 'app:write']);
 });
 
-function actAsReporter(?User $user = null): User
+/** @param  array<string, bool>  $attributes  the profile flags of a new reporter */
+function actAsReporter(?User $user = null, array $attributes = []): User
 {
     app('auth')->forgetGuards();
-    $user ??= User::factory()->create();
+    $user ??= User::factory()->create($attributes);
     Sanctum::actingAs($user, ['app:read', 'app:write']);
 
     return $user;
@@ -108,7 +112,7 @@ it('answers agent_marked false below the threshold, true for the vote that cross
     $answers = [];
 
     foreach ([100001, 100002, 100001, 100002] as $number) {
-        actAsReporter();
+        actAsReporter(attributes: REPORT_FREE);
         $answers[] = $this->postJson("/api/v1/listings/{$number}/reports", ['reason' => 'agent'])->assertOk()->json('data.agent_marked');
     }
 
@@ -118,7 +122,8 @@ it('answers agent_marked false below the threshold, true for the vote that cross
     }
 
     expect($answers)->toBe([false, false, true, true, false, false, false])
-        ->and(AuthorMark::query()->sole()->author_key)->toBe(REPORT_AUTHOR);
+        ->and(AuthorMark::query()->sole()->author_key)->toBe(REPORT_AUTHOR)
+        ->and(AuthorMark::query()->sole()->realtor_marked_at)->not->toBeNull();
 });
 
 it('answers agent_marked true for a vote on an author already marked, and stores the vote', function (): void {
@@ -188,8 +193,15 @@ it('hides a rented listing from the reporter\'s feed at once, and from everybody
     $bystander = actAsReporter();
     expect(reportFeed())->toContain($listing);
 
-    actAsReporter();
-    $this->postJson("/api/v1/listings/{$listing}/reports", ['reason' => 'rented'])->assertOk();
+    foreach (range(1, 2) as $vote) {
+        actAsReporter();
+        $this->postJson("/api/v1/listings/{$listing}/reports", ['reason' => 'rented'])->assertOk();
+    }
+
+    actAsReporter($bystander);
+    expect(ListingMark::query()->sole()->rented_at)->toBeNull()
+        ->and(reportFeed())->toContain($listing);
+
     actAsReporter();
     $this->postJson("/api/v1/listings/{$listing}/reports", ['reason' => 'rented'])->assertOk();
 
@@ -282,7 +294,7 @@ it('logs no author key and no detail while agent votes cross the threshold and a
     $voters = [];
 
     foreach (range(1, 3) as $vote) {
-        $voters[] = actAsReporter();
+        $voters[] = actAsReporter(attributes: REPORT_FREE);
         $this->postJson('/api/v1/listings/100001/reports', ['reason' => 'agent'])->assertOk();
         $this->postJson('/api/v1/listings/100001/reports', ['reason' => 'wrong_data', 'detail' => 'photos'])->assertOk();
     }
@@ -292,6 +304,7 @@ it('logs no author key and no detail while agent votes cross the threshold and a
 
     $key = (string) AuthorKey::fromCard(['phone' => '+998001234567'])?->key;
     expect(AuthorMark::query()->sole()->author_key)->toBe($key)
+        ->and(AuthorMark::query()->sole()->realtor_marked_at)->not->toBeNull()
         ->and(implode("\n", $logged))->not->toContain($key)->not->toContain(substr($key, strlen(AuthorKey::PHONE)))->not->toContain('photos')
         ->not->toContain('1234567');
 });

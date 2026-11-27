@@ -19,7 +19,8 @@ use Illuminate\Http\Request;
  * may fail. The listings are filed in `listing_refs`, so no child asks a source. The votes of stage B race too: one user
  * reporting twice at once keeps one vote, and distinct users whose votes land exactly on a threshold at once mark the
  * subject once, with one decision row — `VoteService` locks the subject's mark row before it counts, so no voter counts
- * without the others' committed votes (PostgreSQL's default isolation).
+ * without the others' committed votes (PostgreSQL's default isolation). The thresholds are DEC-112's: `agent` 4.5 with
+ * three voters of 1.5, `rented` 4.0 with four voters of 1.0.
  */
 
 /** A child that sends one request with the token and answers its status and JSON body. */
@@ -147,7 +148,7 @@ it('marks an author once, with one decision, when distinct voters land exactly o
     AuthorMark::factory()->create(['author_key' => $key, 'realtor_marked_at' => null, 'source' => null]);
     ListingRef::factory()->ofAuthor($key, 'source')->create(['listing_number' => 100003]);
     ListingRef::factory()->ofAuthor($key, 'source')->create(['listing_number' => 100004]);
-    $voters = array_values(User::factory()->count(3)->create()->all());
+    $voters = array_values(User::factory()->count(3)->create(['has_username' => true, 'has_photo' => true])->all());
 
     $answers = concurrently([
         ...voteRaceTasks([$voters[0], $voters[1]], '/api/v1/listings/100003/reports', ['reason' => 'agent']),
@@ -159,7 +160,7 @@ it('marks an author once, with one decision, when distinct voters land exactly o
         ->and(ListingVote::query()->where('author_key', $key)->count())->toBe(3)
         ->and(AuthorMark::query()->sole()->realtor_marked_at)->not->toBeNull()
         ->and([$decision->subject_type, $decision->subject, $decision->reason, $decision->voters, $decision->weight_sum, $decision->threshold, $decision->outcome])
-        ->toBe(['author', $key, 'agent', 3, '3.00', '3.00', 'marked'])
+        ->toBe(['author', $key, 'agent', 3, '4.50', '4.50', 'marked'])
         ->and(array_count_values(array_map(fn (array $answer): string => json_encode($answer[1]['data']['agent_marked'] ?? null) ?: '', $answers)))
         ->toEqual(['false' => 2, 'true' => 1]);
 });
@@ -168,10 +169,10 @@ it('marks a listing rented once, with one decision, when distinct voters land ex
     // No mark row yet: the first insert of the lock row makes the others wait for its commit.
     ListingRef::factory()->create(['listing_number' => 100012]);
 
-    $answers = concurrently(voteRaceTasks(array_values(User::factory()->count(3)->create()->all()), '/api/v1/listings/100012/reports', ['reason' => 'rented']));
+    $answers = concurrently(voteRaceTasks(array_values(User::factory()->count(4)->create()->all()), '/api/v1/listings/100012/reports', ['reason' => 'rented']));
 
-    expect(array_column($answers, 0))->toBe([200, 200, 200])
+    expect(array_column($answers, 0))->toBe([200, 200, 200, 200])
         ->and(ListingMark::query()->sole()->rented_at)->not->toBeNull()
-        ->and(VoteDecision::query()->get(['voters', 'weight_sum', 'outcome'])->map(fn (VoteDecision $row): array => [$row->voters, $row->weight_sum, $row->outcome])->all())
-        ->toBe([[3, '3.00', 'marked']]);
+        ->and(VoteDecision::query()->get(['voters', 'weight_sum', 'threshold', 'outcome'])->map(fn (VoteDecision $row): array => [$row->voters, $row->weight_sum, $row->threshold, $row->outcome])->all())
+        ->toBe([[4, '4.00', '4.00', 'marked']]);
 });

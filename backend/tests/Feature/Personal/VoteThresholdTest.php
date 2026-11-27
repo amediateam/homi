@@ -24,14 +24,21 @@ use Laravel\Pennant\Feature;
 
 /*
  * WP-44, step 8: the detectors behind the report votes (SEC-REQ-045, task `KV-BE-043`). One tap never relabels a
- * listing or a person for everybody: a mark needs the weighted sum of distinct voters at a threshold (`rented` per
- * listing, `agent` per author key with one weight per user, `fraud` per native listing), and at least two of them; it
- * is written once, with a `vote_decisions` row of its inputs, and a recount that falls below removes it with an
- * `unmarked` row. Each detector has a kill switch: off writes no new mark, and the overlay ignores the marks at once.
- * The voters here weigh 1.0 each unless a test gives them a flag.
+ * listing or a person for everybody: a mark needs the weighted sum of distinct voters at a threshold (`rented` 4.0 per
+ * listing, `agent` 4.5 per author key with one weight per user, `fraud` 3.0 per native listing) and the reason's
+ * number of distinct voters (three for `rented` and `agent`, two for native `fraud`; never fewer than two in the code)
+ * — DEC-112; it is written once, with a `vote_decisions` row of its inputs, and a recount that falls below removes it
+ * with an `unmarked` row. Each detector has a kill switch: off writes no new mark, and the overlay ignores the marks at
+ * once. The voters here weigh 1.0 each unless a test gives them a flag (`VOTE_FREE` 1.5, `VOTE_HEAVIEST` 2.0).
  */
 
 const VOTE_AUTHOR = 'phone:0123456789abcdef0123456789abcdef';
+
+/** A free Telegram account: a username and a photo, both free to set — weight 1.50. */
+const VOTE_FREE = ['has_username' => true, 'has_photo' => true];
+
+/** Premium, a username and a photo — weight 2.00, the cap. */
+const VOTE_HEAVIEST = ['is_premium' => true, 'has_username' => true, 'has_photo' => true];
 
 beforeEach(function (): void {
     Http::preventStrayRequests();
@@ -95,22 +102,40 @@ it('keeps a listing unmarked below the rented threshold', function (): void {
         ->and(ListingVote::query()->count())->toBe(2);
 });
 
-it('marks a listing rented once at the threshold, with one decision row of the inputs', function (): void {
+it('keeps a listing unmarked with three bare accounts, 3.0 below the rented threshold of 4.0', function (): void {
     reportBy(voters(3), ReportReason::Rented);
 
+    expect(rentedAt())->toBeNull()
+        ->and(VoteDecision::query()->count())->toBe(0);
+});
+
+it('marks a listing rented once at the smallest crossing, four bare accounts, with one decision row of the inputs', function (): void {
+    reportBy(voters(4), ReportReason::Rented);
+
     expect(rentedAt())->not->toBeNull()
-        ->and(decisions())->toBe([['listing', '100012', 'rented', 3, '3.00', '3.00', 'marked']]);
+        ->and(decisions())->toBe([['listing', '100012', 'rented', 4, '4.00', '4.00', 'marked']]);
 
     reportBy(voters(1), ReportReason::Rented);
 
     expect(decisions())->toHaveCount(1);
 });
 
-it('sums the weights, so two heavier voters reach the threshold', function (): void {
-    reportBy(voters(2, ['is_premium' => true]), ReportReason::Rented);
+it('sums the weights, but two heaviest voters at the threshold stay below the floor of three voters, and a third one marks', function (): void {
+    reportBy(voters(2, VOTE_HEAVIEST), ReportReason::Rented);
+
+    expect(rentedAt())->toBeNull()
+        ->and(VoteDecision::query()->count())->toBe(0);
+
+    reportBy(voters(1), ReportReason::Rented);
 
     expect(rentedAt())->not->toBeNull()
-        ->and(decisions())->toBe([['listing', '100012', 'rented', 2, '3.00', '3.00', 'marked']]);
+        ->and(decisions())->toBe([['listing', '100012', 'rented', 3, '5.00', '4.00', 'marked']]);
+});
+
+it('sums three weighted voters to the rented threshold: 1.5 + 1.5 + 1.0 marks', function (): void {
+    reportBy([...voters(2, VOTE_FREE), ...voters(1)], ReportReason::Rented);
+
+    expect(decisions())->toBe([['listing', '100012', 'rented', 3, '4.00', '4.00', 'marked']]);
 });
 
 it('never lets a single voter mark, at the highest weight and with a threshold he could reach alone', function (): void {
@@ -119,7 +144,7 @@ it('never lets a single voter mark, at the highest weight and with a threshold h
 
     expect(rentedAt())->toBeNull();
 
-    config(['votes.thresholds.rented' => 1.0, 'votes.min_voters' => 1]);
+    config(['votes.thresholds.rented' => 1.0, 'votes.min_voters.rented' => 1]);
     reportBy([$heaviest], ReportReason::Rented, 100013);
 
     expect(rentedAt(100013))->toBeNull()
@@ -127,19 +152,90 @@ it('never lets a single voter mark, at the highest weight and with a threshold h
 });
 
 it('needs the configured number of voters besides the threshold', function (): void {
-    config(['votes.min_voters' => 3]);
-    reportBy(voters(2, ['is_premium' => true]), ReportReason::Rented);
+    config(['votes.min_voters.rented' => 4]);
+    reportBy(voters(3, VOTE_HEAVIEST), ReportReason::Rented);
 
     expect(rentedAt())->toBeNull();
 
     reportBy(voters(1), ReportReason::Rented);
 
-    expect(decisions())->toBe([['listing', '100012', 'rented', 3, '4.00', '3.00', 'marked']]);
+    expect(decisions())->toBe([['listing', '100012', 'rented', 4, '7.00', '4.00', 'marked']]);
 });
 
+it('reads a min_voters below two, or one it cannot read, as two for every reason', function (ReportReason $reason, int $number, mixed $configured): void {
+    ListingRef::factory()->ofAuthor(VOTE_AUTHOR)->create(['listing_number' => $number]);
+    config(["votes.thresholds.{$reason->value}" => 1.0, "votes.min_voters.{$reason->value}" => $configured]);
+
+    reportBy(voters(1, VOTE_HEAVIEST), $reason, $number);
+
+    expect(VoteDecision::query()->count())->toBe(0);
+
+    reportBy(voters(1), $reason, $number);
+
+    expect(array_column(decisions(), 3))->toBe([2]);
+})->with([
+    'rented' => [ReportReason::Rented, 100012],
+    'agent' => [ReportReason::Agent, 100012],
+    'native fraud' => [ReportReason::Fraud, 10000001],
+])->with([
+    'one' => 1,
+    'zero' => 0,
+    'not a number' => 'many',
+    'missing' => null,
+]);
+
+it('keeps the agent floor of three: two heaviest voters on an author with a threshold they reach mark nothing', function (): void {
+    ListingRef::factory()->ofAuthor(VOTE_AUTHOR)->create(['listing_number' => 100001]);
+    config(['votes.thresholds.agent' => 3.0]);
+
+    $outcomes = reportBy(voters(2, VOTE_HEAVIEST), ReportReason::Agent, 100001);
+
+    expect(realtorMarkedAt())->toBeNull()
+        ->and(array_map(fn (ReportOutcome $outcome): bool => $outcome->agentMarked, $outcomes))->toBe([false, false]);
+
+    reportBy(voters(1), ReportReason::Agent, 100001);
+
+    expect(decisions())->toBe([['author', VOTE_AUTHOR, 'agent', 3, '5.00', '3.00', 'marked']]);
+});
+
+it('keeps an author unmarked with three accounts with a username, 3.75 below the agent threshold of 4.5', function (): void {
+    ListingRef::factory()->ofAuthor(VOTE_AUTHOR)->create(['listing_number' => 100001]);
+
+    $outcomes = reportBy(voters(3, ['has_username' => true]), ReportReason::Agent, 100001);
+
+    expect(realtorMarkedAt())->toBeNull()
+        ->and(VoteDecision::query()->count())->toBe(0)
+        ->and(array_map(fn (ReportOutcome $outcome): bool => $outcome->agentMarked, $outcomes))->toBe([false, false, false]);
+});
+
+it('marks an author once at the smallest crossing, three free accounts of 1.5, and answers agent_marked below, at and after it', function (): void {
+    ListingRef::factory()->ofAuthor(VOTE_AUTHOR)->create(['listing_number' => 100001]);
+
+    $outcomes = [...reportBy(voters(3, VOTE_FREE), ReportReason::Agent, 100001), ...reportBy(voters(1), ReportReason::Agent, 100001)];
+
+    expect(realtorMarkedAt())->not->toBeNull()
+        ->and(decisions())->toBe([['author', VOTE_AUTHOR, 'agent', 3, '4.50', '4.50', 'marked']])
+        ->and(array_map(fn (ReportOutcome $outcome): bool => $outcome->agentMarked, $outcomes))->toBe([false, false, true, true]);
+});
+
+it('keeps the floor of three on a native rented or agent crossing, which still marks like any listing until WP-84', function (ReportReason $reason): void {
+    $native = 10000005;
+    ListingRef::factory()->ofAuthor(VOTE_AUTHOR)->create(['listing_number' => $native]);
+    config(["votes.thresholds.{$reason->value}" => 4.0]);
+
+    reportBy(voters(2, VOTE_HEAVIEST), $reason, $native);
+
+    expect(VoteDecision::query()->count())->toBe(0);
+
+    reportBy(voters(1), $reason, $native);
+
+    expect(array_map(fn (array $row): array => [$row[0], $row[3], $row[6]], decisions()))->toBe([[$reason === ReportReason::Rented ? 'listing' : 'author', 3, 'marked']])
+        ->and($reason === ReportReason::Rented ? rentedAt($native) : realtorMarkedAt())->not->toBeNull();
+})->with([ReportReason::Rented, ReportReason::Agent]);
+
 it('lowers the sum with a withdrawn vote and removes the mark with an unmarked decision', function (): void {
-    [$first, $second, $third] = voters(3);
-    reportBy([$first, $second, $third], ReportReason::Rented);
+    [$first, $second] = $voters = voters(4);
+    reportBy($voters, ReportReason::Rented);
 
     votes()->withdraw($second, votePointer(), ReportReason::Rented);
 
@@ -147,8 +243,8 @@ it('lowers the sum with a withdrawn vote and removes the mark with an unmarked d
         ->and(ListingMark::query()->find(100012))->not->toBeNull()
         ->and(ListingVote::query()->where('user_id', $second->id)->sole()->withdrawn_at)->not->toBeNull()
         ->and(decisions())->toBe([
-            ['listing', '100012', 'rented', 3, '3.00', '3.00', 'marked'],
-            ['listing', '100012', 'rented', 2, '2.00', '3.00', 'unmarked'],
+            ['listing', '100012', 'rented', 4, '4.00', '4.00', 'marked'],
+            ['listing', '100012', 'rented', 3, '3.00', '4.00', 'unmarked'],
         ]);
 
     votes()->withdraw($second, votePointer(), ReportReason::Rented);
@@ -158,14 +254,15 @@ it('lowers the sum with a withdrawn vote and removes the mark with an unmarked d
 });
 
 it('counts a vote again when its voter reports after withdrawing it, keeping the first row', function (): void {
-    [$first, $second, $third] = voters(3);
-    reportBy([$first, $second, $third], ReportReason::Rented);
-    votes()->withdraw($third, votePointer(), ReportReason::Rented);
-    $row = ListingVote::query()->where('user_id', $third->id)->sole();
+    $voters = voters(4);
+    $last = $voters[3];
+    reportBy($voters, ReportReason::Rented);
+    votes()->withdraw($last, votePointer(), ReportReason::Rented);
+    $row = ListingVote::query()->where('user_id', $last->id)->sole();
 
-    reportBy([$third], ReportReason::Rented);
+    reportBy([$last], ReportReason::Rented);
 
-    $again = ListingVote::query()->where('user_id', $third->id)->sole();
+    $again = ListingVote::query()->where('user_id', $last->id)->sole();
     expect($again->id)->toBe($row->id)
         ->and($again->withdrawn_at)->toBeNull()
         ->and(rentedAt())->not->toBeNull()
@@ -184,11 +281,11 @@ it('counts each user once per author key: one user on three listings of the auth
         ->and(realtorMarkedAt())->toBeNull()
         ->and(array_map(fn (ReportOutcome $outcome): bool => $outcome->agentMarked, $outcomes))->toBe([false, false, false]);
 
-    reportBy(voters(1, ['is_premium' => true]), ReportReason::Agent, 100003);
+    reportBy(voters(2, ['is_premium' => true]), ReportReason::Agent, 100003);
 
     expect(realtorMarkedAt())->not->toBeNull()
         ->and(AuthorMark::query()->sole()->source)->toBe('votes')
-        ->and(decisions())->toBe([['author', VOTE_AUTHOR, 'agent', 2, '3.00', '3.00', 'marked']]);
+        ->and(decisions())->toBe([['author', VOTE_AUTHOR, 'agent', 3, '4.50', '4.50', 'marked']]);
 });
 
 it('stores a vote on an author already marked and marks nothing twice', function (): void {
@@ -234,7 +331,7 @@ it('accepts agent on a listing without an author, with no author effect', functi
 it('stores the author key a vote of another reason finds, without counting it per author', function (): void {
     ListingRef::factory()->ofAuthor(VOTE_AUTHOR)->create(['listing_number' => 100001]);
 
-    reportBy(voters(3), ReportReason::Rented, 100001);
+    reportBy(voters(4), ReportReason::Rented, 100001);
 
     expect(ListingVote::query()->pluck('author_key')->unique()->all())->toBe([VOTE_AUTHOR])
         ->and(AuthorMark::query()->find(VOTE_AUTHOR))->toBeNull()
@@ -268,6 +365,12 @@ it('sums fraud on a native number per listing: an audit row once, and no mark of
 
     expect(array_column(decisions(), 6))->toBe(['marked'])
         ->and(ListingVote::query()->whereNotNull('withdrawn_at')->count())->toBe(1);
+});
+
+it('marks a native fraud crossing with two voters, its floor of two', function (): void {
+    reportBy(voters(2, VOTE_FREE), ReportReason::Fraud, 10000004);
+
+    expect(decisions())->toBe([['listing', '10000004', 'fraud', 2, '3.00', '3.00', 'marked']]);
 });
 
 it('removes a native fraud crossing once the sum falls below the threshold', function (): void {
@@ -334,7 +437,7 @@ it('writes no rented mark while the rented detector is off, and still the votes 
     reportBy(voters(1), ReportReason::Rented);
 
     expect(rentedAt())->not->toBeNull()
-        ->and(decisions())->toBe([['listing', '100012', 'rented', 4, '4.00', '3.00', 'marked']]);
+        ->and(decisions())->toBe([['listing', '100012', 'rented', 4, '4.00', '4.00', 'marked']]);
 });
 
 it('writes no realtor mark while the realtor detector is off, and answers agent_marked false even for a marked author', function (): void {
@@ -343,7 +446,7 @@ it('writes no realtor mark while the realtor detector is off, and answers agent_
     AuthorMark::factory()->create(['author_key' => 'source:marked_channel']);
     switchDetector('realtor', false);
 
-    $outcomes = reportBy(voters(3), ReportReason::Agent, 100001);
+    $outcomes = reportBy(voters(3, VOTE_FREE), ReportReason::Agent, 100001);
     [$onMarked] = reportBy(voters(1), ReportReason::Agent, 100002);
 
     expect(realtorMarkedAt())->toBeNull()
@@ -352,7 +455,7 @@ it('writes no realtor mark while the realtor detector is off, and answers agent_
 });
 
 it('still removes a mark when a withdrawal falls below the threshold while the detector is off', function (): void {
-    [$first] = $voters = voters(3);
+    [$first] = $voters = voters(4);
     reportBy($voters, ReportReason::Rented);
     switchDetector('rented', false);
 
@@ -387,7 +490,7 @@ it('ignores the existing marks in the overlay while a detector is off, at once a
 it('forgets the cached realtor keys when a recount marks or unmarks an author', function (): void {
     ListingRef::factory()->ofAuthor(VOTE_AUTHOR)->create(['listing_number' => 100001]);
     $data = app(EloquentOverlayData::class);
-    [$first] = $voters = voters(3);
+    [$first] = $voters = voters(3, VOTE_FREE);
 
     expect($data->realtorAuthorKeys())->toBe([]);
 
