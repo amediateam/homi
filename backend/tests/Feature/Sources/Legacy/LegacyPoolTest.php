@@ -211,8 +211,40 @@ it('ends every pooled request by the deadline: a later round gets a shorter time
         ->and($timeouts->getArrayCopy())->toBe([[3.0, 3.0], [3.0, 3.0], [1.0, 1.0], [1.0, 1.0]]);
 });
 
-it('keeps the configured timeouts while the deadline is further away than one timeout', function (): void {
+it('times every pooled request out by the default deadline, 12 s, before the 15 s of one HTTP timeout (review of ec369f2, point 5)', function (): void {
     config(['legacy.rate.per_second' => 1000]);
+    $timeouts = new ArrayObject;
+    LegacyListingsHttp::fake(function (Request $request, array $options) use ($timeouts): mixed {
+        $timeouts[] = [$options['timeout'] ?? null, $options['connect_timeout'] ?? null];
+
+        return null;
+    });
+
+    pooledSource()->previews(feedNumbers(2), poolUser());
+
+    expect(config('legacy.previews.deadline_ms'))->toBe(12_000)
+        ->and($timeouts->getArrayCopy())->toEqual([[12.0, 5.0], [12.0, 5.0]]);
+});
+
+it('cuts a preview read a hung legacy leaves unanswered at the default deadline, without counting it in the breaker', function (): void {
+    config(['legacy.rate.per_second' => 1000]);
+    $sent = new ArrayObject;
+    LegacyListingsHttp::fake(function (Request $request) use ($sent): mixed {
+        $sent[] = LegacyListingsHttp::path($request);
+        CarbonImmutable::setTestNow(now()->addMilliseconds(12_000));
+
+        return (Http::failedConnection())($request);
+    });
+
+    expect(fn () => pooledSource()->previews(feedNumbers(1), poolUser()))->toThrow(SourceUnavailable::class);
+
+    expect($sent)->toHaveCount(1)
+        ->and(Cache::get('legacy:breaker:failures'))->toBeNull()
+        ->and(Cache::has('legacy:breaker:open_until'))->toBeFalse();
+});
+
+it('keeps the configured timeouts while the deadline is further away than one timeout', function (): void {
+    config(['legacy.rate.per_second' => 1000, 'legacy.previews.deadline_ms' => 20_000]);
     $timeouts = new ArrayObject;
     LegacyListingsHttp::fake(function (Request $request, array $options) use ($timeouts): mixed {
         $timeouts[] = [$options['timeout'] ?? null, $options['connect_timeout'] ?? null];
@@ -225,14 +257,17 @@ it('keeps the configured timeouts while the deadline is further away than one ti
     expect($timeouts->getArrayCopy())->toEqual([[15, 5], [15, 5]]);
 });
 
-it('gives the previews a deadline of their wait and one HTTP timeout unless the environment sets one', function (): void {
+it('gives the previews a deadline of 12 s, below the Mini App\'s 15 s, unless the environment sets one (review of ec369f2, point 5)', function (): void {
     $config = legacyConfigWith(...);
 
-    expect($config([])['previews'])->toMatchArray(['max_wait_ms' => 4000, 'background_wait_ms' => 2000, 'deadline_ms' => 19_000])
-        ->and($config(['LEGACY_PREVIEWS_MAX_WAIT_MS' => '2500'])['previews']['deadline_ms'])->toBe(17_500)
+    expect($config([])['previews'])->toMatchArray(['max_wait_ms' => 4000, 'background_wait_ms' => 2000, 'deadline_ms' => 12_000])
+        ->and($config(['LEGACY_PREVIEWS_MAX_WAIT_MS' => '2500'])['previews']['deadline_ms'])->toBe(12_000)
         ->and($config(['LEGACY_PREVIEWS_DEADLINE_MS' => '8000'])['previews']['deadline_ms'])->toBe(8000)
-        ->and($config(['LEGACY_PREVIEWS_DEADLINE_MS' => ' '])['previews']['deadline_ms'])->toBe(19_000)
-        ->and($config(['LEGACY_PREVIEWS_DEADLINE_MS' => '0'])['previews']['deadline_ms'])->toBe(19_000)
+        ->and($config(['LEGACY_PREVIEWS_DEADLINE_MS' => '20000'])['previews']['deadline_ms'])->toBe(20_000)
+        ->and($config(['LEGACY_PREVIEWS_DEADLINE_MS' => ' '])['previews']['deadline_ms'])->toBe(12_000)
+        ->and($config(['LEGACY_PREVIEWS_DEADLINE_MS' => '0'])['previews']['deadline_ms'])->toBe(12_000)
+        ->and($config(['LEGACY_PREVIEWS_DEADLINE_MS' => '-5'])['previews']['deadline_ms'])->toBe(12_000)
+        ->and($config(['LEGACY_PREVIEWS_DEADLINE_MS' => 'soon'])['previews']['deadline_ms'])->toBe(12_000)
         ->and($config(['LEGACY_PREVIEWS_BACKGROUND_WAIT_MS' => '3000'])['previews']['background_wait_ms'])->toBe(3000)
         ->and($config(['LEGACY_PREVIEWS_BACKGROUND_WAIT_MS' => 'soon'])['previews']['background_wait_ms'])->toBe(2000);
 });

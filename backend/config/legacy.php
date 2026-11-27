@@ -35,8 +35,9 @@
 |   than losing some); `previews.background_wait_ms` (`LEGACY_PREVIEWS_BACKGROUND_WAIT_MS`): the same for a background
 |   batch, which waits for its share's places instead of failing at once; `previews.deadline_ms`
 |   (`LEGACY_PREVIEWS_DEADLINE_MS`): the most one batch may take in all, waits, retries and HTTP timeouts included —
-|   blank means `max_wait_ms` plus one `timeout`; `feed.top_up_pages`: extra legacy pages one feed page may read when
-|   HOMI's own exclusions shrink it below half.
+|   blank, 0 or not a number means 12 000, below the 15 s after which the Mini App gives a request up, so HOMI
+|   answers first; each pooled request then times out by the deadline, before one `timeout`; `feed.top_up_pages`:
+|   extra legacy pages one feed page may read when HOMI's own exclusions shrink it below half.
 | - `fake`: answer from `resources/fixtures/legacy` instead of the network. On by default in `local` and `testing`,
 |   off elsewhere; `SourceServiceProvider` refuses to boot with it in production.
 |
@@ -130,7 +131,7 @@ return [
         'concurrency' => 5,
         'max_wait_ms' => $previewsWait,
         'background_wait_ms' => is_numeric($backgroundWait) && (int) $backgroundWait >= 0 ? (int) $backgroundWait : 2000,
-        'deadline_ms' => is_numeric($previewsDeadline) && (int) $previewsDeadline > 0 ? (int) $previewsDeadline : $previewsWait + $timeout * 1000,
+        'deadline_ms' => is_numeric($previewsDeadline) && (int) $previewsDeadline > 0 ? (int) $previewsDeadline : 12_000,
     ],
 
     'feed' => [

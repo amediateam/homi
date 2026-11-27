@@ -8,8 +8,10 @@
 | pseudonymous `phone:` author key of `listing_refs` (`App\Services\Listings\AuthorKey`). Random, at least 32 bytes,
 | different per environment, and never changed once keys are stored: a new secret gives every author a new key, so
 | blocks and votes filed under the old one stop matching. Blank, or shorter than 32 bytes, means no `phone:` key is
-| derived (an HMAC with a short key could be reversed over the phone space): an author then falls back to his source
-| channel, or none, and a warning is logged at most once a minute.
+| derived (an HMAC with a short key could be reversed over the phone space): a card with a phone is then filed under
+| no author key at all, never under its source channel — many authors post in one channel, and blocking one of them
+| must not hide the others — and a warning is logged at most once a minute. A phone that is not one number is filed
+| under no key either; a `source:` key is only for a card without a phone.
 |
 | A blank env value is the default, as if the key were absent: `.env.example` lists the name with a blank value.
 */
