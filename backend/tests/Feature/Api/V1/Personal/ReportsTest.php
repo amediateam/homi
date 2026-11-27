@@ -10,6 +10,8 @@ use App\Models\ListingRef;
 use App\Models\ListingVote;
 use App\Models\User;
 use App\Services\Listings\AuthorKey;
+use Illuminate\Log\Events\MessageLogged;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Sleep;
 use Laravel\Pennant\Feature;
@@ -268,4 +270,28 @@ it('answers the 31st report of a day with 429, counted per user', function (): v
     $this->postJson('/api/v1/listings/100012/reports', ['reason' => 'wrong_data'])->assertOk();
 
     expect(ListingVote::query()->count())->toBe(2);
+});
+
+it('logs no author key and no detail while agent votes cross the threshold and are withdrawn', function (): void {
+    LegacyListingsHttp::fake();
+    Feature::globally()->activate('source.listings.card', ['everyone' => 'legacy']);
+    $logged = [];
+    Event::listen(MessageLogged::class, function (MessageLogged $message) use (&$logged): void {
+        $logged[] = $message->message.' '.json_encode($message->context);
+    });
+    $voters = [];
+
+    foreach (range(1, 3) as $vote) {
+        $voters[] = actAsReporter();
+        $this->postJson('/api/v1/listings/100001/reports', ['reason' => 'agent'])->assertOk();
+        $this->postJson('/api/v1/listings/100001/reports', ['reason' => 'wrong_data', 'detail' => 'photos'])->assertOk();
+    }
+    actAsReporter($voters[0]);
+    $this->postJson('/api/v1/listings/100001/reports', ['reason' => 'rented'])->assertOk();
+    $this->deleteJson('/api/v1/listings/100001/reports')->assertNoContent();
+
+    $key = (string) AuthorKey::fromCard(['phone' => '+998001234567'])?->key;
+    expect(AuthorMark::query()->sole()->author_key)->toBe($key)
+        ->and(implode("\n", $logged))->not->toContain($key)->not->toContain(substr($key, strlen(AuthorKey::PHONE)))->not->toContain('photos')
+        ->not->toContain('1234567');
 });
