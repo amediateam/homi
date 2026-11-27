@@ -212,6 +212,26 @@ it('reads a min_voters below two, or one it cannot read, as two for every reason
     'missing' => null,
 ]);
 
+it('applies a single min_voters to every reason, never below two (review C, N5)', function (mixed $configured, int $expected): void {
+    config(['votes.min_voters' => $configured]);
+
+    expect(array_map(VoteService::minVoters(...), ReportReason::cases()))->toBe(array_fill(0, count(ReportReason::cases()), $expected));
+})->with([
+    'three' => [3, 3],
+    'three as a string' => ['3', 3],
+    'one' => [1, 2],
+    'not a number' => ['many', 2],
+    'missing' => [null, 2],
+]);
+
+it('lets a single min_voters of three keep two heaviest accounts from marking rented 4.0 (review C, N5)', function (): void {
+    config(['votes.min_voters' => 3]);
+    reportBy(voters(2, VOTE_HEAVIEST), ReportReason::Rented);
+
+    expect(rentedAt())->toBeNull()
+        ->and(VoteDecision::query()->count())->toBe(0);
+});
+
 it('keeps the agent floor of three: two heaviest voters on an author with a threshold they reach mark nothing', function (): void {
     ListingRef::factory()->ofAuthor(VOTE_AUTHOR)->create(['listing_number' => 100001]);
     config(['votes.thresholds.agent' => 3.0]);

@@ -155,14 +155,16 @@ final readonly class VoteService
     }
 
     /**
-     * The distinct voters a mark of the reason needs: `votes.min_voters.{reason}` (DEC-112), never fewer than
-     * `MIN_VOTERS`; a value that is missing or no number reads as `MIN_VOTERS`.
+     * The distinct voters a mark of the reason needs: `votes.min_voters.{reason}` (DEC-112), or a single
+     * `votes.min_voters` for every reason (the shape before DEC-112), never fewer than `MIN_VOTERS`; a value that is
+     * missing or no number reads as `MIN_VOTERS`.
      */
     public static function minVoters(ReportReason $reason): int
     {
-        $configured = Config::get("votes.min_voters.{$reason->value}");
+        $configured = Config::get('votes.min_voters');
+        $value = is_array($configured) ? ($configured[$reason->value] ?? null) : $configured;
 
-        return max(self::MIN_VOTERS, is_numeric($configured) ? (int) $configured : self::MIN_VOTERS);
+        return max(self::MIN_VOTERS, is_numeric($value) ? (int) $value : self::MIN_VOTERS);
     }
 
     /** `votes.agent_marked.already_marked` as the config gives it; a value that is no boolean means the default, on. */
