@@ -1,8 +1,12 @@
 <?php
 
 use App\Enums\Identity\BotChatState;
+use App\Events\Radar\RadarSaved;
 use App\Models\Radar;
 use App\Models\User;
+use App\Services\Sources\Data\FlowEstimate;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Http;
 use Tests\Support\ContractShapes;
 use Tests\Support\FakeListingSource;
@@ -190,6 +194,44 @@ describe('PUT /radars/{id}', function (): void {
 
         RadarApi::assertForeignLikeUnknown($this->user, $radar, 'PUT', '', RadarApi::body(['price_max' => 908]));
     });
+});
+
+describe('a failure after the commit', function (): void {
+    beforeEach(function (): void {
+        Event::fake([RadarSaved::class]);
+        Exceptions::fake();
+        $this->source = FakeListingSource::bind()->withItems([100001 => []]);
+        $this->source->count = 1;
+        $this->source->flow = new FlowEstimate(1, 7, []);
+        $this->source->failure = new RuntimeException('the source answered garbage');
+    });
+
+    it('keeps a create, answers 201 with an empty starter and no options, and announces it once', function (bool $starter): void {
+        config(['radar.starter_enabled' => $starter]);
+
+        $this->postJson('/api/v1/radars', RadarApi::body(['price_max' => 777]))->assertCreated()
+            ->assertJsonPath('data.kind', 'created')->assertJsonPath('data.starter', 0)
+            ->assertJsonPath('data.options', [])->assertJsonPath('data.relaxed', []);
+
+        $radar = Radar::query()->sole();
+        expect($this->source->calls)->not->toBe([]);
+        Event::assertDispatchedTimes(RadarSaved::class, 1);
+        Event::assertDispatched(RadarSaved::class, fn (RadarSaved $event): bool => $event->radarId === $radar->id && $event->starterNumbers === []);
+        Exceptions::assertReported(fn (RuntimeException $e): bool => $e->getMessage() === 'the source answered garbage');
+    })->with(['starter on' => true, 'starter off' => false]);
+
+    it('keeps a replace, answers updated with an empty starter and no options, and announces it once', function (bool $starter): void {
+        config(['radar.starter_enabled' => $starter]);
+        $radar = Radar::factory()->for($this->user)->filters(['price_max' => 700])->create();
+
+        $this->putJson("/api/v1/radars/{$radar->id}", RadarApi::body(['price_max' => 778]))->assertOk()
+            ->assertJsonPath('data.kind', 'updated')->assertJsonPath('data.starter', 0)
+            ->assertJsonPath('data.options', [])->assertJsonPath('data.relaxed', []);
+
+        expect($radar->fresh()?->filters['price_max'])->toBe(778);
+        Event::assertDispatchedTimes(RadarSaved::class, 1);
+        Exceptions::assertReported(RuntimeException::class);
+    })->with(['starter on' => true, 'starter off' => false]);
 });
 
 describe('switched off (DEC-51)', function (): void {

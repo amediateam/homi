@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Every change of a radar, for the API and the bot alike (WP-45; tasks `KV-BE-100`, `KV-BE-103`, `KV-BE-104`). Each
@@ -59,9 +60,10 @@ use Illuminate\Support\Facades\Log;
  *    change carry none. New filters, a relax and a delete forget the radar's remembered set.
  *
  * `update` replaces the filters and keeps `active`; `setActive(false)` sets `paused_at`. The locale and currency of a
- * starter and of the options are the write's, else the user's settings, else `ru` and `USD`. When the source cannot
- * answer the starter or the options, the write stands and they are empty. No filters text and no author key is logged
- * (SEC-REQ-047).
+ * starter and of the options are the write's, else the user's settings, else `ru` and `USD`. Whatever fails after the
+ * commit — the starter, the options, forgetting the remembered set — the write stands, answers normally with an empty
+ * starter or no options and is announced: `RadarSaved` is dispatched after the reads, `RadarDeleted` inside the
+ * delete's transaction (both fire on commit). No filters text and no author key is logged (SEC-REQ-047).
  */
 final readonly class RadarService
 {
@@ -216,10 +218,10 @@ final readonly class RadarService
         $this->ensureOwned($user, $radar);
         $this->locked($user, function () use ($user, $radar): void {
             $this->stored($user, $radar)->delete();
+            RadarDeleted::dispatch((string) $radar->getKey(), $user->id);
         });
 
-        $this->options->forget($radar);
-        RadarDeleted::dispatch((string) $radar->getKey(), $user->id);
+        $this->forgetOptions($radar);
     }
 
     /**
@@ -253,7 +255,7 @@ final readonly class RadarService
         });
 
         if ($result[1]) {
-            $this->options->forget($result[0]);
+            $this->forgetOptions($result[0]);
         }
 
         return $result;
@@ -270,8 +272,9 @@ final readonly class RadarService
     }
 
     /**
-     * The options and `relaxed` hints of a write whose starter is empty (step 6); empty when the source cannot answer
-     * — the radar's id is logged, never its filters.
+     * The options and `relaxed` hints of a write whose starter is empty (step 6), read after the commit: empty when
+     * they cannot be read, so the write still answers and is announced — the source's `SourceUnavailable` is logged
+     * with the radar's id, any other failure reported; never its filters.
      *
      * @return array{0: list<FlowOption>, 1: list<string>}
      */
@@ -281,8 +284,23 @@ final readonly class RadarService
             return $this->options->offer($radar, $context);
         } catch (SourceUnavailable) {
             Log::warning('Radar relax options unavailable; the write is kept without options.', ['radar' => (string) $radar->getKey()]);
+        } catch (Throwable $e) {
+            report($e);
+        }
 
-            return [[], []];
+        return [[], []];
+    }
+
+    /**
+     * Forgets the radar's remembered options; a cache failure is reported and does not fail the write, which has
+     * committed and is announced.
+     */
+    private function forgetOptions(Radar $radar): void
+    {
+        try {
+            $this->options->forget($radar);
+        } catch (Throwable $e) {
+            report($e);
         }
     }
 
@@ -372,8 +390,9 @@ final readonly class RadarService
     /**
      * The starter of a committed write (step 5 of the class): `existing`, a pause, a mode change, an unchanged search
      * and a paused radar's new filters send nothing (`Starter::none()`, no source call). Read after the transaction,
-     * outside the lock; when the source cannot answer, the write stands and the starter is empty — the radar's id and
-     * the kind are logged, never its filters.
+     * outside the lock; when it cannot be read, the write stands, is announced and the starter is empty — the source's
+     * `SourceUnavailable` is logged with the radar's id and the kind, any other failure (the overlay's reads, the
+     * delivered set, a data mapping) reported; never its filters.
      *
      * @param  Closure(): Starter  $select
      */
@@ -387,9 +406,11 @@ final readonly class RadarService
             return $select();
         } catch (SourceUnavailable) {
             Log::warning('Radar starter unavailable; the write is kept with an empty starter.', ['radar' => (string) $radar->getKey(), 'kind' => $kind->value]);
-
-            return Starter::none();
+        } catch (Throwable $e) {
+            report($e);
         }
+
+        return Starter::none();
     }
 
     /** The mutation, announced by `RadarSaved` after the commit when it wrote something. */

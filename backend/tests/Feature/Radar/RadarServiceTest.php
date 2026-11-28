@@ -19,12 +19,15 @@ use App\Services\Radar\RadarCreateContext;
 use App\Services\Radar\RadarService;
 use App\Services\Search\SearchFilters;
 use App\Services\Sources\Data\FlowEstimate;
+use Illuminate\Cache\ArrayStore;
 use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Tests\Support\FakeListingSource;
@@ -497,6 +500,26 @@ describe('events', function (): void {
         Event::assertDispatched(RadarDeleted::class, fn (RadarDeleted $event): bool => $event->radarId === $radar->id && $event->userId === $this->user->id);
         expect(array_keys(get_object_vars(new RadarSaved('x', 1, RadarMutationKind::Created, []))))->toBe(['radarId', 'userId', 'kind', 'starterNumbers'])
             ->and(array_keys(get_object_vars(new RadarDeleted('x', 1))))->toBe(['radarId', 'userId']);
+    });
+
+    it('deletes and announces the delete although the remembered options cannot be forgotten', function (): void {
+        Exceptions::fake();
+        Cache::extend('forget_fails', fn (): Repository => Cache::repository(new class extends ArrayStore
+        {
+            public function forget($key): bool
+            {
+                throw new RuntimeException('the cache store is down');
+            }
+        }));
+        config(['cache.stores.forget_fails' => ['driver' => 'forget_fails'], 'cache.default' => 'forget_fails']);
+        $radar = Radar::factory()->for($this->user)->create();
+
+        $this->service->delete($this->user, $radar);
+
+        expect(Radar::query()->count())->toBe(0);
+        Event::assertDispatchedTimes(RadarDeleted::class, 1);
+        Event::assertDispatched(RadarDeleted::class, fn (RadarDeleted $event): bool => $event->radarId === $radar->id);
+        Exceptions::assertReported(fn (RuntimeException $e): bool => $e->getMessage() === 'the cache store is down');
     });
 
     it('announces nothing when nothing was written', function (): void {
