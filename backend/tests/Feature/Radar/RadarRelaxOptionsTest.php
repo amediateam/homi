@@ -202,6 +202,7 @@ describe('the relaxed hint', function (): void {
         'ru, under one a day' => ['ru', 5, 7, ['5 за неделю']],
         'ru, one a day' => ['ru', 7, 7, ['≈1 в день']],
         'ru, many a day' => ['ru', 30, 7, ['≈4 в день']],
+        'uz, none this week' => ['uz', 0, 7, []],
         'uz, under one a day' => ['uz', 3, 7, ['Haftasiga 3']],
         'uz, many a day' => ['uz', 21, 7, ['Kuniga ≈3']],
         'en, under one a day' => ['en', 6, 7, ['6 a week']],

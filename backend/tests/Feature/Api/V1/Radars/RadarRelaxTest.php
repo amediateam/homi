@@ -103,6 +103,21 @@ it('answers 409 no_chat before the code is checked, changing nothing', function 
     expect(RadarApi::rowsOf($this->user))->toBe($before);
 });
 
+it('refuses a relax with 409 no_chat while the bot cannot write and the check is on, and relaxes with it off', function (BotChatState $state): void {
+    $id = relaxRouteRadar();
+    $this->user->forceFill(['bot_chat_state' => $state])->save();
+    config(['radar.require_chat' => true]);
+    $before = RadarApi::rowsOf($this->user);
+
+    $this->postJson("/api/v1/radars/{$id}/relax", ['code' => 'price_more'])->assertStatus(409)->assertJsonPath('code', 'no_chat');
+    expect(RadarApi::rowsOf($this->user))->toBe($before);
+
+    config(['radar.require_chat' => false]);
+    $this->postJson("/api/v1/radars/{$id}/relax", ['code' => 'price_more'])->assertOk()->assertJsonPath('data.radar.filters.price_max', 900);
+
+    expect(Radar::query()->sole()->relax_code)->toBe('price_more');
+})->with([BotChatState::Never, BotChatState::Blocked]);
+
 it('keeps a paused radar paused', function (): void {
     $id = relaxRouteRadar();
     $this->patchJson("/api/v1/radars/{$id}", ['active' => false])->assertOk();
