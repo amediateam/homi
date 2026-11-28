@@ -21,6 +21,8 @@
 |   3 дня»; Q-API-033), at most 20.
 | - `options_max`: the relax options offered when the starter is empty. `preview_ttl` (s) and `preview_budget_ms`: the
 |   previews of `GET /radars?include=previews`, shared per filter set, and the time all of them may take.
+|   `preview_max_rounds`: the source rounds (feed, count and flow of one filter set not in the cache) one list may
+|   make, the radars switched on first; the radars past it that are not cached get no preview (no env key).
 | - `author_hide_rules`: whether «Скрыть похожие» may hide an author (promised by the bot's tip, never observed).
 | - `found_cooldown_days`: «Нашли жильё?» is not asked again for this long after an answer (Q-API-030).
 |
@@ -50,6 +52,7 @@ return [
     'options_max' => 5,
     'preview_ttl' => 120,
     'preview_budget_ms' => 4000,
+    'preview_max_rounds' => 10,
     'author_hide_rules' => false,
     'found_cooldown_days' => 30,
 ];

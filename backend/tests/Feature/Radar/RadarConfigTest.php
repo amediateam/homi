@@ -58,7 +58,7 @@ it('has every key of the design with its type', function (): void {
 
     expect(array_keys($config))->toBe([
         'max', 'creation_enabled', 'limit_scope', 'require_chat', 'starter_enabled', 'starter_window_days', 'starter_max',
-        'options_max', 'preview_ttl', 'preview_budget_ms', 'author_hide_rules', 'found_cooldown_days',
+        'options_max', 'preview_ttl', 'preview_budget_ms', 'preview_max_rounds', 'author_hide_rules', 'found_cooldown_days',
     ])
         ->and($config['limit_scope'])->toBe('active')
         ->and($config['starter_window_days'])->toBe(3)
@@ -66,6 +66,7 @@ it('has every key of the design with its type', function (): void {
         ->and($config['options_max'])->toBe(5)
         ->and($config['preview_ttl'])->toBe(120)
         ->and($config['preview_budget_ms'])->toBe(4000)
+        ->and($config['preview_max_rounds'])->toBe(10)
         ->and($config['author_hide_rules'])->toBeFalse()
         ->and($config['found_cooldown_days'])->toBe(30);
 });

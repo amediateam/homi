@@ -50,10 +50,14 @@ use Throwable;
  *    first five. Count and flow are not overlaid. A read never moves `hidden_count`: only a starter counts what the
  *    rules hold back (`StarterSelector`).
  *
- * The total budget is `radar.preview_budget_ms` (4 000), measured on the application clock and checked before each
- * source round (a round already started is bounded by the driver's own timeouts). After a failure, or once the budget
- * is spent, every remaining radar whose shared part is not cached gets `null`; the list itself never fails because of
- * previews: the source's `SourceUnavailable` and any other error of a round are caught here (the latter reported).
+ * The radars switched on are computed first, then the paused ones (each group in the order given; the answer keeps
+ * that order). Two bounds hold for one list, both checked before each source round: at most `radar.preview_max_rounds`
+ * (10) rounds, counted on a cache miss only, and the total budget `radar.preview_budget_ms` (4 000), measured on the
+ * application clock (a round already started is bounded by the driver's own timeouts). After a failure, after the
+ * last round allowed or once the budget is spent, every remaining radar whose shared part is not cached gets `null`.
+ * The list itself never fails because of previews: the source's `SourceUnavailable` and any other error of a round
+ * are caught here (the latter reported), and any error of one radar's own part — its stored filters that no longer
+ * read as a search, the overlay's reads — is reported and gives that radar `null`.
  */
 final readonly class RadarPreviews
 {
@@ -110,26 +114,35 @@ final readonly class RadarPreviews
         $overlay = $this->container->make(ListingOverlay::class);
         $started = Date::now();
         $stopped = false;
-        $previews = [];
+        $rounds = 0;
+        $computed = [];
+        $first = array_filter($radars, fn (Radar $radar): bool => $radar->active);
+        $then = array_filter($radars, fn (Radar $radar): bool => ! $radar->active);
 
-        foreach ($radars as $radar) {
-            $filters = SearchFilters::fromNormalised($radar->filters);
-            $found = $this->shared($radar, $filters, $round, $started, $stopped);
-            $previews[(string) $radar->getKey()] = $found === null
-                ? null
-                : $this->personal($radar, $filters, $found, $rules[(string) $radar->getKey()] ?? HideRuleSet::none(), $overlay, $personal);
+        foreach ([...$first, ...$then] as $radar) {
+            $id = (string) $radar->getKey();
+
+            try {
+                $filters = SearchFilters::fromNormalised($radar->filters);
+                $found = $this->shared($radar, $filters, $round, $started, $stopped, $rounds);
+                $computed[$id] = $found === null ? null : $this->personal($radar, $filters, $found, $rules[$id] ?? HideRuleSet::none(), $overlay, $personal);
+            } catch (Throwable $e) {
+                report($e);
+                $computed[$id] = null;
+            }
         }
 
-        return $previews;
+        return array_combine($ids, array_map(fn (string $id): ?RadarPreview => $computed[$id] ?? null, $ids));
     }
 
     /**
-     * The shared part of one filter set: from the cache, else one source round while the budget lasts. `$stopped` is
-     * set by a failure, or once the budget is spent, and then only the cache answers.
+     * The shared part of one filter set: from the cache, else one source round while the budget and the rounds last.
+     * `$stopped` is set by a failure, once the budget is spent or once `$rounds` (the rounds made, counted on a miss
+     * only) reaches `radar.preview_max_rounds`, and then only the cache answers.
      *
      * @return array{items: list<ListingSummary>, count: int, week: int, days: int}|null
      */
-    private function shared(Radar $radar, SearchFilters $filters, PreviewRound $round, CarbonImmutable $started, bool &$stopped): ?array
+    private function shared(Radar $radar, SearchFilters $filters, PreviewRound $round, CarbonImmutable $started, bool &$stopped, int &$rounds): ?array
     {
         $context = $round->context;
         $key = implode(':', [
@@ -147,11 +160,15 @@ final readonly class RadarPreviews
             return $cached;
         }
 
-        if ($stopped || $started->diffInMilliseconds(Date::now()) >= Config::integer('radar.preview_budget_ms')) {
+        if ($stopped
+            || $rounds >= Config::integer('radar.preview_max_rounds')
+            || $started->diffInMilliseconds(Date::now()) >= Config::integer('radar.preview_budget_ms')) {
             $stopped = true;
 
             return null;
         }
+
+        $rounds++;
 
         try {
             $page = $round->feed->source->feed(new ListingQuery($filters, ListingSort::New, null, self::PAGE), $context);

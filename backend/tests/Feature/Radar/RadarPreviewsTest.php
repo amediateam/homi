@@ -17,6 +17,7 @@ use App\Services\Sources\Legacy\LegacyListingSource;
 use App\Services\Sources\SourceContext;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Http;
 use Tests\Support\FakeListingSource;
 
@@ -253,6 +254,55 @@ it('stops asking the source once the budget is spent and answers null for the re
     expect($previews[$first->id])->not->toBeNull()
         ->and($previews[$second->id])->toBeNull()
         ->and(sourceRounds($this->source))->toBe([1, 1, 1]);
+});
+
+it('makes at most radar.preview_max_rounds source rounds, active radars first, and answers in creation order', function (): void {
+    $paused = [];
+
+    foreach (range(1, 11) as $i) {
+        $paused[] = Radar::factory()->for($this->user)->filters(['price_max' => 1000 + $i])->paused()->create(['created_at' => now()->subMinutes(20 - $i)]);
+    }
+
+    $active = Radar::factory()->for($this->user)->filters(['price_max' => 2000])->create(['created_at' => now()->subMinute()]);
+
+    $previews = previewsOf($this->user);
+
+    expect(config('radar.preview_max_rounds'))->toBe(10)
+        ->and(sourceRounds($this->source))->toBe([10, 10, 10])
+        ->and(array_keys($previews))->toBe([...array_map(fn (Radar $radar): string => $radar->id, $paused), $active->id])
+        ->and($previews[$active->id])->not->toBeNull()
+        ->and(array_map(fn (Radar $radar): bool => $previews[$radar->id] !== null, $paused))->toBe([...array_fill(0, 9, true), false, false])
+        ->and($this->source->callsOf('feed')[0][1]->filters->priceMax)->toBe(2000);
+});
+
+it('serves the cached radars past the round cap and counts only the misses', function (): void {
+    config(['radar.preview_max_rounds' => 2]);
+    $first = Radar::factory()->for($this->user)->filters(['price_max' => 700])->create(['created_at' => now()->subMinutes(3)]);
+    previewsOf($this->user);
+    $second = Radar::factory()->for($this->user)->filters(['price_max' => 800])->create(['created_at' => now()->subMinutes(2)]);
+    $third = Radar::factory()->for($this->user)->filters(['price_max' => 900])->create(['created_at' => now()->subMinute()]);
+    $fourth = Radar::factory()->for($this->user)->filters(['price_max' => 950])->create(['created_at' => now()]);
+
+    $previews = previewsOf($this->user);
+
+    expect(array_map(fn (Radar $radar): bool => $previews[$radar->id] !== null, [$first, $second, $third, $fourth]))->toBe([true, true, true, false])
+        ->and(sourceRounds($this->source))->toBe([3, 3, 3]);
+});
+
+it('gives null to a radar whose stored filters no longer read as a search, reported, and keeps the others\' previews', function (): void {
+    Exceptions::fake();
+    $before = Radar::factory()->for($this->user)->filters(['price_max' => 700])->create(['created_at' => now()->subMinutes(2)]);
+    $broken = Radar::factory()->for($this->user)->filters(['price_max' => 800])->create(['created_at' => now()->subMinute()]);
+    $after = Radar::factory()->for($this->user)->filters(['price_max' => 900])->create(['created_at' => now()]);
+    DB::table('radars')->where('id', $broken->id)->update(['filters' => json_encode([...$broken->filters, 'deal' => 'atlantis'])]);
+
+    $previews = previewsOf($this->user);
+
+    expect($previews[$broken->id])->toBeNull()
+        ->and($previews[$before->id])->not->toBeNull()
+        ->and($previews[$after->id])->not->toBeNull()
+        ->and(array_keys($previews))->toBe([$before->id, $broken->id, $after->id]);
+    Exceptions::assertReported(InvalidArgumentException::class);
 });
 
 it('caches arrays only under the documented key, and reads an entry of another shape as a miss', function (): void {
