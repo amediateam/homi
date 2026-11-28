@@ -136,6 +136,21 @@ describe('PATCH /radars/{id}', function (): void {
             ->and(RadarHideRule::query()->pluck('id')->all())->toBe([$other->id]);
     });
 
+    it('reads the change from the JSON body only: a change in the query string is 422 on its key, changing nothing', function (string $query, array $body, string $key): void {
+        $radar = Radar::factory()->for($this->user)->paused()->create(['hidden_count' => 2]);
+        RadarHideRule::factory()->for($radar)->create();
+        $before = RadarApi::rowsOf($this->user);
+
+        $this->patchJson("/api/v1/radars/{$radar->id}?{$query}", $body)->assertUnprocessable()
+            ->assertJsonPath('code', 'validation_failed')->assertJsonValidationErrors([$key]);
+
+        expect(RadarApi::rowsOf($this->user))->toBe($before);
+    })->with([
+        'active in the query' => ['active=1', ['mode' => 'digest'], 'active'],
+        'mode in the query' => ['mode=digest', ['active' => true], 'mode'],
+        'unhide in the query' => ['unhide=1', ['mode' => 'digest'], 'unhide'],
+    ]);
+
     it('refuses a body that is not exactly one known change, changing nothing', function (array $body): void {
         $radar = Radar::factory()->for($this->user)->paused()->create(['hidden_count' => 2]);
         $before = RadarApi::rowsOf($this->user);
