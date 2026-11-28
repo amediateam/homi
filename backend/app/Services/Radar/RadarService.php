@@ -30,7 +30,9 @@ use Illuminate\Support\Facades\Log;
  *
  * 0. The switch (DEC-51): while `radar.creation_enabled` is off, `create`, `update`, `setActive`, `setMode` and `relax`
  *    answer `RadarsDisabled` before anything else — no chat check, no lock, no query, no source call. `delete` is never
- *    refused. The API's `EnsureRadarsEnabled` has answered already; the bot calls this service directly.
+ *    refused. The API's `EnsureRadarsEnabled` has answered already; the bot calls this service directly. Then the
+ *    owner: a radar given for another user is `ModelNotFoundException`, as unknown — an attribute comparison, before
+ *    the chat check, the lock or any query (`delete` too).
  * 1. The chat (`ChatReachability`): with `radar.require_chat` on, `create`, `update`, `setActive(true)` and `relax`
  *    answer `NoChat` while the bot cannot write to the user — read from the loaded user, before any lock, source call
  *    or write, so the client's single repeat after the user grants access writes exactly one radar (LB-API-013).
@@ -126,6 +128,7 @@ final readonly class RadarService
     public function update(User $user, Radar $radar, SearchFilters $filters, ?string $relaxed, ?string $locale = null, ?string $currency = null): RadarMutation
     {
         $this->ensureEnabled();
+        $this->ensureOwned($user, $radar);
         $this->ensureChat($user);
 
         [$current, $written] = $this->replaced($user, $radar, $filters, $relaxed);
@@ -144,11 +147,8 @@ final readonly class RadarService
     public function relax(User $user, Radar $radar, string $code, ?string $locale = null, ?string $currency = null): RadarMutation
     {
         $this->ensureEnabled();
+        $this->ensureOwned($user, $radar);
         $this->ensureChat($user);
-
-        if ($radar->user_id !== $user->id) {
-            throw (new ModelNotFoundException)->setModel(Radar::class, [(string) $radar->getKey()]);
-        }
 
         $context = $this->context($user, $locale, $currency);
         [$current, $written] = $this->replaced($user, $radar, $this->options->filtersFor($radar, $code, $context), $code);
@@ -161,6 +161,7 @@ final readonly class RadarService
     public function setActive(User $user, Radar $radar, bool $active): RadarMutation
     {
         $this->ensureEnabled();
+        $this->ensureOwned($user, $radar);
 
         if ($active) {
             $this->ensureChat($user);
@@ -195,6 +196,7 @@ final readonly class RadarService
     public function setMode(User $user, Radar $radar, RadarMode $mode): Radar
     {
         $this->ensureEnabled();
+        $this->ensureOwned($user, $radar);
 
         /** @var Radar */
         return $this->locked($user, function () use ($user, $radar, $mode): Radar {
@@ -211,6 +213,7 @@ final readonly class RadarService
     /** Deletes the radar with its hide rules; works while radars are switched off, so nothing is left behind. */
     public function delete(User $user, Radar $radar): void
     {
+        $this->ensureOwned($user, $radar);
         $this->locked($user, function () use ($user, $radar): void {
             $this->stored($user, $radar)->delete();
         });
@@ -293,6 +296,18 @@ final readonly class RadarService
     {
         if (! Config::boolean('radar.creation_enabled')) {
             throw new RadarsDisabled;
+        }
+    }
+
+    /**
+     * A radar of another user is not found, like an unknown one: an attribute comparison, so it answers before the chat
+     * check, the lock and any query, and a caller that loaded a radar by id outside the user's relation (the bot) learns
+     * nothing from the order of the checks.
+     */
+    private function ensureOwned(User $user, Radar $radar): void
+    {
+        if ($radar->user_id !== $user->id) {
+            throw (new ModelNotFoundException)->setModel(Radar::class, [(string) $radar->getKey()]);
         }
     }
 

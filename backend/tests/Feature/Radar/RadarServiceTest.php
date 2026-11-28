@@ -146,6 +146,29 @@ describe('the chat check', function (): void {
         'relax' => [fn (RadarService $service, User $user, Radar $radar): mixed => $service->relax($user, $radar, 'price_more')],
     ]);
 
+    it('answers a radar of another user as unknown before the chat check, the lock and any query', function (Closure $write): void {
+        config(['radar.require_chat' => true]);
+        $this->user->forceFill(['bot_chat_state' => BotChatState::Never])->save();
+        $foreign = Radar::factory()->for(User::factory()->create(['bot_chat_state' => BotChatState::Active]))->paused()->create();
+        $before = $foreign->fresh()?->toArray();
+        Cache::spy();
+
+        [$statements, $error] = radarStatements(fn () => $write($this->service, $this->user, $foreign));
+
+        expect($error)->toBeInstanceOf(ModelNotFoundException::class)
+            ->and($error?->getModel())->toBe(Radar::class)
+            ->and($statements)->toBe([])
+            ->and($foreign->fresh()?->toArray())->toBe($before);
+        Cache::shouldNotHaveReceived('lock');
+    })->with([
+        'update' => [fn (RadarService $service, User $user, Radar $radar): mixed => $service->update($user, $radar, radarFilters(['price_max' => 2]), null)],
+        'switch on' => [fn (RadarService $service, User $user, Radar $radar): mixed => $service->setActive($user, $radar, true)],
+        'pause' => [fn (RadarService $service, User $user, Radar $radar): mixed => $service->setActive($user, $radar, false)],
+        'mode' => [fn (RadarService $service, User $user, Radar $radar): mixed => $service->setMode($user, $radar, RadarMode::Digest)],
+        'relax' => [fn (RadarService $service, User $user, Radar $radar): mixed => $service->relax($user, $radar, 'price_more')],
+        'delete' => [fn (RadarService $service, User $user, Radar $radar): mixed => $service->delete($user, $radar)],
+    ]);
+
     it('lets the single repeat after the user grants write access create exactly one radar', function (): void {
         config(['radar.require_chat' => true]);
         $this->user->forceFill(['bot_chat_state' => BotChatState::Never])->save();
