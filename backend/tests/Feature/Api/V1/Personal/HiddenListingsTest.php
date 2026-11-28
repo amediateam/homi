@@ -133,6 +133,19 @@ it('lets a hidden listing shown in «Скрытое» as the survivor of a later
     expect($this->getJson('/api/v1/hidden')->assertOk()->json('data.listings'))->toBe([]);
 });
 
+it('lets a hidden listing leave «Скрытое» by the survivor it shows, when only that read told HOMI of the merge', function (): void {
+    LegacyListingsHttp::fake();
+    Feature::globally()->activate('source.listings.card', ['everyone' => 'legacy']);
+    HiddenListing::factory()->for($this->user)->create(['listing_number' => 100016]);
+
+    expect(ListingRef::query()->count())->toBe(0)
+        ->and(array_column($this->getJson('/api/v1/hidden')->assertOk()->json('data.listings'), 'number'))->toBe([100001]);
+
+    $this->deleteJson('/api/v1/hidden/listings/100001')->assertNoContent();
+
+    expect(HiddenListing::query()->count())->toBe(0);
+});
+
 it('back-fills the channel and post of a listing hidden before HOMI had seen its card', function (): void {
     LegacyListingsHttp::fake();
     Feature::globally()->activate('source.listings.card', ['everyone' => 'legacy']);

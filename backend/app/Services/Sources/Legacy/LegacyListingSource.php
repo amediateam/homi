@@ -564,6 +564,8 @@ final class LegacyListingSource implements ListingSource
         ));
 
         if ($preview) {
+            $this->refs->markMerged($number, ListingSummary::fromArray($card)->number);
+
             return ['card' => $card, 'contact' => null, 'answered' => $number];
         }
 
@@ -578,7 +580,8 @@ final class LegacyListingSource implements ListingSource
      * <answered>}`, sealed alike, no copy of the phone) under an asked number legacy merged into it — so the `404` of
      * the survivor leaves no copy of its phone behind. Nothing is filed while either number is withdrawn
      * (`withdrawnKey()`): a read that was in flight when legacy answered `404` for it cannot file a usable entry. A
-     * preview carries no phone or post link, so it files nothing.
+     * preview carries no phone or post link, so it files only a merge (`readCard()`, `fetchPreviews()`): a personal list
+     * that shows a duplicate as its survivor lets its owner remove the row through the survivor's number (WP-44).
      *
      * @param  array<array-key, mixed>  $card  the translated card
      * @param  array<array-key, mixed>  $answer  legacy's raw answer
@@ -929,6 +932,7 @@ final class LegacyListingSource implements ListingSource
                 }
 
                 $previews[(int) $number] = ListingSummary::fromArray($preview);
+                $this->refs->markMerged((int) $number, $previews[(int) $number]->number);
             }
 
             if ($failed !== []) {

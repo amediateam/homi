@@ -176,6 +176,19 @@ it('lets a favourite listed as the survivor of a later merge leave the list by t
     expect(favouriteNumbersOf($this->getJson('/api/v1/favorites')->assertOk()))->toBe([]);
 });
 
+it('lets a favourite leave the list by the survivor it shows, when only the list read told HOMI of the merge', function (): void {
+    onLegacyFavourites();
+    favouriteInOrder($this->user, [100016]);
+
+    expect(ListingRef::query()->count())->toBe(0)
+        ->and(favouriteNumbersOf($this->getJson('/api/v1/favorites')->assertOk()))->toBe([100001])
+        ->and(ListingRef::query()->find(100016)?->merged_into)->toBe(100001);
+
+    $this->deleteJson('/api/v1/favorites/100001')->assertOk();
+
+    expect(Favorite::query()->count())->toBe(0);
+});
+
 it('lists the favourites newest first, each a favourite, in the shape of WP-13 from the native source', function (): void {
     favouriteInOrder($this->user, [100012, 100013, 100003]);
 

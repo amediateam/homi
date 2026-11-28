@@ -233,3 +233,22 @@ it('files nothing for a preview read', function (): void {
     expect(ListingRef::query()->count())->toBe(0)
         ->and(LegacyListingsHttp::sent('/api/listings/100002'))->toHaveCount(1);
 });
+
+it('files only the merge for a preview legacy answers with another number, single or in a batch', function (string $how): void {
+    LegacyListingsHttp::fake();
+
+    if ($how === 'single') {
+        $this->getJson('/api/v1/listings/100016?preview=1')->assertOk()->assertJsonPath('data.number', 100001);
+    } else {
+        $previews = app(LegacyListingSource::class)->previews([100016, 100002], new SourceContext('ru', 'USD', User::factory()->create()));
+
+        expect($previews[100016]->number)->toBe(100001);
+    }
+
+    $merged = ListingRef::query()->sole();
+
+    expect($merged->listing_number)->toBe(100016)
+        ->and($merged->merged_into)->toBe(100001)
+        ->and($merged->author_key)->toBeNull()
+        ->and($merged->source_channel)->toBeNull();
+})->with(['single', 'batch']);
