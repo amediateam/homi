@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | C |
-| Status | REVIEW |
+| Status | REVIEW (#136; env keys #135; DEC-113) |
 | Depends on | WP-42, WP-44 |
 | Size | about 2 400 changed lines, L |
 | Behaviour reference | WP-13 (the shapes — unchanged here); `25` §5 (radars); `08` §1.8 and the rows of API-018 … API-023; `02` BR-API-086; `03` §4 (BR-APP-012, BR-APP-041, BR-APP-042, BR-APP-044, BR-APP-047, BR-APP-048, BR-APP-063, BR-APP-073); `15` §3.1 rows 1–3, §3.4 rows 1, 2 and 6, §3.6 rows 2 and 3; `16` SEC-REQ-014, SEC-REQ-015, SEC-REQ-017; tasks `tasks/backend/KV-BE-100-radar-service-core.md`, `KV-BE-101-…`, `KV-BE-102-radar-starter-and-options.md`, `KV-BE-103-…`, `KV-BE-104-…`, `KV-BE-105-…`, `KV-BE-106-radar-hide-rules.md` (rules, limits, edge cases — not their routes, serializers or SQL predicates) |
@@ -381,7 +381,7 @@ before it; what was not fixed is in the Handoff.
 
 ## Handoff
 
-In review. The development track needs nothing more for this package after the merge; WP-46 (matching and delivery
+In review (#136, env keys #135). The development track needs nothing more for this package after the merge; WP-46 (matching and delivery
 planning) is next in queue order.
 
 **For the production track** (no nginx change, no `source.*` flag change):
