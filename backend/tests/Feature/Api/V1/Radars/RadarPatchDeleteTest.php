@@ -218,3 +218,21 @@ it('lets RadarPolicy pass the owner only, and refuses anyone else as not found',
         ->and(Gate::forUser($other)->inspect($ability, $radar)->status())->toBe(404)
         ->and(Gate::getPolicyFor(Radar::class))->toBeInstanceOf(RadarPolicy::class);
 })->with(['view', 'update', 'delete']);
+
+it('limits the radar writes of one user to 30 a minute across the write routes: the 31st is 429 and changes nothing', function (): void {
+    $radar = Radar::factory()->for($this->user)->create();
+
+    foreach (range(1, 30) as $write) {
+        $this->patchJson("/api/v1/radars/{$radar->id}", ['mode' => $write % 2 === 0 ? 'instant' : 'digest'])->assertOk();
+    }
+
+    $before = RadarApi::rowsOf($this->user);
+
+    $this->postJson('/api/v1/radars', RadarApi::body(['price_max' => 700]))->assertTooManyRequests()->assertJsonPath('code', 'rate_limited');
+    $this->deleteJson("/api/v1/radars/{$radar->id}")->assertTooManyRequests();
+
+    expect(RadarApi::rowsOf($this->user))->toBe($before);
+
+    $this->travel(61)->seconds();
+    $this->deleteJson("/api/v1/radars/{$radar->id}")->assertOk();
+});
