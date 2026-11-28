@@ -507,6 +507,71 @@ describe('switching on and off, the mode and delete', function (): void {
     ]);
 });
 
+describe('unhide', function (): void {
+    it('clears the radar\'s rules and zeroes its counter as stored, without the chat check, and answers the radar', function (): void {
+        config(['radar.require_chat' => true]);
+        $this->user->forceFill(['bot_chat_state' => BotChatState::Never])->save();
+        $radar = Radar::factory()->for($this->user)->create(['hidden_count' => 3]);
+        $stale = Radar::query()->findOrFail($radar->id);
+        RadarHideRule::factory()->count(2)->for($radar)->create();
+        $other = RadarHideRule::factory()->for(Radar::factory()->for($this->user)->create(['hidden_count' => 1]))->create();
+
+        $unhidden = $this->service->unhide($this->user, $stale);
+
+        expect($unhidden->id)->toBe($radar->id)
+            ->and($unhidden->hidden_count)->toBe(0)
+            ->and($radar->fresh()?->hidden_count)->toBe(0)
+            ->and(RadarHideRule::query()->pluck('id')->all())->toBe([$other->id])
+            ->and($other->radar()->firstOrFail()->hidden_count)->toBe(1);
+    });
+
+    it('refuses with RadarsDisabled while radars are switched off, before any query or lock, and keeps the rules', function (): void {
+        $radar = Radar::factory()->for($this->user)->create(['hidden_count' => 3]);
+        RadarHideRule::factory()->for($radar)->create();
+        config(['radar.creation_enabled' => false]);
+        Cache::spy();
+
+        [$statements, $error] = radarStatements(fn () => $this->service->unhide($this->user, $radar));
+
+        expect($error)->toBeInstanceOf(RadarsDisabled::class)
+            ->and($statements)->toBe([])
+            ->and($radar->fresh()?->hidden_count)->toBe(3)
+            ->and(RadarHideRule::query()->count())->toBe(1);
+        Cache::shouldNotHaveReceived('lock');
+    });
+
+    it('answers a radar of another user as unknown before any query, and keeps its rules and counter', function (): void {
+        $foreign = Radar::factory()->create(['hidden_count' => 3]);
+        RadarHideRule::factory()->for($foreign)->create();
+
+        [$statements, $error] = radarStatements(fn () => $this->service->unhide($this->user, $foreign));
+
+        expect($error)->toBeInstanceOf(ModelNotFoundException::class)
+            ->and($statements)->toBe([])
+            ->and($foreign->fresh()?->hidden_count)->toBe(3)
+            ->and(RadarHideRule::query()->count())->toBe(1);
+    });
+
+    it('clears under the user\'s lock', function (): void {
+        $radar = Radar::factory()->for($this->user)->create(['hidden_count' => 3]);
+        RadarHideRule::factory()->for($radar)->create();
+
+        if (DB::getDriverName() === 'pgsql') {
+            [$statements] = radarStatements(fn () => $this->service->unhide($this->user, $radar));
+
+            expect($statements)->toContain("select pg_advisory_xact_lock(hashtext('radar:' || ?))");
+
+            return;
+        }
+
+        Cache::lock("radar:{$this->user->id}", 30)->get();
+
+        expect(fn () => $this->service->unhide($this->user, $radar))->toThrow(LockTimeoutException::class)
+            ->and($radar->fresh()?->hidden_count)->toBe(3)
+            ->and(RadarHideRule::query()->count())->toBe(1);
+    });
+});
+
 describe('events', function (): void {
     beforeEach(function (): void {
         Event::fake([RadarSaved::class, RadarDeleted::class]);

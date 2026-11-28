@@ -17,7 +17,6 @@ use App\Models\Radar as RadarModel;
 use App\Models\User;
 use App\Services\Radar\FoundAskPolicy;
 use App\Services\Radar\RadarCreateContext;
-use App\Services\Radar\RadarHideRuleService;
 use App\Services\Radar\RadarPreviews;
 use App\Services\Radar\RadarService;
 use App\Services\Radars\Radar;
@@ -48,7 +47,6 @@ class RadarController extends ApiController
 {
     public function __construct(
         private readonly RadarService $radars,
-        private readonly RadarHideRuleService $hideRules,
         private readonly FoundAskPolicy $found,
         private readonly RadarPreviews $previews,
     ) {}
@@ -147,9 +145,7 @@ class RadarController extends ApiController
             return new RadarChange(Radar::fromModel($this->radars->setMode($user, $radar, $request->enum('mode', RadarMode::class) ?? $radar->mode)));
         }
 
-        $this->hideRules->clearAll($radar);
-
-        return new RadarChange(Radar::fromModel($radar));
+        return new RadarChange(Radar::fromModel($this->radars->unhide($user, $radar)));
     }
 
     /** The caller's radar by id (a ULID in either case), checked by `RadarPolicy`; else `404 not_found`. */

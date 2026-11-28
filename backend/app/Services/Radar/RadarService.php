@@ -29,15 +29,16 @@ use Throwable;
  * Every change of a radar, for the API and the bot alike (WP-45; tasks `KV-BE-100`, `KV-BE-103`, `KV-BE-104`). Each
  * write runs in this order:
  *
- * 0. The switch (DEC-51): while `radar.creation_enabled` is off, `create`, `update`, `setActive`, `setMode` and `relax`
- *    answer `RadarsDisabled` before anything else — no chat check, no lock, no query, no source call. `delete` is never
+ * 0. The switch (DEC-51): while `radar.creation_enabled` is off, `create`, `update`, `setActive`, `setMode`, `relax`
+ *    and `unhide` answer `RadarsDisabled` before anything else — no chat check, no lock, no query, no source call
+ *    (`RadarHideRuleService::add()` and `addFromListing()` too). `delete` is never
  *    refused. The API's `EnsureRadarsEnabled` has answered already; the bot calls this service directly. Then the
  *    owner: a radar given for another user is `ModelNotFoundException`, as unknown — an attribute comparison, before
  *    the chat check, the lock or any query (`delete` too).
  * 1. The chat (`ChatReachability`): with `radar.require_chat` on, `create`, `update`, `setActive(true)` and `relax`
  *    answer `NoChat` while the bot cannot write to the user — read from the loaded user, before any lock, source call
  *    or write, so the client's single repeat after the user grants access writes exactly one radar (LB-API-013).
- *    Pause, mode and delete are never checked.
+ *    Pause, mode, unhide and delete are never checked.
  * 2. The lock: one per user for the transaction — `pg_advisory_xact_lock(hashtext('radar:' || <user id>))` on
  *    PostgreSQL, `Cache::lock("radar:<user id>", 5)->block(3)` elsewhere. Inside it the radar is read again through
  *    the user's radars (one deleted meanwhile is `ModelNotFoundException`, as unknown); `relax` resolves its code
@@ -75,7 +76,12 @@ final readonly class RadarService
 
     private const int LOCK_WAIT_SECONDS = 3;
 
-    public function __construct(private ChatReachability $chat, private StarterSelector $starters, private RadarRelaxOptions $options) {}
+    public function __construct(
+        private ChatReachability $chat,
+        private StarterSelector $starters,
+        private RadarRelaxOptions $options,
+        private RadarHideRuleService $hideRules,
+    ) {}
 
     /**
      * Creates a radar for the filters, or answers the user's radar of the same search: `existing` while it is on,
@@ -214,6 +220,26 @@ final readonly class RadarService
             if ($current->mode !== $mode) {
                 $current->forceFill(['mode' => $mode])->save();
             }
+
+            return $current;
+        });
+    }
+
+    /**
+     * Clears every hide rule of the radar and sets its `hidden_count` to 0 (`PATCH {"unhide": true}`, DEV-033; the bot's
+     * radar screen, WP-55): the switch and the owner first, then under the user's lock on the radar as stored
+     * (`RadarHideRuleService::clearAll()`); the answer is that radar. Never checks the chat, never limited, announces
+     * nothing.
+     */
+    public function unhide(User $user, Radar $radar): Radar
+    {
+        $this->ensureEnabled();
+        $this->ensureOwned($user, $radar);
+
+        /** @var Radar */
+        return $this->locked($user, function () use ($user, $radar): Radar {
+            $current = $this->stored($user, $radar);
+            $this->hideRules->clearAll($current);
 
             return $current;
         });

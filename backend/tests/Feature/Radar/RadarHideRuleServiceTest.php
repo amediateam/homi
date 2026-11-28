@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\Radar\HideRuleKind;
+use App\Exceptions\Radar\RadarsDisabled;
 use App\Models\ListingRef;
 use App\Models\Radar;
 use App\Models\RadarHideRule;
@@ -8,6 +9,8 @@ use App\Models\User;
 use App\Services\Radar\HideRuleSet;
 use App\Services\Radar\RadarHideRuleService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
 /*
@@ -74,6 +77,30 @@ it('refuses a radar of another user like an unknown one', function (Closure $wri
 })->with([
     'add' => [fn (RadarHideRuleService $service, User $user, Radar $radar): bool => $service->add($user, $radar, HideRuleKind::Channel, 'arenda_tashkent')],
     'from a listing' => [fn (RadarHideRuleService $service, User $user, Radar $radar): bool => $service->addFromListing($user, 100012, HideRuleKind::Channel, $radar)],
+]);
+
+it('refuses every rule write with RadarsDisabled while radars are switched off, before any query', function (Closure $write): void {
+    config(['radar.author_hide_rules' => true]);
+    $radar = Radar::factory()->for($this->user)->create();
+    ListingRef::factory()->create(['listing_number' => 100012, 'source_channel' => 'arenda_tashkent']);
+    config(['radar.creation_enabled' => false]);
+    $statements = new ArrayObject;
+    DB::listen(function (QueryExecuted $query) use ($statements): void {
+        $statements[] = $query->sql;
+    });
+
+    try {
+        $write($this->service, $this->user, $radar);
+        $this->fail('A hide rule was written while radars are switched off.');
+    } catch (RadarsDisabled) {
+    }
+
+    expect($statements->getArrayCopy())->toBe([])
+        ->and(RadarHideRule::query()->count())->toBe(0);
+})->with([
+    'add' => [fn (RadarHideRuleService $service, User $user, Radar $radar): bool => $service->add($user, $radar, HideRuleKind::Channel, 'arenda_tashkent')],
+    'from a listing on its radar' => [fn (RadarHideRuleService $service, User $user, Radar $radar): bool => $service->addFromListing($user, 100012, HideRuleKind::Channel, $radar)],
+    'from a listing on every active radar' => [fn (RadarHideRuleService $service, User $user): bool => $service->addFromListing($user, 100012, HideRuleKind::Channel, null)],
 ]);
 
 describe('from a listing', function (): void {
