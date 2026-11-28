@@ -142,8 +142,8 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
     The found survey; `IdorMatrixTest` over the 59 bearer routes.
   - Every `{number}` route of `/api/v1` takes `ListingNumber::ROUTE_PATTERN` (1–18 digits, no leading zero).
   - While `sources.native_stubs` is on, the 16 routes answer their WP-13 fixtures and no query touches the eight tables.
-  - **Tests:** `php artisan test --compact` → 3 634 tests, 3 608 passed, 26 skipped; on PostgreSQL 3 634 passed; the Pgsql
-    suite 26 passed (on `28b52b5`, the integrator's run).
+  - **Tests:** `php artisan test --compact` → 3 636 tests, 3 610 passed, 26 skipped; on PostgreSQL 3 636 passed; the Pgsql
+    suite 26 passed (on `1c0f321`, the integrator's run).
 
 ## Frontend (`frontend/`)
 - pnpm 11.24 workspace, Node 26, Next 16.4.5 × 3 apps on dev ports 3000/3001/3002, TypeScript ^6. `pnpm -r lint` and `pnpm -r typecheck` exit 0 (3 apps + 8 packages; on `fb4a2b2` of WP-23, merged in #68, and on `5fd06c9` of WP-24, merged in #71, where the packages are linted with the app's rules since #70).

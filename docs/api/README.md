@@ -364,17 +364,17 @@ nothing else. It answers `204`, also when there is nothing to withdraw, and `404
 The personal methods are HOMI's own data on every driver since WP-44 (while `SOURCES_NATIVE_STUBS` is on they answer
 their fixtures and store nothing). Writes name the target state and are idempotent; a merged duplicate acts on its
 survivor; a write on a listing HOMI has not filed asks the source (`404 not_found` when it does not exist, `503
-source_unavailable` while the source is down), a delete never does. `GET /favorites` (newest first) and `GET
-/history` (last viewed first) page like the feed: `limit` 1 … 50, default 20, `meta.next_cursor` until `null`; a
-cursor that does not decode ends the list quietly with an empty page, and a page may be shorter than `limit` while
-its cursor is still set (a listing the source no longer gives is left out). `GET /hidden` answers every blocked
-author and at most the 200 newest hidden listings. Blocking an author needs the author HOMI files when a full card is
-read: on the stub driver it answers `404 not_found`; `listing_numbers` holds at most the author's 500 newest live
-listings plus the one asked for, and `count` is the author's count. `DELETE /hidden` clears the caller's hidden
-listings and blocked authors, not radar rules. A report is one vote per user, listing and reason; a mark for everybody
-(«сдано» hides the listing from every feed, «риелтор» takes the owner label off the author) needs at least three
-distinct voters and a weighted sum (DEC-112, proposals in `config/votes.php`), and each detector has a kill switch
-(`php artisan votes:detector`).
+source_unavailable` while the source is down), a list delete never does (`DELETE …/reports` resolves the listing
+first). `GET /favorites` (newest first) and `GET /history` (last viewed first) page like the feed: `limit` 1 … 50,
+default 20, `meta.next_cursor` until `null`; a cursor that does not decode ends the list quietly with an empty page,
+and a page may be shorter than `limit` while its cursor is still set (a listing the source no longer gives is left
+out). `GET /hidden` answers every blocked author and at most the 200 newest hidden listings. Blocking an author needs
+the author HOMI files when a full card is read: on the stub driver it answers `404 not_found`; `listing_numbers`
+holds at most the author's 500 newest live listings plus the one asked for, and `count` is the author's count.
+`DELETE /hidden` clears the caller's hidden listings and blocked authors, not radar rules. A report is one vote per
+user, listing and reason; a mark for everybody («сдано» hides the listing from every feed, «риелтор» takes the owner
+label off the author) needs at least three distinct voters and a weighted sum (DEC-112, proposals in
+`config/votes.php`), and each detector has a kill switch (`php artisan votes:detector`).
 
 ## Keeping the contract current
 

@@ -324,18 +324,20 @@ proposals of `config/votes.php` until the product owner confirms them.
 - `ListingPointer` gains `filed` (default `true`). The back-fill job is queued by `ListingResolver::backfill()` after
   the write, not inside `resolve()` — with the tests' `sync` queue it would run before the insert. The job files nothing
   in `listing_refs` itself, so the stub driver files no rows.
-- Deletes never ask the source. `unset`, `unhide`, `unhideReported` and the withdrawal act on
-  `ListingResolver::numbersOf()`: the asked number and the pointer's number, their survivors in `listing_refs`, and
-  every number of **the caller's own rows** in that table that `listing_refs` files as merged into one of those
-  survivors (one query per table, the chain followed in PHP by `survivors()`, at most 8 hops), ascending and
-  deduplicated — so a row stored before a later merge, one hop or two, leaves by the number the list shows (review C,
-  N1, N4). `unblockByListing()` keeps the asked number and its survivor: a block is keyed by the author, and an entry
-  always leaves by its id.
+- List deletes never ask the source (`unset`, `unhide`, `unblockByListing`); `DELETE …/reports` resolves the listing
+  first (`404` / `503`). `unset`, `unhide`, `unhideReported` and the withdrawal act on `ListingResolver::numbersOf()`:
+  the asked number and the pointer's number, their survivors in `listing_refs`, and every number of **the caller's own
+  rows** in that table that `listing_refs` files as merged into one of those survivors (one query per table, the chain
+  followed in PHP by `survivors()`, at most 8 hops), ascending and deduplicated — so a row stored before a later merge,
+  one hop or two, leaves by the number the list shows (review C, N1, N4). `unblockByListing()` keeps the asked number
+  and its survivor: a block is keyed by the author, and an entry always leaves by its id.
 - **Legacy files the merge a preview answers** (corrects WP-42's "a preview files nothing"): when legacy answers another
   number for a preview (`readCard()`, `fetchPreviews()`), the merge goes into `listing_refs` like a full card's
   (`markMerged()`), nothing else (no author, no source reference). The lists read only previews, so without it a row
   listed as its survivor could not leave by that survivor until someone opened the old number's full card. The stub
-  driver files nothing.
+  driver files nothing. An alias row it files has no survivor row yet, so `resolve()` still asks the source for a write
+  through the alias (the survivor is not live in `listing_refs`): the row lands under the survivor with `filed: false`
+  and the back-fill is queued, and with the source down the write answers `503` as for an unknown listing.
 
 **Lists**
 
