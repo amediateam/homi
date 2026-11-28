@@ -129,7 +129,7 @@ final readonly class RadarService
             ? $this->offered($radar, $this->context($user, $context->locale, $context->currency))
             : [[], []];
 
-        return $this->announced($user, new RadarMutation($radar, $kind, $starter, $options, $relaxed), written: $kind !== RadarMutationKind::Existing);
+        return $this->announced($user, new RadarMutation($radar, $kind, $starter, $options, $relaxed, changed: $kind !== RadarMutationKind::Existing));
     }
 
     /**
@@ -148,7 +148,7 @@ final readonly class RadarService
         $starter = $this->replacedStarter($current, $written, fn (): Starter => $this->starters->forUpdate($user, $current, $context->locale, $context->currency));
         [$options, $hints] = $written && $starter->count === 0 ? $this->offered($current, $context) : [[], []];
 
-        return $this->announced($user, new RadarMutation($current, RadarMutationKind::Updated, $starter, $options, $hints), written: $written);
+        return $this->announced($user, new RadarMutation($current, RadarMutationKind::Updated, $starter, $options, $hints, changed: $written));
     }
 
     /**
@@ -169,10 +169,13 @@ final readonly class RadarService
         [$current, $written] = $this->replaced($user, $radar, fn (Radar $stored): SearchFilters => $this->options->filtersFor($stored, $code, $context), $code);
         $starter = $this->replacedStarter($current, $written, fn (): Starter => $this->starters->forRelax($user, $current, $context->locale, $context->currency));
 
-        return $this->announced($user, new RadarMutation($current, RadarMutationKind::Updated, $starter), written: $written);
+        return $this->announced($user, new RadarMutation($current, RadarMutationKind::Updated, $starter, changed: $written));
     }
 
-    /** Switches the radar on (`resumed`, within the limit and after the chat check) or pauses it (`paused`). */
+    /**
+     * Switches the radar on (`resumed`, within the limit and after the chat check) or pauses it (`paused`); a radar
+     * already in that state writes nothing and answers `changed: false`, so a no-op pause asks no «Нашли жильё?».
+     */
     public function setActive(User $user, Radar $radar, bool $active): RadarMutation
     {
         $this->ensureEnabled();
@@ -204,7 +207,7 @@ final readonly class RadarService
             ? $this->starter($current, $kind, fn (): Starter => $this->starters->forResume($user, $current))
             : Starter::none();
 
-        return $this->announced($user, new RadarMutation($current, $kind, $starter), written: $written);
+        return $this->announced($user, new RadarMutation($current, $kind, $starter, changed: $written));
     }
 
     /** Switches between sending each listing at once and the digest; never limited, never checks the chat. */
@@ -447,10 +450,10 @@ final readonly class RadarService
         return Starter::none();
     }
 
-    /** The mutation, announced by `RadarSaved` after the commit when it wrote something. */
-    private function announced(User $user, RadarMutation $mutation, bool $written): RadarMutation
+    /** The mutation, announced by `RadarSaved` after the commit when it wrote something (`changed`). */
+    private function announced(User $user, RadarMutation $mutation): RadarMutation
     {
-        if ($written) {
+        if ($mutation->changed) {
             RadarSaved::dispatch((string) $mutation->radar->getKey(), $user->id, $mutation->kind, $mutation->starter->numbers);
         }
 

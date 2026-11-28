@@ -138,7 +138,7 @@ class RadarController extends ApiController
         if ($request->has('active')) {
             $paused = $this->radars->setActive($user, $radar, false);
 
-            return new RadarChange(Radar::fromModel($paused->radar), askFound: $this->found->shouldAsk($user, 'pause'));
+            return new RadarChange(Radar::fromModel($paused->radar), askFound: $paused->changed && $this->found->shouldAsk($user, 'pause'));
         }
 
         if ($request->has('mode')) {

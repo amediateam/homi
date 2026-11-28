@@ -9,6 +9,8 @@ use App\Models\Radar;
 use App\Models\RadarHideRule;
 use App\Models\User;
 use App\Policies\RadarPolicy;
+use App\Services\Radar\FoundAskPolicy;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
 use Tests\Support\ContractShapes;
@@ -92,6 +94,17 @@ describe('PATCH /radars/{id}', function (): void {
 
         expect(array_keys($response->json('data')))->toBe(['radar', 'ask_found'])
             ->and($first->fresh()?->paused_at?->toIso8601String())->toBe(now()->toIso8601String());
+    });
+
+    it('asks nothing and sets no 24-hour mark for a pause of a radar that is already paused', function (): void {
+        $paused = Radar::factory()->for($this->user)->paused()->create();
+        $active = Radar::factory()->for($this->user)->create();
+
+        $this->patchJson("/api/v1/radars/{$paused->id}", ['active' => false])->assertOk()
+            ->assertJsonPath('data.radar.active', false)->assertJsonPath('data.ask_found', false);
+        expect(Cache::has(FoundAskPolicy::key($this->user)))->toBeFalse();
+
+        $this->patchJson("/api/v1/radars/{$active->id}", ['active' => false])->assertOk()->assertJsonPath('data.ask_found', true);
     });
 
     it('does not ask after an answer of the last 30 days', function (): void {
