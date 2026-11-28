@@ -44,9 +44,11 @@ use Throwable;
  *    the user's radars (a radar of another user, or one deleted meanwhile, is `ModelNotFoundException`, as unknown).
  * 3. The twin: the canonical hash of the filters (`posted_days`, key order and list order ignored) among the user's
  *    radars. `create`: an active twin is `existing` and nothing is written; a paused one is switched on as
- *    `reactivated` and keeps the new `entry` and `relax_code`. `update` and `relax`: another radar's hash is
- *    `RadarDuplicate`, its own hash writes nothing. The unique (`user_id`, `filters_hash`) is the backstop: an insert that loses re-reads
- *    the winner (`createOrFirst`, inside a savepoint on PostgreSQL).
+ *    `reactivated` and stores the body's filters (a new `posted_days` with them, DEV-005), the new `entry` and
+ *    `relax_code`. `update` and `relax`: another radar's hash is `RadarDuplicate`; filters equal to the stored ones
+ *    write nothing, while its own hash with other filters — a new `posted_days`, another order of a list or of the
+ *    polygon's vertices — is stored as received, a write like any other. The unique (`user_id`, `filters_hash`) is the
+ *    backstop: an insert that loses re-reads the winner (`createOrFirst`, inside a savepoint on PostgreSQL).
  * 4. The limit: `radar.max` radars switched on (`radar.limit_scope` `active`; `total` counts every radar). Creating or
  *    switching on beyond it is `RadarLimit`; pause, mode and delete are never limited, and lowering the limit keeps the
  *    radars a user has.
@@ -108,7 +110,7 @@ final readonly class RadarService
             }
 
             $this->ensureBelowLimit($user, $twin);
-            $twin->forceFill(['active' => true, 'paused_at' => null, 'entry' => $context->entry, 'relax_code' => $context->relaxed])->save();
+            $twin->forceFill([...Radar::filterAttributes($filters), 'active' => true, 'paused_at' => null, 'entry' => $context->entry, 'relax_code' => $context->relaxed])->save();
 
             return [$twin, RadarMutationKind::Reactivated];
         });
@@ -125,7 +127,8 @@ final readonly class RadarService
 
     /**
      * Replaces the filters of the radar and keeps whether it is on; `$relaxed` is stored as `relax_code` (statistics
-     * only). Filters equal to another radar of the user are `RadarDuplicate`; equal to its own, nothing is written.
+     * only). Filters of another radar's search are `RadarDuplicate`; filters equal to the stored ones write nothing,
+     * and the same search with another `posted_days` is stored as received.
      */
     public function update(User $user, Radar $radar, SearchFilters $filters, ?string $relaxed, ?string $locale = null, ?string $currency = null): RadarMutation
     {
@@ -237,7 +240,7 @@ final readonly class RadarService
             $current = $this->stored($user, $radar);
             $hash = $filters->canonicalHash();
 
-            if ($hash === $current->filters_hash) {
+            if ($hash === $current->filters_hash && $filters->toArray() === $current->searchFilters()->toArray()) {
                 return [$current, false];
             }
 

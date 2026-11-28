@@ -267,6 +267,20 @@ describe('create', function (): void {
         expect($this->service->create($this->user, radarFilters(), radarContext())->radar->id)->toBe($first->radar->id);
     });
 
+    it('stores the body\'s filters on a paused twin it switches back on, a new posted_days with them', function (): void {
+        $paused = Radar::factory()->for($this->user)->filters(['price_max' => 700, 'posted_days' => 3])->paused()->create();
+        $filters = radarFilters(['price_max' => 700, 'posted_days' => 7]);
+
+        $mutation = $this->service->create($this->user, $filters, radarContext('return'));
+        $stored = $paused->fresh();
+
+        expect($mutation->kind)->toBe(RadarMutationKind::Reactivated)
+            ->and($mutation->radar->filters['posted_days'])->toBe(7)
+            ->and($stored?->filters)->toBe($filters->toArray())
+            ->and($stored?->only(['active', 'entry']))->toBe(['active' => true, 'entry' => 'return'])
+            ->and(Radar::query()->count())->toBe(1);
+    });
+
     it('switches a paused twin back on as reactivated and keeps the new entry and relaxed code', function (): void {
         $paused = Radar::factory()->for($this->user)->filters(['price_max' => 700])->paused()->create(['entry' => 'filters', 'relax_code' => null]);
 
@@ -384,11 +398,32 @@ describe('update', function (): void {
             ->and($radar->fresh()?->filters['price_max'])->toBe(500);
     });
 
-    it('writes nothing for its own search and answers updated with an empty starter', function (): void {
+    it('stores a new posted_days of the same search as received: a write with the relaxed code, the starter of an update and RadarSaved', function (): void {
+        config(['radar.starter_enabled' => true]);
+        $source = FakeListingSource::bind()->withItems([100001 => []]);
+        Event::fake([RadarSaved::class]);
+        $radar = Radar::factory()->for($this->user)->filters(['price_max' => 500, 'posted_days' => 3])->create();
+        $filters = radarFilters(['price_max' => 500, 'posted_days' => 14]);
+
+        $mutation = app(RadarService::class)->update($this->user, $radar, $filters, 'price_more');
+        $stored = $radar->fresh();
+
+        expect($mutation->kind)->toBe(RadarMutationKind::Updated)
+            ->and($mutation->starter->numbers)->toBe([100001])
+            ->and($stored?->filters)->toBe($filters->toArray())
+            ->and($stored?->filters['posted_days'])->toBe(14)
+            ->and($stored?->filters_hash)->toBe($radar->filters_hash)
+            ->and($stored?->relax_code)->toBe('price_more')
+            ->and($source->callsOf('feed'))->toHaveCount(1);
+        Event::assertDispatchedTimes(RadarSaved::class, 1);
+        Event::assertDispatched(RadarSaved::class, fn (RadarSaved $event): bool => $event->kind === RadarMutationKind::Updated && $event->starterNumbers === [100001]);
+    });
+
+    it('writes nothing for the filters it has and answers updated with an empty starter', function (): void {
         $radar = Radar::factory()->for($this->user)->filters(['price_max' => 500, 'posted_days' => 3])->create();
 
         [$statements] = radarStatements(function () use ($radar, &$mutation): void {
-            $mutation = $this->service->update($this->user, $radar, radarFilters(['price_max' => 500, 'posted_days' => 14]), 'price_more');
+            $mutation = $this->service->update($this->user, $radar, radarFilters(['price_max' => 500, 'posted_days' => 3]), 'price_more');
         });
 
         expect($mutation->kind)->toBe(RadarMutationKind::Updated)
@@ -526,7 +561,7 @@ describe('events', function (): void {
         $radar = Radar::factory()->for($this->user)->filters(['price_max' => 700])->create();
 
         $this->service->create($this->user, radarFilters(['price_max' => 700]), radarContext());
-        $this->service->update($this->user, $radar, radarFilters(['price_max' => 700, 'posted_days' => 3]), null);
+        $this->service->update($this->user, $radar, radarFilters(['price_max' => 700]), null);
         $this->service->setActive($this->user, $radar, true);
         $this->service->setMode($this->user, $radar, RadarMode::Digest);
 

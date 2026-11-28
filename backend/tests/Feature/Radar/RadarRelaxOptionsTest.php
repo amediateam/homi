@@ -169,7 +169,7 @@ describe('the options', function (): void {
         $radar = Radar::factory()->for($this->user)->filters(['price_max' => 700])->create();
 
         $updated = $this->service->update($this->user, $radar, relaxFilters(['price_max' => 650]), null, 'en');
-        $unchanged = $this->service->update($this->user, $radar, relaxFilters(['price_max' => 650, 'posted_days' => 1]), null);
+        $unchanged = $this->service->update($this->user, $radar, relaxFilters(['price_max' => 650]), null);
 
         expect(array_map(fn (FlowOption $option): string => $option->code, $updated->options))->toBe(['price_more', 'districts'])
             ->and($this->source->callsOf('flow'))->toHaveCount(1)

@@ -154,11 +154,21 @@ describe('PUT /radars/{id}', function (): void {
         $this->putJson('/api/v1/radars/'.strtolower($radar->id), RadarApi::body(['price_max' => 906]))->assertOk()->assertJsonPath('data.radar.id', $radar->id);
     });
 
+    it('stores a new posted_days of the same search as received and answers it', function (): void {
+        $radar = Radar::factory()->for($this->user)->filters(['price_max' => 700, 'posted_days' => 3])->create();
+
+        $this->putJson("/api/v1/radars/{$radar->id}", RadarApi::body(['price_max' => 700, 'posted_days' => 7], ['relaxed' => 'price_more']))->assertOk()
+            ->assertJsonPath('data.kind', 'updated')->assertJsonPath('data.radar.filters.posted_days', 7);
+
+        expect($radar->fresh()?->filters)->toBe(FilterArrays::defaults(['price_max' => 700, 'posted_days' => 7]))
+            ->and($radar->fresh()?->relax_code)->toBe('price_more');
+    });
+
     it('writes nothing for the filters the radar already has', function (): void {
         $radar = Radar::factory()->for($this->user)->filters(['price_max' => 700, 'posted_days' => 7])->create();
         $before = RadarApi::rowsOf($this->user);
 
-        $this->putJson("/api/v1/radars/{$radar->id}", RadarApi::body(['price_max' => 700, 'posted_days' => 1]))->assertOk()
+        $this->putJson("/api/v1/radars/{$radar->id}", RadarApi::body(['price_max' => 700, 'posted_days' => 7]))->assertOk()
             ->assertJsonPath('data.kind', 'updated')->assertJsonPath('data.starter', 0)->assertJsonPath('data.options', [])->assertJsonPath('data.relaxed', []);
 
         expect(RadarApi::rowsOf($this->user))->toBe($before);
