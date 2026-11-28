@@ -14,13 +14,16 @@ use App\Services\Sources\Data\ListingTranslation;
 use App\Services\Sources\Data\MapPoints;
 use App\Services\Sources\SourceContext;
 use App\Services\Sources\Stub\StubListingSource;
+use Closure;
 use LogicException;
 use Throwable;
 
 /**
  * The listing source as a radar test sets it (WP-45), bound as the stub driver: `feed()` answers the first `limit` of
- * `$items` in their order with no next page, or throws `$failure`. `calls` records every call with its first argument
- * and its context, so a test sees the window, the sort and the user a starter asked for, or that nothing was asked.
+ * `$items` in their order with no next page; `count()` answers `$count` and `flow()` answers `$flow` (each a value, or
+ * a closure of the filters), only once a test set it. `$failure` is thrown by all three. `$before` runs before each
+ * of them answers (a test moves the clock there). `calls` records every call with its first argument and its context,
+ * so a test sees the window, the sort and the user a starter asked for, or that nothing was asked.
  */
 final class FakeListingSource implements ListingSource
 {
@@ -28,6 +31,15 @@ final class FakeListingSource implements ListingSource
     public array $items = [];
 
     public ?Throwable $failure = null;
+
+    /** @var (Closure(SearchFilters): int)|int|null */
+    public Closure|int|null $count = null;
+
+    /** @var (Closure(SearchFilters): FlowEstimate)|FlowEstimate|null */
+    public Closure|FlowEstimate|null $flow = null;
+
+    /** @var (Closure(string): void)|null called with the method's name before it answers */
+    public ?Closure $before = null;
 
     /** @var list<array{0: string, 1: mixed, 2: SourceContext}> method, first argument, context */
     public array $calls = [];
@@ -59,18 +71,20 @@ final class FakeListingSource implements ListingSource
 
     public function feed(ListingQuery $query, SourceContext $context): ListingPage
     {
-        $this->calls[] = ['feed', $query, $context];
-
-        if ($this->failure !== null) {
-            throw $this->failure;
-        }
+        $this->answering('feed', $query, $context);
 
         return new ListingPage(array_slice($this->items, 0, $query->limit), null);
     }
 
     public function count(SearchFilters $filters, SourceContext $context): int
     {
-        return $this->unfaked('count', $filters, $context);
+        if ($this->count === null) {
+            return $this->unfaked('count', $filters, $context);
+        }
+
+        $this->answering('count', $filters, $context);
+
+        return is_int($this->count) ? $this->count : ($this->count)($filters);
     }
 
     public function newSince(SearchFilters $filters, int $since, SourceContext $context): int
@@ -80,7 +94,23 @@ final class FakeListingSource implements ListingSource
 
     public function flow(SearchFilters $filters, SourceContext $context): FlowEstimate
     {
-        return $this->unfaked('flow', $filters, $context);
+        if ($this->flow === null) {
+            return $this->unfaked('flow', $filters, $context);
+        }
+
+        $this->answering('flow', $filters, $context);
+
+        return $this->flow instanceof FlowEstimate ? $this->flow : ($this->flow)($filters);
+    }
+
+    /**
+     * The calls of one method, in order.
+     *
+     * @return list<array{0: string, 1: mixed, 2: SourceContext}>
+     */
+    public function callsOf(string $method): array
+    {
+        return array_values(array_filter($this->calls, fn (array $call): bool => $call[0] === $method));
     }
 
     public function map(SearchFilters $filters, SourceContext $context): MapPoints
@@ -121,6 +151,20 @@ final class FakeListingSource implements ListingSource
     public function translation(int $number, SourceContext $context): ListingTranslation
     {
         return $this->unfaked('translation', $number, $context);
+    }
+
+    /** Records the call, runs `$before` and throws `$failure` when one is set. */
+    private function answering(string $method, mixed $argument, SourceContext $context): void
+    {
+        $this->calls[] = [$method, $argument, $context];
+
+        if ($this->before !== null) {
+            ($this->before)($method);
+        }
+
+        if ($this->failure !== null) {
+            throw $this->failure;
+        }
     }
 
     private function unfaked(string $method, mixed $argument, SourceContext $context): never

@@ -2,16 +2,7 @@
 
 use App\Http\Controllers\Api\V1\Radars\RadarController;
 use App\Http\Controllers\Api\V1\Radars\RadarRelaxController;
-use App\Http\Requests\Api\V1\Radars\ListRadarsRequest;
-use App\Http\Requests\Api\V1\Radars\PatchRadarRequest;
-use App\Http\Requests\Api\V1\Radars\RelaxRadarRequest;
-use App\Http\Requests\Api\V1\Radars\StoreRadarRequest;
-use App\Http\Requests\Api\V1\Radars\UpdateRadarRequest;
 use App\Models\User;
-use App\Services\Sources\Stub\StubRadars;
-use App\Services\Sources\Stub\StubResponder;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 use Tests\Support\ContractShapes;
@@ -205,40 +196,9 @@ describe('switched off (DEC-51)', function (): void {
 });
 
 it('answers every radar route from the native stubs, never from the controllers', function (string $method, string $path, array $body, int $status): void {
-    $this->app->instance(RadarController::class, new class(app(StubResponder::class), app(StubRadars::class)) extends RadarController
-    {
-        public function index(ListRadarsRequest $request): JsonResponse
-        {
-            throw new LogicException('The radar controller was reached.');
-        }
-
-        public function store(StoreRadarRequest $request): JsonResponse
-        {
-            throw new LogicException('The radar controller was reached.');
-        }
-
-        public function update(UpdateRadarRequest $request, string $id): JsonResponse
-        {
-            throw new LogicException('The radar controller was reached.');
-        }
-
-        public function patch(PatchRadarRequest $request, string $id): JsonResponse
-        {
-            throw new LogicException('The radar controller was reached.');
-        }
-
-        public function destroy(Request $request, string $id): JsonResponse
-        {
-            throw new LogicException('The radar controller was reached.');
-        }
-    });
-    $this->app->instance(RadarRelaxController::class, new class extends RadarRelaxController
-    {
-        public function __invoke(RelaxRadarRequest $request, string $id, StubResponder $stubs, StubRadars $radars): JsonResponse
-        {
-            throw new LogicException('The radar relax controller was reached.');
-        }
-    });
+    foreach ([RadarController::class, RadarRelaxController::class] as $controller) {
+        $this->app->bind($controller, fn (): never => throw new LogicException("{$controller} was reached."));
+    }
 
     $this->json($method, "/api/v1/{$path}", $body)->assertStatus($status)->assertJsonPath('meta.source', 'stub');
 })->with([

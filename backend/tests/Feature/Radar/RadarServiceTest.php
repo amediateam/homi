@@ -18,6 +18,7 @@ use App\Services\Radar\ChatReachability;
 use App\Services\Radar\RadarCreateContext;
 use App\Services\Radar\RadarService;
 use App\Services\Search\SearchFilters;
+use App\Services\Sources\Data\FlowEstimate;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Events\QueryExecuted;
@@ -104,6 +105,7 @@ describe('the switch (DEC-51)', function (): void {
         'switch on' => [fn (RadarService $service, User $user, Radar $radar): mixed => $service->setActive($user, $radar, true)],
         'pause' => [fn (RadarService $service, User $user, Radar $radar): mixed => $service->setActive($user, $radar, false)],
         'mode' => [fn (RadarService $service, User $user, Radar $radar): mixed => $service->setMode($user, $radar, RadarMode::Digest)],
+        'relax' => [fn (RadarService $service, User $user, Radar $radar): mixed => $service->relax($user, $radar, 'price_more')],
     ]);
 
     it('still deletes a radar and its hide rules', function (): void {
@@ -141,6 +143,7 @@ describe('the chat check', function (): void {
         'create' => [fn (RadarService $service, User $user): mixed => $service->create($user, radarFilters(['price_max' => 1]), radarContext())],
         'update' => [fn (RadarService $service, User $user, Radar $radar): mixed => $service->update($user, $radar, radarFilters(['price_max' => 2]), null)],
         'switch on' => [fn (RadarService $service, User $user, Radar $radar): mixed => $service->setActive($user, $radar, true)],
+        'relax' => [fn (RadarService $service, User $user, Radar $radar): mixed => $service->relax($user, $radar, 'price_more')],
     ]);
 
     it('lets the single repeat after the user grants write access create exactly one radar', function (): void {
@@ -190,7 +193,7 @@ describe('create', function (): void {
             ->and($mutation->starter->count)->toBe(0)
             ->and($mutation->starter->numbers)->toBe([])
             ->and($mutation->options)->toBe([])
-            ->and($mutation->relaxed)->toBe([])
+            ->and($mutation->relaxed)->toBe(['≈2 в день'])
             ->and($radar->user_id)->toBe($this->user->id)
             ->and(array_keys($radar->filters))->toBe(FilterArrays::KEYS)
             ->and($radar->filters)->toBe($filters->toArray())
@@ -531,6 +534,7 @@ describe('the starter', function (): void {
     beforeEach(function (): void {
         config(['radar.starter_enabled' => true]);
         $this->source = FakeListingSource::bind()->withItems([100001 => [], 100002 => [], 100003 => []]);
+        $this->source->flow = new FlowEstimate(0, 7, []);
         ListingView::factory()->for($this->user)->create(['listing_number' => 100002]);
         $this->service = app(RadarService::class);
         Event::fake([RadarSaved::class]);
@@ -562,7 +566,7 @@ describe('the starter', function (): void {
         expect($this->service->update($this->user, $active, radarFilters(['price_max' => 900]), null)->starter->numbers)->toBe([100001, 100002, 100003])
             ->and($this->source->calls)->toHaveCount(1)
             ->and($this->service->update($this->user, $paused, radarFilters(['price_max' => 901]), null)->starter->numbers)->toBe([])
-            ->and($this->source->calls)->toHaveCount(1);
+            ->and($this->source->callsOf('feed'))->toHaveCount(1);
     });
 
     it('asks no source for a write that sends nothing', function (): void {
@@ -587,6 +591,6 @@ describe('the starter', function (): void {
             ->and($mutation->starter->count)->toBe(0)
             ->and(Radar::query()->count())->toBe(1);
         Event::assertDispatched(RadarSaved::class, fn (RadarSaved $event): bool => $event->starterNumbers === []);
-        Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message, array $context): bool => $context === ['radar' => $mutation->radar->id, 'kind' => 'created'] && ! str_contains($message, '777'));
+        Log::shouldHaveReceived('warning')->withArgs(fn (string $message, array $context): bool => $context === ['radar' => $mutation->radar->id, 'kind' => 'created'] && ! str_contains($message, '777'))->once();
     });
 });

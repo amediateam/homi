@@ -5,9 +5,6 @@ namespace App\Http\Controllers\Api\V1\Radars;
 use App\Enums\RadarMode;
 use App\Enums\RadarMutationKind;
 use App\Enums\SourceDriver;
-use App\Exceptions\Radar\NoChat;
-use App\Exceptions\Radar\RadarDuplicate;
-use App\Exceptions\Radar\RadarLimit;
 use App\Http\Controllers\Api\V1\ApiController;
 use App\Http\Requests\Api\V1\Radars\ListRadarsRequest;
 use App\Http\Requests\Api\V1\Radars\PatchRadarRequest;
@@ -16,37 +13,53 @@ use App\Http\Requests\Api\V1\Radars\UpdateRadarRequest;
 use App\Http\Resources\Api\V1\RadarMutationResource;
 use App\Http\Resources\Api\V1\RadarPatchResource;
 use App\Http\Resources\Api\V1\RadarResource;
+use App\Models\Radar as RadarModel;
+use App\Models\User;
+use App\Services\Radar\FoundAskPolicy;
+use App\Services\Radar\RadarCreateContext;
+use App\Services\Radar\RadarHideRuleService;
+use App\Services\Radar\RadarService;
+use App\Services\Radars\Radar;
 use App\Services\Radars\RadarChange;
-use App\Services\Sources\Stub\StubRadars;
-use App\Services\Sources\Stub\StubResponder;
-use Closure;
+use App\Services\Radars\RadarMutation;
+use App\Services\Sources\SourceContext;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
-use Throwable;
+use Illuminate\Support\Facades\Gate;
 
 /**
- * Radars on stubs (WP-13; native from WP-45). While the switch is off (DEC-51) the write routes never reach this
- * controller (`EnsureRadarsEnabled`), and the list answers `[]` without reading a fixture or a scenario; `DELETE`
- * works either way. Scenarios: `empty` (list); `no_chat`, `radar_limit`, `radar_duplicate` (writes); `existing`,
- * `starter`, `few` (create); `ask_found` (pause and delete).
+ * HOMI's radars (WP-45; the shapes of WP-13, `meta.source = native`): every write goes through `RadarService`, which
+ * holds the switch, the chat check, the per-user lock, the twin and the limit. A radar is looked up only through the
+ * caller's own relation and then checked by `RadarPolicy`, so a foreign or unknown id answers the same `404 not_found`
+ * with the same queries (SEC-REQ-014); the policy's verdict is thrown as it gives it (`Gate::inspect()->authorize()`),
+ * not through `Gate::authorize()`, which the OpenAPI export would document as a `403` these routes never answer.
+ *
+ * While the switch is off (DEC-51) the four write routes never reach this controller (`EnsureRadarsEnabled`), and the
+ * list answers `[]` without a query to a radar table and without a source call; `DELETE` works either way. While
+ * `sources.native_stubs` is on, `NativeStubs` answers the stub bodies of WP-13 instead.
  */
 class RadarController extends ApiController
 {
-    public function __construct(private readonly StubResponder $stubs, private readonly StubRadars $radars) {}
+    public function __construct(
+        private readonly RadarService $radars,
+        private readonly RadarHideRuleService $hideRules,
+        private readonly FoundAskPolicy $found,
+    ) {}
 
     /** `GET /radars`: the radars in creation order; `include=previews` adds each radar's preview. */
     public function index(ListRadarsRequest $request): JsonResponse
     {
         if (! Config::boolean('radar.creation_enabled')) {
-            return $this->sourced(RadarResource::collection([]), SourceDriver::Stub);
+            return $this->sourced(RadarResource::collection([]), SourceDriver::Native);
         }
 
-        $context = $this->stubs->check($request);
-        $radars = $context->scenario === 'empty' ? [] : $this->radars->list($context, $request->wantsPreviews());
+        $previews = $request->wantsPreviews();
+        $radars = $this->signedInUser($request)->radars()->orderBy('created_at')->orderBy('id')->get()
+            ->map(fn (RadarModel $radar): Radar => $previews ? Radar::fromModel($radar)->withPreview(null) : Radar::fromModel($radar));
 
-        return $this->sourced(RadarResource::collection($radars), SourceDriver::Stub);
+        return $this->sourced(RadarResource::collection($radars->all()), SourceDriver::Native);
     }
 
     /**
@@ -57,72 +70,85 @@ class RadarController extends ApiController
     #[BodyParameter('filters', description: 'The filters object of WP-12; any subset of its 25 keys, normalised for a radar.', required: true, type: 'array<string, mixed>')]
     public function store(StoreRadarRequest $request): JsonResponse
     {
-        $context = $this->stubs->check($request, self::errors(['no_chat', 'radar_limit']));
-        $mutation = $this->radars->mutation(match ($context->scenario) {
-            'existing' => 'radars/existing',
-            'starter' => 'radars/starter',
-            'few' => 'radars/few',
-            default => 'radars/created',
-        }, $request->filters());
+        $context = SourceContext::fromRequest($request);
+        $relaxed = $request->validated('relaxed');
+        $mutation = RadarMutation::fromService($this->radars->create($this->signedInUser($request), $request->filters(), new RadarCreateContext(
+            entry: $request->string('entry')->toString(),
+            relaxed: is_string($relaxed) ? $relaxed : null,
+            locale: $context->locale,
+            currency: $context->currency,
+        )));
         $result = new RadarMutationResource($mutation);
 
         if (in_array($mutation->kind, [RadarMutationKind::Existing, RadarMutationKind::Reactivated], true)) {
-            return $this->sourced($result, SourceDriver::Stub);
+            return $this->sourced($result, SourceDriver::Native);
         }
 
-        return $this->sourced($result, SourceDriver::Stub, status: 201);
+        return $this->sourced($result, SourceDriver::Native, status: 201);
     }
 
     /** `PUT /radars/{id}`: replaces the filters and keeps `active`. */
     #[BodyParameter('filters', description: 'The filters object of WP-12; any subset of its 25 keys, normalised for a radar.', required: true, type: 'array<string, mixed>')]
     public function update(UpdateRadarRequest $request, string $id): JsonResponse
     {
-        $radar = $this->radars->find($id);
-        $this->stubs->check($request, self::errors(['no_chat', 'radar_duplicate']));
+        $user = $this->signedInUser($request);
+        $radar = $this->owned($user, $id, 'update');
+        $relaxed = $request->validated('relaxed');
+        $context = SourceContext::fromRequest($request);
+        $mutation = $this->radars->update($user, $radar, $request->filters(), is_string($relaxed) ? $relaxed : null, $context->locale, $context->currency);
 
-        return $this->sourced(new RadarMutationResource($this->radars->mutation('radars/updated', $request->filters(), $radar)), SourceDriver::Stub);
+        return $this->sourced(new RadarMutationResource(RadarMutation::fromService($mutation)), SourceDriver::Native);
     }
 
     /** `PATCH /radars/{id}`: switches on (with `starter`), pauses (with `ask_found`), changes the mode or unhides. */
     public function patch(PatchRadarRequest $request, string $id): JsonResponse
     {
-        $radar = $this->radars->find($id);
-        $active = $request->has('active') ? $request->boolean('active') : null;
-        $context = $this->stubs->check($request, $active === true ? self::errors(['no_chat', 'radar_limit']) : []);
+        $user = $this->signedInUser($request);
+        $radar = $this->owned($user, $id, 'update');
+        $change = $this->change($request, $user, $radar);
 
-        $change = match (true) {
-            $active === true => new RadarChange($radar->with(active: true), starter: $this->radars->starter('radars/patched')),
-            $active === false => new RadarChange($radar->with(active: false), askFound: $context->scenario === 'ask_found'),
-            $request->has('mode') => new RadarChange($radar->with(mode: $request->enum('mode', RadarMode::class))),
-            default => new RadarChange($radar->with(hidden: 0)),
-        };
-
-        return $this->sourced(new RadarPatchResource($change), SourceDriver::Stub);
+        return $this->sourced(new RadarPatchResource($change), SourceDriver::Native);
     }
 
     /** `DELETE /radars/{id}`: works while the switch is off, so nothing can be left behind. */
     public function destroy(Request $request, string $id): JsonResponse
     {
-        $this->radars->find($id);
-        $context = $this->stubs->check($request);
+        $user = $this->signedInUser($request);
+        $this->radars->delete($user, $this->owned($user, $id, 'delete'));
 
-        return $this->sourced(['ask_found' => $context->scenario === 'ask_found'], SourceDriver::Stub);
+        return $this->sourced(['ask_found' => $this->found->shouldAsk($user, 'delete')], SourceDriver::Native);
     }
 
-    /**
-     * The scenario errors of a write.
-     *
-     * @param  list<string>  $codes
-     * @return array<string, Closure(): Throwable>
-     */
-    public static function errors(array $codes): array
+    /** The one change of a `PATCH` body: switch on, pause, the mode or unhide. */
+    private function change(PatchRadarRequest $request, User $user, RadarModel $radar): RadarChange
     {
-        $errors = [
-            'no_chat' => fn (): NoChat => new NoChat,
-            'radar_limit' => fn (): RadarLimit => new RadarLimit(Config::integer('radar.max')),
-            'radar_duplicate' => fn (): RadarDuplicate => new RadarDuplicate,
-        ];
+        if ($request->has('active') && $request->boolean('active')) {
+            $resumed = $this->radars->setActive($user, $radar, true);
 
-        return array_intersect_key($errors, array_flip($codes));
+            return new RadarChange(Radar::fromModel($resumed->radar), starter: $resumed->starter->count);
+        }
+
+        if ($request->has('active')) {
+            $paused = $this->radars->setActive($user, $radar, false);
+
+            return new RadarChange(Radar::fromModel($paused->radar), askFound: $this->found->shouldAsk($user, 'pause'));
+        }
+
+        if ($request->has('mode')) {
+            return new RadarChange(Radar::fromModel($this->radars->setMode($user, $radar, $request->enum('mode', RadarMode::class) ?? $radar->mode)));
+        }
+
+        $this->hideRules->clearAll($radar);
+
+        return new RadarChange(Radar::fromModel($radar));
+    }
+
+    /** The caller's radar by id (a ULID in either case), checked by `RadarPolicy`; else `404 not_found`. */
+    private function owned(User $user, string $id, string $ability): RadarModel
+    {
+        $radar = $user->radars()->findOrFail(strtoupper($id));
+        Gate::inspect($ability, $radar)->authorize();
+
+        return $radar;
     }
 }
