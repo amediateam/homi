@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\Listings\ResolveListingRef;
 use App\Models\BlockedAuthor;
 use App\Models\Favorite;
 use App\Models\ListingRef;
@@ -9,7 +10,9 @@ use App\Services\Personal\PersonalCursor;
 use App\Services\Sources\Stub\StubListingSource;
 use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Sleep;
 use Illuminate\Testing\TestResponse;
 use Laravel\Pennant\Feature;
@@ -188,6 +191,34 @@ it('lets a favourite leave the list by the survivor it shows, when only the list
 
     expect(Favorite::query()->count())->toBe(0);
 });
+
+it('writes a favourite of an alias only a preview has filed under its survivor, asking the source as for an unknown listing', function (bool $up): void {
+    onLegacyFavourites();
+    Queue::fake();
+    $this->getJson('/api/v1/listings/100016?preview=1')->assertOk();
+
+    expect(ListingRef::query()->sole()->merged_into)->toBe(100001);
+
+    Cache::flush();
+
+    if (! $up) {
+        LegacyListingsHttp::answer(fn (): PromiseInterface => Http::response(['error' => 'down'], 500));
+    }
+
+    $answer = $this->putJson('/api/v1/favorites/100016');
+
+    if ($up) {
+        $answer->assertOk()->assertJsonPath('data.favorite', true);
+
+        expect(Favorite::query()->sole()->listing_number)->toBe(100001);
+        Queue::assertPushed(ResolveListingRef::class, fn (ResolveListingRef $job): bool => $job->number === 100001);
+    } else {
+        $answer->assertStatus(503)->assertJsonPath('code', 'source_unavailable');
+
+        expect(Favorite::query()->count())->toBe(0);
+        Queue::assertNothingPushed();
+    }
+})->with(['legacy up' => true, 'legacy down' => false]);
 
 it('lists the favourites newest first, each a favourite, in the shape of WP-13 from the native source', function (): void {
     favouriteInOrder($this->user, [100012, 100013, 100003]);
