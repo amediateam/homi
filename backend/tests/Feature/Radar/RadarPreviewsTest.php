@@ -13,6 +13,7 @@ use App\Services\Radars\RadarPreview;
 use App\Services\Search\ListingQuery;
 use App\Services\Sources\Data\FlowEstimate;
 use App\Services\Sources\Data\ListingSummary;
+use App\Services\Sources\Legacy\LegacyListingSource;
 use App\Services\Sources\SourceContext;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -147,6 +148,41 @@ it('keys the shared part by posted_days, which the radar hash leaves out, and by
 
     expect(sourceRounds($this->source))->toBe([4, 4, 4])
         ->and(array_map(fn (array $call): ?int => $call[1]->filters->postedDays, $this->source->callsOf('feed')))->toBe([7, 30, 7, 7]);
+});
+
+it('leaves the stub scenario out of the shared part when no driver is the stub: other scenarios are served from one round', function (): void {
+    $legacy = (new FakeListingSource)->withItems([100001 => [], 100002 => []]);
+    $legacy->count = 2;
+    $legacy->flow = new FlowEstimate(1, 7, []);
+    app()->instance(LegacyListingSource::class, $legacy);
+    $features = config('sources.features');
+
+    foreach (['source.listings.feed', 'source.listings.count', 'source.listings.flow'] as $feature) {
+        $features[$feature]['default'] = ['*' => 'legacy'];
+    }
+
+    config(['sources.features' => $features]);
+    $radar = Radar::factory()->for($this->user)->create();
+
+    foreach (['a1', 'a2', 'a3', 'a4', 'a5'] as $scenario) {
+        expect(previewNumbers(previewsOf($this->user, new SourceContext('ru', 'USD', $this->user, $scenario))[$radar->id]))->toBe([100001, 100002]);
+    }
+
+    expect(sourceRounds($legacy))->toBe([1, 1, 1])
+        ->and(array_map(fn (array $call): ?string => $call[2]->scenario, $legacy->calls))->toBe([null, null, null])
+        ->and($this->source->calls)->toBe([]);
+});
+
+it('neither reads nor writes the shared cache for a stub scenario, which the stub answers itself', function (): void {
+    $radar = Radar::factory()->for($this->user)->create();
+    $scenario = new SourceContext('ru', 'USD', $this->user, 'empty_feed');
+
+    expect(previewsOf($this->user, $scenario)[$radar->id])->not->toBeNull()
+        ->and(previewsOf($this->user)[$radar->id])->not->toBeNull()
+        ->and(previewsOf($this->user, $scenario)[$radar->id])->not->toBeNull()
+        ->and(previewsOf($this->user)[$radar->id])->not->toBeNull()
+        ->and(sourceRounds($this->source))->toBe([3, 3, 3])
+        ->and(array_map(fn (array $call): ?string => $call[2]->scenario, $this->source->callsOf('feed')))->toBe(['empty_feed', null, 'empty_feed']);
 });
 
 it('applies each radar\'s own hide rules, in one rule query, and never moves hidden_count', function (): void {

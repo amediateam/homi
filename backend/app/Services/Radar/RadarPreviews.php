@@ -3,6 +3,7 @@
 namespace App\Services\Radar;
 
 use App\Enums\ListingSort;
+use App\Enums\SourceDriver;
 use App\Exceptions\Sources\SourceUnavailable;
 use App\Models\Radar;
 use App\Models\User;
@@ -32,10 +33,14 @@ use Throwable;
  *    round. It is asked in a context without a user (the request's locale and currency, `foreground`, since a person
  *    waits), so nothing personal enters it: legacy's pager leaves out no caller's hidden listings, and no item carries
  *    a caller's flags. It is cached for `radar.preview_ttl` seconds (120; 0 disables the cache) under
- *    `radar:previews:v1:<drivers>:<filters_hash>:<posted_days>:<locale>:<currency>[:<scenario>]` and shared by every
- *    user with the same search (RK-25). The key carries `posted_days`, which `filters_hash` leaves out: two radars of
- *    one hash with other windows find other listings. The entry holds arrays only (`ListingSummary::toArray()`, AM-120)
- *    and is read back through `fromArray()`; an entry of another shape is a miss, and a failure is never cached.
+ *    `radar:previews:v1:<drivers>:<filters_hash>:<posted_days>:<locale>:<currency>` and shared by every user with the
+ *    same search (RK-25). The key carries `posted_days`, which `filters_hash` leaves out: two radars of one hash with
+ *    other windows find other listings. The stub scenario (`X-Stub-Scenario`) is never part of the key, as in
+ *    `TranslationService` and `ShareService`: when none of the three drivers is `stub` the shared part is asked
+ *    without it, so a client cannot defeat the cache by changing the header; when one is `stub` and a scenario is set,
+ *    the cache is neither read nor written and the stub answers the scenario. The entry holds arrays only
+ *    (`ListingSummary::toArray()`, AM-120) and is read back through `fromArray()`; an entry of another shape is a
+ *    miss, and a failure is never cached. The drivers are resolved once per list, without a user.
  *    There is no fill lock: the feed page is no more than `GET /listings` asks on every visit, and the legacy count
  *    and flow are single-flight in the driver's own cache (WP-42).
  * 2. The caller's part, per radar: HOMI's overlay (`ListingOverlay::feed()` with the caller — hidden listings, blocked
@@ -78,9 +83,29 @@ final readonly class RadarPreviews
             return [];
         }
 
+        $ids = array_map(fn (Radar $radar): string => (string) $radar->getKey(), $radars);
+        $asked = new SourceContext($context->locale, $context->currency, null, $context->scenario, foreground: true);
+
+        try {
+            $feed = $this->sources->listings('source.listings.feed', $asked);
+            $count = $this->sources->listings('source.listings.count', $asked);
+            $flow = $this->sources->listings('source.listings.flow', $asked);
+        } catch (Throwable $e) {
+            report($e);
+
+            return array_fill_keys($ids, null);
+        }
+
+        $stub = in_array(SourceDriver::Stub, [$feed->driver, $count->driver, $flow->driver], true);
+        $round = new PreviewRound(
+            $feed,
+            $count,
+            $flow,
+            $stub ? $asked : new SourceContext($context->locale, $context->currency, null, null, foreground: true),
+            cached: ! $stub || $context->scenario === null,
+        );
         $personal = new SourceContext($context->locale, $context->currency, $user, $context->scenario, $context->foreground);
-        $shared = new SourceContext($context->locale, $context->currency, null, $context->scenario, foreground: true);
-        $rules = $this->hideRules->rulesForMany(array_map(fn (Radar $radar): string => (string) $radar->getKey(), $radars));
+        $rules = $this->hideRules->rulesForMany($ids);
         $overlay = $this->container->make(ListingOverlay::class);
         $started = Date::now();
         $stopped = false;
@@ -88,7 +113,7 @@ final readonly class RadarPreviews
 
         foreach ($radars as $radar) {
             $filters = SearchFilters::fromNormalised($radar->filters);
-            $found = $this->shared($radar, $filters, $shared, $started, $stopped);
+            $found = $this->shared($radar, $filters, $round, $started, $stopped);
             $previews[(string) $radar->getKey()] = $found === null
                 ? null
                 : $this->personal($radar, $filters, $found, $rules[(string) $radar->getKey()] ?? HideRuleSet::none(), $overlay, $personal);
@@ -103,29 +128,18 @@ final readonly class RadarPreviews
      *
      * @return array{items: list<ListingSummary>, count: int, week: int, days: int}|null
      */
-    private function shared(Radar $radar, SearchFilters $filters, SourceContext $context, CarbonImmutable $started, bool &$stopped): ?array
+    private function shared(Radar $radar, SearchFilters $filters, PreviewRound $round, CarbonImmutable $started, bool &$stopped): ?array
     {
-        try {
-            $feed = $this->sources->listings('source.listings.feed', $context);
-            $count = $this->sources->listings('source.listings.count', $context);
-            $flow = $this->sources->listings('source.listings.flow', $context);
-        } catch (Throwable $e) {
-            report($e);
-            $stopped = true;
-
-            return null;
-        }
-
-        $key = implode(':', array_filter([
+        $context = $round->context;
+        $key = implode(':', [
             'radar:previews:v1',
-            $feed->driver->value.'-'.$count->driver->value.'-'.$flow->driver->value,
+            $round->feed->driver->value.'-'.$round->count->driver->value.'-'.$round->flow->driver->value,
             $radar->filters_hash,
             $filters->postedDays === null ? 'all' : (string) $filters->postedDays,
             $context->locale,
             $context->currency,
-            $context->scenario,
-        ], fn (?string $part): bool => $part !== null));
-        $cached = self::decode($this->cache->get($key));
+        ]);
+        $cached = $round->cached ? self::decode($this->cache->get($key)) : null;
 
         if ($cached !== null) {
             return $cached;
@@ -138,9 +152,9 @@ final readonly class RadarPreviews
         }
 
         try {
-            $page = $feed->source->feed(new ListingQuery($filters, ListingSort::New, null, self::PAGE), $context);
-            $total = $count->source->count($filters, $context);
-            $estimate = $flow->source->flow($filters, $context);
+            $page = $round->feed->source->feed(new ListingQuery($filters, ListingSort::New, null, self::PAGE), $context);
+            $total = $round->count->source->count($filters, $context);
+            $estimate = $round->flow->source->flow($filters, $context);
         } catch (Throwable $e) {
             if (! $e instanceof SourceUnavailable) {
                 report($e);
@@ -154,7 +168,7 @@ final readonly class RadarPreviews
         $found = ['items' => $page->items, 'count' => $total, 'week' => $estimate->week, 'days' => $estimate->days];
         $seconds = Config::integer('radar.preview_ttl');
 
-        if ($seconds > 0) {
+        if ($round->cached && $seconds > 0) {
             $this->cache->put($key, self::encode($found), $seconds);
         }
 
