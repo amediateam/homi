@@ -2,12 +2,17 @@
 
 namespace App\Services\Sources\Stub;
 
+use App\Enums\RadarMode;
+use App\Enums\RadarMutationKind;
 use App\Enums\SourceDriver;
 use App\Exceptions\Identity\InitDataExpired;
 use App\Exceptions\Identity\InvalidInitData;
 use App\Exceptions\Identity\InvalidInitDataReason;
 use App\Exceptions\Listings\ShareFailed;
 use App\Exceptions\Listings\TranslationNotNeeded;
+use App\Exceptions\Radar\NoChat;
+use App\Exceptions\Radar\RadarDuplicate;
+use App\Exceptions\Radar\RadarLimit;
 use App\Exceptions\Sources\SourceNotFound;
 use App\Exceptions\Sources\SourceUnavailable;
 use App\Http\Requests\Api\V1\Auth\TelegramSignInRequest;
@@ -15,6 +20,11 @@ use App\Http\Requests\Api\V1\Personal\ListPersonalRequest;
 use App\Http\Requests\Api\V1\Personal\StoreFoundAnswerRequest;
 use App\Http\Requests\Api\V1\Personal\StoreFoundWhereRequest;
 use App\Http\Requests\Api\V1\Personal\StoreReportRequest;
+use App\Http\Requests\Api\V1\Radars\ListRadarsRequest;
+use App\Http\Requests\Api\V1\Radars\PatchRadarRequest;
+use App\Http\Requests\Api\V1\Radars\RelaxRadarRequest;
+use App\Http\Requests\Api\V1\Radars\StoreRadarRequest;
+use App\Http\Requests\Api\V1\Radars\UpdateRadarRequest;
 use App\Http\Requests\Api\V1\UpdateSettingsRequest;
 use App\Http\Resources\Api\V1\BlockedAuthorResultResource;
 use App\Http\Resources\Api\V1\ContactResource;
@@ -23,6 +33,9 @@ use App\Http\Resources\Api\V1\HiddenOverviewResource;
 use App\Http\Resources\Api\V1\ListingPreviewResource;
 use App\Http\Resources\Api\V1\MeResource;
 use App\Http\Resources\Api\V1\PreparedShareResource;
+use App\Http\Resources\Api\V1\RadarMutationResource;
+use App\Http\Resources\Api\V1\RadarPatchResource;
+use App\Http\Resources\Api\V1\RadarResource;
 use App\Http\Resources\Api\V1\ReportResultResource;
 use App\Http\Resources\Api\V1\SessionResource;
 use App\Http\Resources\Api\V1\SettingsResource;
@@ -30,17 +43,22 @@ use App\Http\Resources\Api\V1\TranslationResource;
 use App\Services\Identity\TokenIssuer;
 use App\Services\Personal\BlockedAuthor;
 use App\Services\Personal\HiddenOverview;
+use App\Services\Radars\RadarChange;
 use App\Services\Sources\Data\ListingSummary;
 use App\Services\Sources\SourceContext;
 use App\Services\Sources\SourceManager;
 use App\Services\Telegram\PreparedShare;
+use Closure;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Resources\Json\ResourceCollection;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Validation\ValidationException;
 use LogicException;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 /**
  * The stub answers of the native methods whose controllers stage C has replaced (WP-40, `25` §9): while
@@ -66,6 +84,13 @@ use Symfony\Component\HttpFoundation\Response;
  * survey of WP-13: a report answers `hidden` by its reason and `agent_marked` only for `agent` in the scenario
  * `agent_marked`, a withdrawal `204`, both for a listing the card source knows (`404`, `503`); the survey validates and
  * answers `204`. Nothing is counted or stored.
+ *
+ * WP-45 moved here the six radar methods of WP-13 (brief decision 11), unchanged: the three radars of `radars/list.json`
+ * whatever was written, the mutation fixtures of `radars/`, the scenarios `empty`, `no_chat`, `radar_limit`,
+ * `radar_duplicate`, `existing`, `starter`, `few` and `ask_found`. The switch of DEC-51 acts as before: the four writes
+ * answer `403 radars_disabled` in `EnsureRadarsEnabled` before this class, `GET /radars` answers `[]` without reading a
+ * fixture or a scenario, and `DELETE` answers as usual. No query touches `radars` or `radar_hide_rules` while
+ * `sources.native_stubs` is on.
  */
 final readonly class NativeStubs
 {
@@ -120,6 +145,12 @@ final readonly class NativeStubs
         'api.v1.listings.reports.destroy' => 'withdrawReport',
         'api.v1.surveys.found.store' => 'foundAnswer',
         'api.v1.surveys.found.where' => 'foundWhere',
+        'api.v1.radars.index' => 'radars',
+        'api.v1.radars.store' => 'createRadar',
+        'api.v1.radars.update' => 'replaceRadar',
+        'api.v1.radars.patch' => 'patchRadar',
+        'api.v1.radars.destroy' => 'deleteRadar',
+        'api.v1.radars.relax' => 'relaxRadar',
     ];
 
     public function __construct(private Container $container) {}
@@ -413,6 +444,112 @@ final readonly class NativeStubs
         return response()->noContent();
     }
 
+    /** `GET /radars` on stubs (WP-13): the radars in creation order, `include=previews` adds each preview; `[]` while radars are switched off. */
+    public function radars(ListRadarsRequest $request, StubResponder $stubs, StubRadars $radars): JsonResponse
+    {
+        if (! Config::boolean('radar.creation_enabled')) {
+            return $this->sourced(RadarResource::collection([]));
+        }
+
+        $context = $stubs->check($request);
+        $list = $context->scenario === 'empty' ? [] : $radars->list($context, $request->wantsPreviews());
+
+        return $this->sourced(RadarResource::collection($list));
+    }
+
+    /** `POST /radars` on stubs (WP-13): `201` with the created fixture, `200` for `existing` and `reactivated`. */
+    public function createRadar(StoreRadarRequest $request, StubResponder $stubs, StubRadars $radars): JsonResponse
+    {
+        $context = $stubs->check($request, self::radarErrors(['no_chat', 'radar_limit']));
+        $mutation = $radars->mutation(match ($context->scenario) {
+            'existing' => 'radars/existing',
+            'starter' => 'radars/starter',
+            'few' => 'radars/few',
+            default => 'radars/created',
+        }, $request->filters());
+        $result = new RadarMutationResource($mutation);
+
+        if (in_array($mutation->kind, [RadarMutationKind::Existing, RadarMutationKind::Reactivated], true)) {
+            return $this->sourced($result);
+        }
+
+        return $this->sourced($result, status: 201);
+    }
+
+    /** `PUT /radars/{id}` on stubs (WP-13): the radar of the list with the sent filters, `active` kept. */
+    public function replaceRadar(UpdateRadarRequest $request, StubResponder $stubs, StubRadars $radars): JsonResponse
+    {
+        $radar = $radars->find(self::radarId($request));
+        $stubs->check($request, self::radarErrors(['no_chat', 'radar_duplicate']));
+
+        return $this->sourced(new RadarMutationResource($radars->mutation('radars/updated', $request->filters(), $radar)));
+    }
+
+    /** `PATCH /radars/{id}` on stubs (WP-13): switch on (with `starter`), pause (with `ask_found`), mode or unhide. */
+    public function patchRadar(PatchRadarRequest $request, StubResponder $stubs, StubRadars $radars): JsonResponse
+    {
+        $radar = $radars->find(self::radarId($request));
+        $active = $request->has('active') ? $request->boolean('active') : null;
+        $context = $stubs->check($request, $active === true ? self::radarErrors(['no_chat', 'radar_limit']) : []);
+
+        $change = match (true) {
+            $active === true => new RadarChange($radar->with(active: true), starter: $radars->starter('radars/patched')),
+            $active === false => new RadarChange($radar->with(active: false), askFound: $context->scenario === 'ask_found'),
+            $request->has('mode') => new RadarChange($radar->with(mode: $request->enum('mode', RadarMode::class))),
+            default => new RadarChange($radar->with(hidden: 0)),
+        };
+
+        return $this->sourced(new RadarPatchResource($change));
+    }
+
+    /** `DELETE /radars/{id}` on stubs (WP-13): `{"ask_found": …}`, also while radars are switched off. */
+    public function deleteRadar(Request $request, StubResponder $stubs, StubRadars $radars): JsonResponse
+    {
+        $radars->find(self::radarId($request));
+        $context = $stubs->check($request);
+
+        return $this->sourced(['ask_found' => $context->scenario === 'ask_found']);
+    }
+
+    /** `POST /radars/{id}/relax` on stubs (WP-13): an offered code answers the radar with `starter`, any other `422`. */
+    public function relaxRadar(RelaxRadarRequest $request, StubResponder $stubs, StubRadars $radars): JsonResponse
+    {
+        $radar = $radars->find(self::radarId($request));
+
+        if (! in_array($request->string('code')->toString(), $radars->optionCodes(), true)) {
+            throw ValidationException::withMessages(['code' => 'The code is not an option of this radar.']);
+        }
+
+        $stubs->check($request, self::radarErrors(['no_chat', 'radar_duplicate']));
+
+        return $this->sourced(new RadarPatchResource(new RadarChange($radar, starter: $radars->starter('radars/relaxed'))));
+    }
+
+    /**
+     * The scenario errors of a radar write (WP-13).
+     *
+     * @param  list<string>  $codes
+     * @return array<string, Closure(): Throwable>
+     */
+    private static function radarErrors(array $codes): array
+    {
+        $errors = [
+            'no_chat' => fn (): NoChat => new NoChat,
+            'radar_limit' => fn (): RadarLimit => new RadarLimit(Config::integer('radar.max')),
+            'radar_duplicate' => fn (): RadarDuplicate => new RadarDuplicate,
+        ];
+
+        return array_intersect_key($errors, array_flip($codes));
+    }
+
+    /** The radar id of the route (a ULID by the route's pattern). */
+    private static function radarId(Request $request): string
+    {
+        $id = $request->route('id');
+
+        return is_string($id) ? $id : '';
+    }
+
     /** The positive listing number of the route, else `404 not_found`. */
     private static function positive(Request $request): int
     {
@@ -432,13 +569,17 @@ final readonly class NativeStubs
         ]);
     }
 
-    /** The envelope of `ApiController::sourced()` for a stub answer without extra meta. */
-    private function sourced(JsonResource $data, SourceDriver $driver = SourceDriver::Stub): JsonResponse
+    /**
+     * The envelope of `ApiController::sourced()` for a stub answer without extra meta.
+     *
+     * @param  JsonResource|array<string, mixed>  $data
+     */
+    private function sourced(JsonResource|array $data, SourceDriver $driver = SourceDriver::Stub, int $status = 200): JsonResponse
     {
         return response()->json([
             'success' => true,
             'data' => $data,
             'meta' => ['source' => $driver],
-        ]);
+        ], $status);
     }
 }

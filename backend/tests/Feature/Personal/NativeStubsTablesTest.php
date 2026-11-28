@@ -8,6 +8,8 @@ use App\Models\HiddenListing;
 use App\Models\ListingMark;
 use App\Models\ListingRef;
 use App\Models\ListingVote;
+use App\Models\Radar;
+use App\Models\RadarHideRule;
 use App\Models\User;
 use App\Models\VoteDecision;
 use Illuminate\Database\Events\QueryExecuted;
@@ -97,4 +99,61 @@ it('leaves every personal row as it was', function (): void {
     $this->postJson('/api/v1/surveys/found/where', ['where' => 'olx'])->assertNoContent();
 
     expect(array_map(fn (string $table): int => DB::table($table)->count(), PERSONAL_TABLES))->toBe($before);
+});
+
+/*
+ * WP-45, brief decision 11: the same holds for the two radar tables — the six radar routes answer their WP-13 stub
+ * bodies from `NativeStubs`, and the feed reads no radar. The user here has a radar with a hide rule.
+ */
+
+/** The two tables of WP-45. */
+const RADAR_TABLES = ['radars', 'radar_hide_rules'];
+
+/** A radar id of `radars/list.json`. */
+const NATIVE_STUB_RADAR_ID = '01JD0000000000000000000001';
+
+describe('radars', function (): void {
+    beforeEach(function (): void {
+        RadarHideRule::factory()->for(Radar::factory()->for($this->user))->create();
+    });
+
+    it('sends no query to a radar table on the feed and the six radar routes', function (string $method, string $uri, array $body, int $status): void {
+        $statements = new ArrayObject;
+        DB::listen(function (QueryExecuted $query) use ($statements): void {
+            $statements[] = $query->sql;
+        });
+
+        $this->json($method, $uri, $body)->assertStatus($status)->assertJsonPath('meta.source', 'stub');
+
+        $touching = array_values(array_filter(
+            $statements->getArrayCopy(),
+            fn (string $sql): bool => preg_match('/\b(?:'.implode('|', RADAR_TABLES).')\b/', $sql) === 1,
+        ));
+        expect($touching)->toBe([]);
+    })->with([
+        'the feed' => ['GET', '/api/v1/listings?city=tashkent&deal=rent_long', [], 200],
+        'the list' => ['GET', '/api/v1/radars?include=previews', [], 200],
+        'create' => ['POST', '/api/v1/radars', ['filters' => ['city' => 'tashkent', 'deal' => 'rent_long'], 'entry' => 'filters'], 201],
+        'replace' => ['PUT', '/api/v1/radars/'.NATIVE_STUB_RADAR_ID, ['filters' => ['city' => 'tashkent', 'deal' => 'rent_long']], 200],
+        'switch on' => ['PATCH', '/api/v1/radars/'.NATIVE_STUB_RADAR_ID, ['active' => true], 200],
+        'pause' => ['PATCH', '/api/v1/radars/'.NATIVE_STUB_RADAR_ID, ['active' => false], 200],
+        'mode' => ['PATCH', '/api/v1/radars/'.NATIVE_STUB_RADAR_ID, ['mode' => 'digest'], 200],
+        'unhide' => ['PATCH', '/api/v1/radars/'.NATIVE_STUB_RADAR_ID, ['unhide' => true], 200],
+        'delete' => ['DELETE', '/api/v1/radars/'.NATIVE_STUB_RADAR_ID, [], 200],
+        'relax' => ['POST', '/api/v1/radars/'.NATIVE_STUB_RADAR_ID.'/relax', ['code' => 'price_more'], 200],
+    ]);
+
+    it('leaves every radar row as it was, also while radars are switched off', function (): void {
+        $before = Radar::query()->orderBy('id')->get()->toArray();
+
+        $this->postJson('/api/v1/radars', ['filters' => ['city' => 'tashkent', 'deal' => 'rent_long', 'price_max' => 700], 'entry' => 'filters'])->assertCreated();
+        $this->patchJson('/api/v1/radars/'.NATIVE_STUB_RADAR_ID, ['unhide' => true])->assertOk();
+        $this->deleteJson('/api/v1/radars/'.NATIVE_STUB_RADAR_ID)->assertOk();
+        config(['radar.creation_enabled' => false]);
+        $this->getJson('/api/v1/radars')->assertOk()->assertJsonPath('data', []);
+        $this->deleteJson('/api/v1/radars/'.NATIVE_STUB_RADAR_ID)->assertOk()->assertJsonPath('data', ['ask_found' => false]);
+
+        expect(Radar::query()->orderBy('id')->get()->toArray())->toBe($before)
+            ->and(RadarHideRule::query()->count())->toBe(1);
+    });
 });

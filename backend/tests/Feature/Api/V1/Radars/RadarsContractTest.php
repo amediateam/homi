@@ -1,12 +1,34 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Radars\RadarController;
+use App\Http\Controllers\Api\V1\Radars\RadarRelaxController;
+use App\Http\Requests\Api\V1\Radars\ListRadarsRequest;
+use App\Http\Requests\Api\V1\Radars\PatchRadarRequest;
+use App\Http\Requests\Api\V1\Radars\RelaxRadarRequest;
+use App\Http\Requests\Api\V1\Radars\StoreRadarRequest;
+use App\Http\Requests\Api\V1\Radars\UpdateRadarRequest;
 use App\Models\User;
+use App\Services\Sources\Stub\StubRadars;
+use App\Services\Sources\Stub\StubResponder;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 use Tests\Support\ContractShapes;
 use Tests\Support\FilterArrays;
 use Tests\Support\JsonShape;
 
+/*
+ * The six radar methods of WP-13 as the native stubs answer them (WP-45, brief decision 11): while
+ * `sources.native_stubs` is on, `NativeStubs` answers the fixtures of `radars/` and stores nothing, as the end-to-end
+ * suite expects — the same three radars whatever was written, `meta.source = stub`, the scenarios of WP-13, and the
+ * switched-off state of DEC-51 (the four writes `403 radars_disabled` before the stub, the list `[]`, `DELETE` as
+ * usual).
+ */
+
 beforeEach(function (): void {
+    Http::preventStrayRequests();
+    config(['sources.native_stubs' => true]);
     Sanctum::actingAs(User::factory()->create(), ['app:read', 'app:write']);
 });
 
@@ -181,3 +203,49 @@ describe('switched off (DEC-51)', function (): void {
         $this->withHeader('Authorization', '')->postJson('/api/v1/radars', radarBody())->assertStatus(401);
     });
 });
+
+it('answers every radar route from the native stubs, never from the controllers', function (string $method, string $path, array $body, int $status): void {
+    $this->app->instance(RadarController::class, new class(app(StubResponder::class), app(StubRadars::class)) extends RadarController
+    {
+        public function index(ListRadarsRequest $request): JsonResponse
+        {
+            throw new LogicException('The radar controller was reached.');
+        }
+
+        public function store(StoreRadarRequest $request): JsonResponse
+        {
+            throw new LogicException('The radar controller was reached.');
+        }
+
+        public function update(UpdateRadarRequest $request, string $id): JsonResponse
+        {
+            throw new LogicException('The radar controller was reached.');
+        }
+
+        public function patch(PatchRadarRequest $request, string $id): JsonResponse
+        {
+            throw new LogicException('The radar controller was reached.');
+        }
+
+        public function destroy(Request $request, string $id): JsonResponse
+        {
+            throw new LogicException('The radar controller was reached.');
+        }
+    });
+    $this->app->instance(RadarRelaxController::class, new class extends RadarRelaxController
+    {
+        public function __invoke(RelaxRadarRequest $request, string $id, StubResponder $stubs, StubRadars $radars): JsonResponse
+        {
+            throw new LogicException('The radar relax controller was reached.');
+        }
+    });
+
+    $this->json($method, "/api/v1/{$path}", $body)->assertStatus($status)->assertJsonPath('meta.source', 'stub');
+})->with([
+    'list' => ['GET', 'radars?include=previews', [], 200],
+    'create' => ['POST', 'radars', radarBody(), 201],
+    'update' => ['PUT', 'radars/'.RADAR_ID, radarBody(), 200],
+    'patch' => ['PATCH', 'radars/'.RADAR_ID, ['active' => false], 200],
+    'delete' => ['DELETE', 'radars/'.RADAR_ID, [], 200],
+    'relax' => ['POST', 'radars/'.RADAR_ID.'/relax', ['code' => 'price_more'], 200],
+]);
