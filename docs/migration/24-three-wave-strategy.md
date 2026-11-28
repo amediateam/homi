@@ -173,7 +173,8 @@ handoff of the development track (`decisions/2026-11-22-developer-answers.md`); 
 of WP-33 (`decisions/2026-11-23-developer-answers.md`); DEC-104 … DEC-108 on 2026-11-26, asked by WP-40, and DEC-109 on
 the same day, on how two development sessions share the queue (`decisions/2026-11-26-developer-answers.md`); DEC-110
 on 2026-11-27, asked by WP-42, and DEC-111 the same day, asked by WP-43 (`decisions/2026-11-27-developer-answers.md`);
-DEC-112 on 2026-11-28, asked by WP-44 (`decisions/2026-11-28-developer-answers.md`).
+DEC-112 on 2026-11-28, asked by WP-44, and DEC-113 the same day, asked by WP-45
+(`decisions/2026-11-28-developer-answers.md`).
 
 | ID | Decision | Answer | Still needs | Shapes |
 | -- | -------- | ------ | ----------- | ------ |
@@ -259,6 +260,7 @@ DEC-112 on 2026-11-28, asked by WP-44 (`decisions/2026-11-28-developer-answers.m
 | DEC-110 | How long a page of previews may wait for the legacy limiter (2026-11-27) | Up to 4 s for the whole batch (`legacy.previews.max_wait_ms`), an exception to WP-41's 0.5 s for user calls, so a cold page of 20 personal-list cards loads at the default 5 calls a second; a number legacy answered `404` is left out, any other miss makes the call `503 source_unavailable` — no favourite vanishes silently. «Ждать до 4 с, без пропусков (Рекомендуется)» | The operator's real rate (Q-API-059) shortens the wait | WP-42, WP-44 |
 | DEC-111 | Where the texts of HOMI's call page live (2026-11-27) | A new folder `backend/lang/` (Laravel's default translation path) with `ru`, `uz`, `en` and `call.php` in each; later server-side texts (bot, mails) go there too | WP-43 |
 | DEC-112 | How many voters and how much weight a vote mark for everybody needs (2026-11-28) | At least three distinct voters for `rented` and `agent` (two for native `fraud`, which only writes the audit row; a floor of 2 in the code) and thresholds `rented` 4.0, `agent` 4.5 (`fraud` 3.0), so two accounts never mark and three bare accounts (3.0) mark nothing. «3 голосующих + пороги 4.0/4.5» | The product owner's confirmation of the values (they stay proposals of `config/votes.php`); the reviewer's further proposals (account age, a card view, a circuit breaker, `votes:unmark`) in WP-44's Handoff | WP-44, WP-53, WP-84 |
+| DEC-113 | Whether a user's radars have a total cap (2026-11-28) | Yes: at most 50 radars per user, switched-on and paused together (`radar.max_total`, no env key), checked only when a create would add a row — an `existing` or `reactivated` twin passes — under the per-user lock, answered `409 radar_limit` naming the total; radars above it are kept. Legacy has no such cap; `RADAR_MAX` (10) still counts the radars switched on. «Потолок 50 всего (Рекомендуется)» | — | WP-45, WP-46, WP-47 |
 
 ### 8.2 Questions
 
