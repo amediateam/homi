@@ -8,6 +8,8 @@ use App\Http\OpenApi\ApiErrorSchema;
 use App\Http\OpenApi\RelativeServer;
 use App\Models\User;
 use App\Services\Access\RateLimits;
+use App\Services\Delivery\Contracts\DeliveredSet;
+use App\Services\Delivery\NullDeliveredSet;
 use App\Services\Identity\TelegramInitDataVerifier;
 use App\Services\Personal\VoteDetectors;
 use App\Services\Sources\SourceContext;
@@ -41,6 +43,9 @@ class AppServiceProvider extends ServiceProvider
 
         // One instance, so `RecordSourceFlagChange` sees that `votes:detector` is writing (WP-44).
         $this->app->singleton(VoteDetectors::class);
+
+        // Nothing is delivered before WP-46, which binds its ledger here (WP-45).
+        $this->app->bind(DeliveredSet::class, NullDeliveredSet::class);
 
         // Built on each resolution, so the token and the window are read from the configuration of the moment.
         $this->app->bind(TelegramInitDataVerifier::class, fn (Application $app): TelegramInitDataVerifier => new TelegramInitDataVerifier(

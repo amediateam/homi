@@ -12,6 +12,7 @@ use App\Models\HiddenListing;
 use App\Models\ListingRef;
 use App\Models\ListingView;
 use App\Models\ListingVote;
+use App\Models\Radar;
 use App\Models\User;
 use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Database\Events\QueryExecuted;
@@ -22,6 +23,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route as Router;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
+use Tests\Support\RadarApi;
 
 /*
  * The authorisation and IDOR matrix (WP-44, `15` §3.1, SEC-REQ-014, SEC-REQ-006; brief decision 15): one row per
@@ -33,7 +35,7 @@ use Laravel\Sanctum\Sanctum;
  *   data and leaves A's rows as they were, a foreign id answers exactly as an unknown one (status, body, queries), an
  *   unknown listing number is `404` where the route looks the listing up;
  * - a placeholder row is a route still answered by stubs, naming the package that makes it real and gives it its
- *   real row (radars WP-45, events WP-47, the card sample WP-53, the owner cabinet WP-84, its requests WP-85);
+ *   real row (events WP-47, the card sample WP-53, the owner cabinet WP-84, its requests WP-85);
  * - a media row points at the ownership tests of WP-00 (`MediaOwnershipTest`), which hold B, the unknown id and the
  *   query count for the five `api.v1.media.*` routes.
  *
@@ -105,7 +107,6 @@ function idorMatrix(): array
     $placeholders = [
         'api.v1.events.store' => 'WP-47',
         'api.v1.settings.card-sample' => 'WP-53',
-        ...array_fill_keys(['api.v1.radars.index', 'api.v1.radars.store', 'api.v1.radars.update', 'api.v1.radars.patch', 'api.v1.radars.destroy', 'api.v1.radars.relax'], 'WP-45'),
         ...array_fill_keys([
             'api.v1.owner.listings.index', 'api.v1.owner.listings.show', 'api.v1.owner.listings.store', 'api.v1.owner.listings.update',
             'api.v1.owner.listings.destroy', 'api.v1.owner.listings.status', 'api.v1.owner.listings.contact-mode',
@@ -335,6 +336,27 @@ function idorRealRows(): array
             expect(idorRowsOf($owner))->toBe($before)
                 ->and(FoundAnswer::query()->where('user_id', $other->id)->sole()->answer)->toBeNull();
         },
+        'api.v1.radars.index' => function (User $owner, User $other): void {
+            $radar = Radar::factory()->for($owner)->create();
+            idorAs($other);
+            test()->getJson('/api/v1/radars')->assertOk()->assertJsonPath('data', []);
+            test()->getJson('/api/v1/radars?include=previews')->assertOk()->assertJsonPath('data', []);
+            idorAs($owner);
+            test()->getJson('/api/v1/radars')->assertOk()->assertJsonPath('data.0.id', $radar->id);
+        },
+        'api.v1.radars.store' => function (User $owner, User $other): void {
+            idorAs($owner);
+            test()->postJson('/api/v1/radars', RadarApi::body(['price_max' => 700]))->assertCreated();
+            $before = idorRowsOf($owner);
+            idorAs($other);
+            $theirs = test()->postJson('/api/v1/radars', RadarApi::body(['price_max' => 700]))->assertCreated()->assertJsonPath('data.kind', 'created');
+            expect(idorRowsOf($owner))->toBe($before)
+                ->and(Radar::query()->where('user_id', $other->id)->pluck('id')->all())->toBe([$theirs->json('data.radar.id')]);
+        },
+        'api.v1.radars.update' => fn (User $owner, User $other) => RadarApi::assertForeignLikeUnknown($owner, Radar::factory()->for($owner)->create(), 'PUT', '', RadarApi::body(['price_max' => 908])),
+        'api.v1.radars.patch' => fn (User $owner, User $other) => RadarApi::assertForeignLikeUnknown($owner, Radar::factory()->for($owner)->create(), 'PATCH', '', ['active' => false]),
+        'api.v1.radars.destroy' => fn (User $owner, User $other) => RadarApi::assertForeignLikeUnknown($owner, Radar::factory()->for($owner)->create(), 'DELETE', '', []),
+        'api.v1.radars.relax' => fn (User $owner, User $other) => RadarApi::assertForeignLikeUnknown($owner, Radar::factory()->for($owner)->create(), 'POST', '/relax', ['code' => 'price_more']),
     ];
 }
 
@@ -355,7 +377,7 @@ function idorRowsOf(User $user): array
 {
     $rows = [];
 
-    foreach (['favorites', 'listing_views', 'hidden_listings', 'blocked_authors', 'listing_votes', 'found_answers', 'user_settings'] as $table) {
+    foreach (['favorites', 'listing_views', 'hidden_listings', 'blocked_authors', 'listing_votes', 'found_answers', 'user_settings', 'radars'] as $table) {
         $rows[$table] = array_map(
             fn (object $row): array => array_diff_key((array) $row, ['source_channel' => true, 'source_post_id' => true]),
             DB::table($table)->where('user_id', $user->id)->orderBy($table === 'user_settings' ? 'user_id' : 'id')->get()->all(),
@@ -448,11 +470,11 @@ it('counts the rows by kind: real, a placeholder naming its package, the media t
     $kinds = array_count_values(array_column(idorMatrix(), 0));
     ksort($kinds);
 
-    expect($kinds)->toBe(['media' => 5, 'placeholder' => 26, 'real' => 28]);
+    expect($kinds)->toBe(['media' => 5, 'placeholder' => 20, 'real' => 34]);
 
     foreach (idorMatrix() as $name => [$kind, $target]) {
         if ($kind === 'placeholder') {
-            expect($target)->toBeIn(['WP-45', 'WP-47', 'WP-53', 'WP-84', 'WP-85'], $name);
+            expect($target)->toBeIn(['WP-47', 'WP-53', 'WP-84', 'WP-85'], $name);
         }
     }
 });

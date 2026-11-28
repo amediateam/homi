@@ -51,7 +51,7 @@ only on `422` and maps each field to its messages.
 | 409 | `own_listing` | A request on the caller's own listing |
 | 409 | `contact_open` | The listing shows its number now; read the card again |
 | 409 | `request_answer_closed` | The owner's answer is no longer possible (the undo window passed, or the request changed) |
-| 409 | `radar_limit` | Creating or switching on a radar would exceed `limits.radars`; `message` names the limit |
+| 409 | `radar_limit` | Creating or switching on a radar would exceed `limits.radars` (radars switched on), or creating one the user's 50 radars in all (DEC-113); `message` names the limit |
 | 409 | `radar_duplicate` | `PUT` or relax would make the radar equal to another radar of the user |
 | 413 | `payload_too_large` | The request body is over the size cap |
 | 429 | `rate_limited` | Too many requests; wait for the `Retry-After` seconds. With `reason: "daily"` the caller reached the daily limit of opened listings (the full card of `GET /listings/{number}`); without `reason` it is a request limiter (see "Request limits"). The seeker's request limits answer `reason` `requests_fast`, `requests_day` or `requests_week`. `POST /events` never answers `429` from its limiter: the excess is dropped with `204` |
@@ -375,6 +375,23 @@ holds at most the author's 500 newest live listings plus the one asked for, and 
 user, listing and reason; a mark for everybody («сдано» hides the listing from every feed, «риелтор» takes the owner
 label off the author) needs at least three distinct voters and a weighted sum (DEC-112, proposals in
 `config/votes.php`), and each detector has a kill switch (`php artisan votes:detector`).
+
+The radars are HOMI's own data on every driver since WP-45 (while `SOURCES_NATIVE_STUBS` is on they answer the WP-13
+fixtures and store nothing). While radars are switched off (`radars_enabled: false`, DEC-51) `GET /radars` answers
+`[]` and the four writes `403 radars_disabled`; `DELETE` works. A write checks, in this order, the switch, `no_chat`
+(create, replace, switch on and relax, while the bot's chat is required), then the twin and the limit: `POST` of a
+search the caller already has answers `200` with `kind: existing` (active, nothing written) or `kind: reactivated`
+(paused, switched on), and `201` with `kind: created` otherwise; «the same search» ignores `posted_days`; the limit
+counts the radars switched on, and lowering it keeps the existing ones; a user has at most 50 radars in all, paused
+ones counted (DEC-113). A `PUT` of the same search with another `posted_days` or another polygon order is stored; one
+that only reorders a list writes nothing. `starter` is how many listings the write sends
+at once (0 while the starter is off); `options` (at most 5) are offered only when it is 0, and `relaxed` is then one
+hint of the radar's flow or empty — both always arrays. `POST /radars/{id}/relax` takes the `code` of an option the
+radar offered (`422` on `code` otherwise) and widens the radar from its current filters. `include=previews` adds each
+radar's five newest listings, count and flow, shared by users with the same search for two minutes; `preview` is
+`null` where the source failed, the list's 4-second budget ran out or its 10 source rounds were spent (active radars
+first), and the list itself never fails because of it. `PATCH` reads its one change from the JSON body only: the same
+key in the query string is `422`.
 
 ## Keeping the contract current
 

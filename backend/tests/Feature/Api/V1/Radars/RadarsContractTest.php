@@ -1,12 +1,25 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Radars\RadarController;
+use App\Http\Controllers\Api\V1\Radars\RadarRelaxController;
 use App\Models\User;
+use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 use Tests\Support\ContractShapes;
 use Tests\Support\FilterArrays;
 use Tests\Support\JsonShape;
 
+/*
+ * The six radar methods of WP-13 as the native stubs answer them (WP-45, brief decision 11): while
+ * `sources.native_stubs` is on, `NativeStubs` answers the fixtures of `radars/` and stores nothing, as the end-to-end
+ * suite expects — the same three radars whatever was written, `meta.source = stub`, the scenarios of WP-13, and the
+ * switched-off state of DEC-51 (the four writes `403 radars_disabled` before the stub, the list `[]`, `DELETE` as
+ * usual).
+ */
+
 beforeEach(function (): void {
+    Http::preventStrayRequests();
+    config(['sources.native_stubs' => true]);
     Sanctum::actingAs(User::factory()->create(), ['app:read', 'app:write']);
 });
 
@@ -181,3 +194,18 @@ describe('switched off (DEC-51)', function (): void {
         $this->withHeader('Authorization', '')->postJson('/api/v1/radars', radarBody())->assertStatus(401);
     });
 });
+
+it('answers every radar route from the native stubs, never from the controllers', function (string $method, string $path, array $body, int $status): void {
+    foreach ([RadarController::class, RadarRelaxController::class] as $controller) {
+        $this->app->bind($controller, fn (): never => throw new LogicException("{$controller} was reached."));
+    }
+
+    $this->json($method, "/api/v1/{$path}", $body)->assertStatus($status)->assertJsonPath('meta.source', 'stub');
+})->with([
+    'list' => ['GET', 'radars?include=previews', [], 200],
+    'create' => ['POST', 'radars', radarBody(), 201],
+    'update' => ['PUT', 'radars/'.RADAR_ID, radarBody(), 200],
+    'patch' => ['PATCH', 'radars/'.RADAR_ID, ['active' => false], 200],
+    'delete' => ['DELETE', 'radars/'.RADAR_ID, [], 200],
+    'relax' => ['POST', 'radars/'.RADAR_ID.'/relax', ['code' => 'price_more'], 200],
+]);

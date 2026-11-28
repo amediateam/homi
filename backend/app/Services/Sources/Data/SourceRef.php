@@ -12,4 +12,14 @@ final readonly class SourceRef
     {
         return new self(ltrim(Fields::string($data, 'channel'), '@'), Fields::int($data, 'post_id'));
     }
+
+    /**
+     * The v1 array `fromArray()` reads back.
+     *
+     * @return array{channel: string, post_id: int}
+     */
+    public function toArray(): array
+    {
+        return ['channel' => $this->channel, 'post_id' => $this->postId];
+    }
 }

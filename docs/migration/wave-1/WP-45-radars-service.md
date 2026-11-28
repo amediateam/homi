@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | C |
-| Status | TODO |
+| Status | REVIEW (#136; env keys #135; DEC-113) |
 | Depends on | WP-42, WP-44 |
 | Size | about 2 400 changed lines, L |
 | Behaviour reference | WP-13 (the shapes — unchanged here); `25` §5 (radars); `08` §1.8 and the rows of API-018 … API-023; `02` BR-API-086; `03` §4 (BR-APP-012, BR-APP-041, BR-APP-042, BR-APP-044, BR-APP-047, BR-APP-048, BR-APP-063, BR-APP-073); `15` §3.1 rows 1–3, §3.4 rows 1, 2 and 6, §3.6 rows 2 and 3; `16` SEC-REQ-014, SEC-REQ-015, SEC-REQ-017; tasks `tasks/backend/KV-BE-100-radar-service-core.md`, `KV-BE-101-…`, `KV-BE-102-radar-starter-and-options.md`, `KV-BE-103-…`, `KV-BE-104-…`, `KV-BE-105-…`, `KV-BE-106-radar-hide-rules.md` (rules, limits, edge cases — not their routes, serializers or SQL predicates) |
@@ -280,6 +280,141 @@ filters); a daily-rent radar gets daily options because the source computes them
       eleventh radar — is run on the local stack now (`backend/.env.example` has the switch on) and inside Telegram
       on staging and production in WP-57, right after it switches radars on.
 
+## As built
+
+The package is built as designed, with these points decided in the code (rule 6). Each one corrects or completes the
+design above; the AM row is in `docs/ai/reports/phase-3-notes.md` §AM, the developer's decision DEC-113 in
+`docs/migration/decisions/2026-11-28-developer-answers.md`. Two reviews read the whole package on a snapshot with their
+own probes — a security review (3 medium, 4 low, 5 info) and a specification review (1 bug, 5 gaps, 3 nits; 44 of the
+46 test cases of "Tests" covered, the other two added) — and one fix round followed, each fix with a test that failed
+before it; what was not fixed is in the Handoff.
+
+**Tables, models and configuration**
+
+- Exactly two migrations, `2026_11_28_013015_create_radars_table` and `2026_11_28_013016_create_radar_hide_rules_table`,
+  both additive and empty. Radar ids are upper-case ULIDs; `{id}` is upper-cased before the lookup.
+- `config/radar.php` reads `RADAR_MAX`, `RADAR_CREATION_ENABLED`, `RADAR_REQUIRE_CHAT` and `RADAR_STARTER_ENABLED`
+  with a blank value as the safe default: a blank `RADAR_MAX` is 10 (it read as 0), a blank, spaced or `no`
+  `RADAR_CREATION_ENABLED` is off (it read as on). Two keys without an env key are added: `max_total` (50, DEC-113)
+  and `preview_max_rounds` (10).
+- The two service namespaces stay apart: `App\Services\Radar` holds the service and its helpers, `App\Services\Radars`
+  the WP-13 answer objects (`Radar`, `RadarMutation`, `RadarChange`, `RadarPreview`), which gain `fromModel()` and
+  `fromService()`.
+
+**`RadarService`**
+
+- Order of every write but delete: `RadarsDisabled` (no query, no lock, no source call), then `NoChat` from the loaded
+  user (create, update, switch on, relax; not pause, mode or delete), then the per-user lock —
+  `pg_advisory_xact_lock(hashtext('radar:' || <user id>))` on PostgreSQL, `Cache::lock("radar:<user id>", 5)->block(3)`
+  elsewhere — inside which the radar is read again through the user's radars and the twin and the active-radar limit are
+  read; `createOrFirst` re-reads a concurrent insert that won the unique key. Right after the switch, and before the
+  chat check, the lock or any query, a radar of another user is not found (an attribute comparison), so the bot's
+  callers get the `404` of an unknown id too.
+- **A total cap (DEC-113):** a create that would add a row is refused `409 radar_limit` ("at most 50 radars") once the
+  user has `radar.max_total` radars, paused ones counted, read under the same lock before the active limit; a twin
+  (`existing`, `reactivated`) passes, radars above a lowered cap stay, and resume, replace, mode, relax and delete are
+  not checked against it.
+- **Unchanged** (corrects "a `PUT` that changes nothing writes nothing", read as "the same hash"): a replace or a relax
+  writes nothing only when the `filters_hash`, `posted_days` and the polygon as drawn (`SearchFilters::polygonDigest()`,
+  the vertex order kept) are all equal. A new window of the same search is stored as received (DEV-005), a reordered
+  polygon is another area; reordering a list writes nothing. A reactivated twin also stores the body's filters unless
+  they are unchanged by the same rule.
+- `RadarSaved` and `RadarDeleted` carry ids, kind and starter numbers, implement `ShouldDispatchAfterCommit`, and are
+  not dispatched for a write that changed nothing or for a mode change.
+- The starter and the relax options are read after the transaction. Any failure there keeps the write, with an empty
+  starter or no options, and is reported (a `SourceUnavailable` logged with the radar id and kind only), so the write
+  answers and `RadarSaved` is sent; a client's repeat no longer meets an `existing` radar no event announced.
+  `RadarDeleted` is dispatched inside the delete's transaction (it fires on commit), and forgetting the remembered
+  options is guarded the same way.
+- `unhide` goes through `RadarService::unhide()`: the switch, the owner, the per-user lock, the radar as stored, then
+  `RadarHideRuleService::clearAll()` (now internal). `add()` and `addFromListing()` throw `RadarsDisabled` while radars
+  are switched off, so no radar row or rule is written then by any caller.
+- A pause of a radar that is already paused answers `ask_found: false` and spends no 24-hour mark (`RadarMutation`'s
+  `changed`).
+
+**Starter, options and hide rules**
+
+- `StarterSelector` reads one page of 20 in a new context with the user (the write's locale and currency, else his
+  settings) and runs HOMI's overlay on every driver; each listing a hide rule holds back adds 1 to `hidden_count`,
+  counted after the overlay and the delivered set.
+- `RadarRelaxOptions` remembers the offered set (code → filters, as arrays) under `radar:<id>:options`; a filters change
+  forgets it inside the lock, before the commit, and a delete after it. `relax()` resolves the code under the user's
+  lock against the radar as stored, so two overlapping relaxes relax twice, each from the then-current filters; a
+  remembered set costs nothing, and only an expired one is computed again — a source call under the lock. A code whose
+  filters the reference no longer accepts is `422` on `code` like an unknown one.
+- A channel rule is stored without `@`, in lower case; `addFromListing()` takes the target `listing_refs` files for the
+  listing's survivor.
+
+**Previews (`RadarPreviews`)**
+
+- The shared part is asked in a context without a user (`foreground`, since a person waits), so legacy's pager leaves
+  out no caller's listings and no item carries a caller's flags; the caller's overlay and the radar's hide rules (all
+  radars' rules in one query) run per user, then the first five are kept.
+- The cache key is
+  `radar:previews:v1:<feed>-<count>-<flow drivers>:<filters_hash>:<posted_days>:<polygon digest>:<locale>:<currency>`:
+  `filters_hash` leaves `posted_days` out and sorts the polygon's vertices, but the feed, count and flow depend on both
+  (AM-132). The stub scenario is never part of it: off the stub the shared part is asked without one, and with a
+  scenario on a stub driver the cache is neither read nor written, so a client cannot bypass the cache with the
+  header. The entry holds arrays only through the new `ListingSummary::toArray()` (with `toArray()` on `PriceInfo`,
+  `GeoPoint` and `SourceRef`), the exact inverse of `fromArray()`, checked over the whole stub catalogue; an entry of
+  another shape is a miss, and a failure is never cached. There is no fill lock: the feed page costs what `GET
+  /listings` costs on every visit, and the legacy count and flow are single-flight in the driver's own cache (WP-42).
+- A read never moves `hidden_count`: only a starter counts what the rules hold back.
+- At most `radar.preview_max_rounds` (10) source rounds per list, active radars first (the answer keeps creation
+  order); a cache hit is no round. The budget is measured on the application clock and checked before each round;
+  after a failure, the round cap or the spent budget, every remaining radar that is not cached gets `preview: null`.
+  Any error of a round or of one radar's own part (its stored filters, its overlay) is caught there and gives that
+  radar `null` (a `SourceUnavailable` silently, any other reported). The drivers are resolved once per list
+  (`PreviewRound`).
+
+**Controllers and authorisation**
+
+- A radar is read through `$request->user()->radars()->findOrFail()`, then checked with
+  `Gate::inspect($ability, $radar)->authorize()`: `Gate::authorize()` would make the OpenAPI export document a `403`
+  these routes never answer. `docs/api/openapi.json` is unchanged by the package.
+- The six radar routes have real rows in `IdorMatrixTest`, and the matrix compares the `radars` table of the owner
+  too (a blocked user stores no radar).
+- The 31st radar write of a user in a minute is `429 rate_limited` on the radar routes themselves (`v1-radars`, shared
+  with the settings writes).
+- A `PATCH` change named in the query string (`?active=`, `?mode=`, `?unhide=`) is `422` on its key, so the controller
+  only sees the JSON body's single change.
+
 ## Handoff
 
-Empty.
+In review (#136, env keys #135). The development track needs nothing more for this package after the merge; WP-46 (matching and delivery
+planning) is next in queue order.
+
+**For the production track** (no nginx change, no `source.*` flag change):
+
+1. **Approve the two migrations** `2026_11_28_013015` and `2026_11_28_013016`: the new tables `radars` and
+   `radar_hide_rules`, additive and empty; they run with the deploy (`php artisan migrate --force`), before the code
+   serves.
+2. **Server env** (the separate env PR adds the keys to `backend/.env.example` and the environments page): leave
+   `RADAR_MAX` blank (default 10); set `RADAR_REQUIRE_CHAT=false` and `RADAR_STARTER_ENABLED=false` now — both are
+   switched to `true` with the bot's radar wizard (WP-54). `RADAR_CREATION_ENABLED` stays **unset** on staging and
+   production until WP-57 (DEC-51): until then the list is `[]`, the four writes answer `403 radars_disabled`, and
+   `DELETE` works.
+3. **Cache keys** (Redis): `radar:<id>:options` (15 minutes), `radar:previews:v1:…` (`radar.preview_ttl`, 120 s),
+   `found:asked:<user id>` (24 hours), and the lock `radar:<user id>` outside PostgreSQL.
+4. **Before WP-57 switches radars on** (from the security review; none can be reached while
+   `RADAR_CREATION_ENABLED` is unset): a per-user limiter of preview misses and of the relax options' source calls — a
+   create or replace with an empty starter costs one flow and up to five count calls, about 210 legacy calls a minute
+   at the 30 writes a minute of `v1-radars` while `RADAR_STARTER_ENABLED` is off (review S-F7, S-F2's rest); and, outside
+   this package, dropping `X-Stub-Scenario` in `SourceContext::fromRequest()` in production (S-F12).
+
+**Known and left (for the next packages):**
+- The previews run HOMI's overlay once per radar (about 48 statements for 10 radars): one overlay over all radars
+  would be wrong, since each radar's owner filter decides what is left out; reading the marks once and applying them
+  per radar needs an overlay method (review P-F4).
+- `hidden_count` adds a held-back listing again on every starter (for example on each resume); a recount over the
+  delivered set belongs to WP-46 (review P-F6).
+- Hide rules per radar have no cap (S-F11, WP-53, which adds them from the bot); a user's deletion cascades in the
+  database without `RadarDeleted`, so `radar:<id>:options` lives out its 15 minutes (S-F10, WP-47).
+
+**For the next packages:**
+- **WP-46** implements `DeliveredSet` (bound to `NullDeliveredSet` now) and matches with `HideRuleSet::excludes()`;
+  it listens to `RadarSaved` and `RadarDeleted`.
+- **WP-47** registers for erasure `radars` (its rules cascade) and the cache keys `radar:<id>:options` and
+  `found:asked:<user id>`.
+- **WP-53 … WP-55** call the same `RadarService`, `RadarHideRuleService::addFromListing()` and `FoundAskPolicy`; the
+  policy's abilities are `view`, `update` and `delete`.

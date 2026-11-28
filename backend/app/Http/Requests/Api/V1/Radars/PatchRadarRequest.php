@@ -37,10 +37,19 @@ class PatchRadarRequest extends FormRequest
         ];
     }
 
-    /** @return list<callable(Validator): void> */
+    /**
+     * The change is read from the JSON body only: a change key in the query string is `422` on that key, so the
+     * controller's reads (which merge the query string) only ever see the body's single change.
+     *
+     * @return list<callable(Validator): void>
+     */
     public function after(): array
     {
         return [function (Validator $validator): void {
+            foreach (array_intersect(array_map('strval', array_keys($this->query())), self::KEYS) as $inQuery) {
+                $validator->errors()->add($inQuery, "The {$inQuery} change is read from the JSON body, not from the query string.");
+            }
+
             $keys = array_map('strval', array_keys($this->json()->all()));
 
             foreach (array_diff($keys, self::KEYS) as $unknown) {

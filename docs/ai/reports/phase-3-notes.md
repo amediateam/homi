@@ -2298,4 +2298,20 @@ ASSUMPTION_MISMATCH AM-131 (2026-11-28):
 
 Reviews: one security review per stage (stage A: 6 low, 5 info; stage B: 2 medium, 2 low, 5 info), then a narrow
 re-review of the fixes (4 low, 2 info more) and one more fix round; every fix has a test that failed before it, 8 low or
-info items are recorded in the spec's "Handoff". Next ids: AM-132, KI-73, DEC-113.
+info items are recorded in the spec's "Handoff". Next ids then: AM-132, KI-73, DEC-113.
+
+ASSUMPTION_MISMATCH AM-132 (2026-11-28, WP-45):
+- **Assumption.** WP-45 "Previews": the shared part of a radar preview (the first feed page, the count and the flow)
+  is cached "per hash, locale and currency", the hash being the radar's `filters_hash`.
+- **What was found.** `filters_hash` leaves `posted_days` out (BR-APP-012: "the same search" ignores the window), but
+  the feed, the count and the flow of the stored filters depend on it: two users' radars of one hash with windows of 7
+  and 30 days would have shared one entry, and the second would have shown the first one's listings and count.
+- **Resolution.** The key is `radar:previews:v1:<drivers>:<filters_hash>:<posted_days>:<locale>:<currency>` (and the
+  stub scenario when set); a test pins two rounds for the two windows. The radars' unique key stays
+  (`user_id`, `filters_hash`). The review round then added the polygon as drawn to the key (the hash sorts its
+  vertices) and took the stub scenario out of it (`…:<posted_days>:<polygon digest>:<locale>:<currency>`).
+
+WP-45 reviews: a security review (3 medium, 4 low, 5 info) and a specification review (1 bug, 5 gaps, 3 nits) of the
+whole package on one snapshot, each with its own probes; one fix round of 13 commits, each fix with a test that failed
+before it; the developer's DEC-113 (a total of 50 radars per user) answered the one finding that needed a decision;
+what was left is in the spec's "Handoff". Next ids: AM-133, KI-73, DEC-114.

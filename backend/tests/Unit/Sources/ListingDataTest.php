@@ -107,3 +107,11 @@ it('refuses a preview that misses or mistypes a field', function (array $data, s
     'photos without count' => [ListingArrays::preview(['photos' => ['preview' => [], 'cover' => null]]), 'count'],
     'missing place' => [array_diff_key(ListingArrays::preview(), ['place' => true]), 'place'],
 ]);
+
+it('writes the nullable parts and the flags of a preview back as they were read', function (): void {
+    $preview = ListingSummary::fromArray(ListingArrays::preview([
+        'deal' => null, 'type' => null, 'price' => null, 'district' => null, 'metro' => null, 'location' => null, 'source_ref' => null,
+    ]))->withFlags(favorite: true, viewed: true);
+
+    expect(ListingSummary::fromArray($preview->toArray()))->toEqual($preview);
+});

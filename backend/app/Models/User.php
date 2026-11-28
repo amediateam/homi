@@ -48,6 +48,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property-read Collection<int, BlockedAuthor> $blockedAuthors
  * @property-read Collection<int, ListingVote> $listingVotes
  * @property-read Collection<int, FoundAnswer> $foundAnswers
+ * @property-read Collection<int, Radar> $radars
  */
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
@@ -160,6 +161,17 @@ class User extends Authenticatable
     public function foundAnswers(): HasMany
     {
         return $this->hasMany(FoundAnswer::class);
+    }
+
+    /**
+     * The user's radars (WP-45); written only through `App\Services\Radar\RadarService`, and a radar is looked up only
+     * through this relation (SEC-REQ-014), so a foreign id is not found like an unknown one.
+     *
+     * @return HasMany<Radar, $this>
+     */
+    public function radars(): HasMany
+    {
+        return $this->hasMany(Radar::class);
     }
 
     /**

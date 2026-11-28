@@ -32,4 +32,21 @@ final readonly class PriceInfo
             kind: PriceKind::tryFrom((string) Fields::nullableString($data, 'kind')),
         );
     }
+
+    /**
+     * The v1 array `fromArray()` reads back (scalars only, for a cache that refuses objects).
+     *
+     * @return array{display: string, period: string|null, alt: string|null, notes: list<string>, usd: int|null, kind: string|null}
+     */
+    public function toArray(): array
+    {
+        return [
+            'display' => $this->display,
+            'period' => $this->period,
+            'alt' => $this->alt,
+            'notes' => $this->notes,
+            'usd' => $this->usd,
+            'kind' => $this->kind?->value,
+        ];
+    }
 }
