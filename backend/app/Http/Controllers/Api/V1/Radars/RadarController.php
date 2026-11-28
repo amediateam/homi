@@ -40,6 +40,9 @@ use Illuminate\Support\Facades\Gate;
  * While the switch is off (DEC-51) the four write routes never reach this controller (`EnsureRadarsEnabled`), and the
  * list answers `[]` without a query to a radar table and without a source call; `DELETE` works either way. While
  * `sources.native_stubs` is on, `NativeStubs` answers the stub bodies of WP-13 instead.
+ *
+ * The list's previews come from `RadarPreviews`: one source round per filter set, shared by users for two minutes,
+ * `null` where one could not be computed, never a failed list.
  */
 class RadarController extends ApiController
 {
@@ -50,11 +53,7 @@ class RadarController extends ApiController
         private readonly RadarPreviews $previews,
     ) {}
 
-    /**
-     * `GET /radars`: the radars in creation order; `include=previews` adds each radar's preview (`RadarPreviews`: one
-     * source round per filter set, shared by users for two minutes; `null` where it could not be computed, never a
-     * failed list).
-     */
+    /** `GET /radars`: the radars in creation order; `include=previews` adds each radar's preview. */
     public function index(ListRadarsRequest $request): JsonResponse
     {
         if (! Config::boolean('radar.creation_enabled')) {
