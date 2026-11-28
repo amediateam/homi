@@ -15,6 +15,7 @@ use App\Services\Listings\Contracts\ListingExclusion;
 use App\Services\Listings\ListingNumber;
 use App\Services\Listings\ListingRefs;
 use App\Services\Listings\PhotoUrlRewriter;
+use App\Services\Personal\AuthorLabel;
 use App\Services\Search\ListingQuery;
 use App\Services\Search\SearchFilters;
 use App\Services\Sources\Contracts\ListingSource;
@@ -373,6 +374,21 @@ final class LegacyListingSource implements ListingSource
     }
 
     /**
+     * The masked number of the contact entry (else the card read again), for a blocked author's label (WP-44): the
+     * entry's phone goes through `AuthorLabel::ofPhone()` only, so no digit but the last two leaves here; nothing is
+     * counted, no call link is asked. Under the mode `link` the entry keeps no phone, and a withdrawn listing has no
+     * contact: both give `null`.
+     */
+    public function authorPhoneLabel(int $number, SourceContext $context): ?string
+    {
+        try {
+            return AuthorLabel::ofPhone($this->contactEntry($number, $context)->phone);
+        } catch (ContactUnavailable) {
+            return null;
+        }
+    }
+
+    /**
      * The author's contact under `legacy.contact.mode`: variant A gives the phone (and blank `callUrl` and `expiresAt`
      * for `ContactService` to fill with HOMI's link), variant B legacy's call link.
      */
@@ -548,6 +564,8 @@ final class LegacyListingSource implements ListingSource
         ));
 
         if ($preview) {
+            $this->refs->markMerged($number, ListingSummary::fromArray($card)->number);
+
             return ['card' => $card, 'contact' => null, 'answered' => $number];
         }
 
@@ -562,7 +580,8 @@ final class LegacyListingSource implements ListingSource
      * <answered>}`, sealed alike, no copy of the phone) under an asked number legacy merged into it — so the `404` of
      * the survivor leaves no copy of its phone behind. Nothing is filed while either number is withdrawn
      * (`withdrawnKey()`): a read that was in flight when legacy answered `404` for it cannot file a usable entry. A
-     * preview carries no phone or post link, so it files nothing.
+     * preview carries no phone or post link, so it files only a merge (`readCard()`, `fetchPreviews()`): a personal list
+     * that shows a duplicate as its survivor lets its owner remove the row through the survivor's number (WP-44).
      *
      * @param  array<array-key, mixed>  $card  the translated card
      * @param  array<array-key, mixed>  $answer  legacy's raw answer
@@ -913,6 +932,7 @@ final class LegacyListingSource implements ListingSource
                 }
 
                 $previews[(int) $number] = ListingSummary::fromArray($preview);
+                $this->refs->markMerged((int) $number, $previews[(int) $number]->number);
             }
 
             if ($failed !== []) {

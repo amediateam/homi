@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Api\V1\Personal;
 
+use App\Enums\Personal\ReportDetail;
+use App\Enums\Personal\ReportReason;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -44,5 +46,17 @@ class StoreReportRequest extends FormRequest
     public function namesAgent(): bool
     {
         return $this->string('reason')->toString() === 'agent';
+    }
+
+    /** The validated reason (WP-44). */
+    public function reason(): ReportReason
+    {
+        return ReportReason::from($this->string('reason')->toString());
+    }
+
+    /** The validated detail of a `wrong_data` report, `null` when it has none (WP-44). */
+    public function detail(): ?ReportDetail
+    {
+        return $this->enum('detail', ReportDetail::class);
     }
 }

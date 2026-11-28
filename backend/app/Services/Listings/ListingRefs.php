@@ -108,6 +108,58 @@ final class ListingRefs
     }
 
     /**
+     * The newest `$limit` live numbers — neither gone nor merged — filed under one author key (WP-44's block answer),
+     * ascending: the highest numbers, since legacy and HOMI number listings upwards, in one query on the primary key.
+     *
+     * @param  positive-int  $limit
+     * @return list<int>
+     */
+    public function liveNumbersOfAuthor(string $authorKey, int $limit): array
+    {
+        $numbers = ListingRef::query()->where('author_key', $authorKey)->whereNull('gone_at')->whereNull('merged_into')
+            ->orderByDesc('listing_number')->limit($limit)->pluck('listing_number');
+
+        return array_reverse(array_values(array_map(intval(...), $numbers->all())));
+    }
+
+    /** The author filed for a number (WP-44's blocks), `null` when HOMI files none. */
+    public function author(int $number): ?AuthorKey
+    {
+        $ref = ListingRef::query()->find($number, ['listing_number', 'author_key', 'author_kind']);
+
+        if ($ref === null || $ref->author_key === null) {
+            return null;
+        }
+
+        return new AuthorKey($ref->author_key, $ref->author_kind);
+    }
+
+    /**
+     * How many live listings — neither gone nor merged — HOMI files under each of the author keys (WP-44's «Скрытое»),
+     * in one grouped query per chunk; a key without one counts 0.
+     *
+     * @param  list<string>  $authorKeys
+     * @return array<string, int> author key => live listings
+     */
+    public function liveCountsOfAuthors(array $authorKeys): array
+    {
+        $counts = array_fill_keys($authorKeys, 0);
+
+        foreach (array_chunk(array_values(array_unique($authorKeys)), self::CHUNK) as $chunk) {
+            $rows = ListingRef::query()->whereIn('author_key', $chunk)->whereNull('gone_at')->whereNull('merged_into')
+                ->groupBy('author_key')->selectRaw('author_key, count(*) as listings')->toBase()->get();
+
+            foreach ($rows as $row) {
+                if (is_string($row->author_key ?? null) && is_numeric($row->listings ?? null)) {
+                    $counts[$row->author_key] = (int) $row->listings;
+                }
+            }
+        }
+
+        return $counts;
+    }
+
+    /**
      * The author key of each of the numbers that has one.
      *
      * @param  list<int>  $numbers

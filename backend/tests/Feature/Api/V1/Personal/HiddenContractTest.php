@@ -1,11 +1,21 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 use Tests\Support\ContractShapes;
 use Tests\Support\JsonShape;
 
+/*
+ * The hidden listings, blocked authors and hidden overview of WP-13 as the native stubs answer them (WP-44, brief
+ * decision 10): while `sources.native_stubs` is on, `NativeStubs` answers the fixtures of `hidden/` and stores nothing,
+ * as the end-to-end suite expects; `HiddenListingsTest`, `BlockedAuthorsTest` and `HiddenOverviewTest` cover the real
+ * methods.
+ */
+
 beforeEach(function (): void {
+    Http::preventStrayRequests();
+    config(['sources.native_stubs' => true]);
     Sanctum::actingAs(User::factory()->create(), ['app:read', 'app:write']);
 });
 

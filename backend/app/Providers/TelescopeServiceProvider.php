@@ -20,7 +20,7 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
      * listing (`legacy:v1:listings:{contact,card,preview}:…`), and a user's day of disclosures (`contact:<user
      * id>:<day>`).
      */
-    private const string SENSITIVE_KEYS = '/[a-z]:translation:|legacy:v1:listings:(?:contact|card|preview):|contact:\d+:\d{4}-\d{2}-\d{2}/';
+    private const string SENSITIVE_KEYS = '/[a-z]:translation:|legacy:v1:listings:(?:contact|card|preview):|contact:\d+:\d{4}-\d{2}-\d{2}|personal:realtor-author-keys/';
 
     /**
      * Register any application services.

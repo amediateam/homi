@@ -43,6 +43,7 @@ use App\Http\Middleware\AnswerNativeStubs;
 use App\Http\Middleware\EnsureOwnerCabinetEnabled;
 use App\Http\Middleware\EnsureRadarsEnabled;
 use App\Http\Middleware\SetRequestLocale;
+use App\Services\Listings\ListingNumber;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -94,30 +95,30 @@ Route::prefix('v1')->name('api.v1.')->middleware([SetRequestLocale::class, Answe
                     Route::get('map', ListingMapController::class)->name('map');
                 });
                 // The card: the request limiter, and the daily cap on full cards (DEC-104 … DEC-107).
-                Route::get('{number}', [ListingController::class, 'show'])->whereNumber('number')->middleware(['throttle:v1-listing', 'listing-opens'])->name('show');
-                Route::post('{number}/contact', ListingContactController::class)->whereNumber('number')->middleware('throttle:v1-contact')->name('contact');
+                Route::get('{number}', [ListingController::class, 'show'])->where('number', ListingNumber::ROUTE_PATTERN)->middleware(['throttle:v1-listing', 'listing-opens'])->name('show');
+                Route::post('{number}/contact', ListingContactController::class)->where('number', ListingNumber::ROUTE_PATTERN)->middleware('throttle:v1-contact')->name('contact');
                 // WP-43: `v1-translation` counts only the cache misses, inside `TranslationService`; the route itself is
                 // read under `v1-reads`, as a translation that is cached is a read.
-                Route::post('{number}/translation', ListingTranslationController::class)->whereNumber('number')->middleware('throttle:v1-reads')->name('translation');
-                Route::post('{number}/share', ListingShareController::class)->whereNumber('number')->middleware('throttle:v1-share')->name('share');
+                Route::post('{number}/translation', ListingTranslationController::class)->where('number', ListingNumber::ROUTE_PATTERN)->middleware('throttle:v1-reads')->name('translation');
+                Route::post('{number}/share', ListingShareController::class)->where('number', ListingNumber::ROUTE_PATTERN)->middleware('throttle:v1-share')->name('share');
             });
 
             // Personal lists (WP-13): native, stubs until WP-44; `app:read` to list, `app:write` to change. The lists are
             // read under `v1-reads` and changed under `v1-lists`; a report is sent under its own daily limit.
             Route::get('favorites', [FavoriteController::class, 'index'])->middleware(['ability:app:read', 'throttle:v1-reads'])->name('favorites.index');
-            Route::put('favorites/{number}', [FavoriteController::class, 'update'])->whereNumber('number')->middleware(['ability:app:write', 'throttle:v1-lists'])->name('favorites.update');
-            Route::delete('favorites/{number}', [FavoriteController::class, 'destroy'])->whereNumber('number')->middleware(['ability:app:write', 'throttle:v1-lists'])->name('favorites.destroy');
+            Route::put('favorites/{number}', [FavoriteController::class, 'update'])->where('number', ListingNumber::ROUTE_PATTERN)->middleware(['ability:app:write', 'throttle:v1-lists'])->name('favorites.update');
+            Route::delete('favorites/{number}', [FavoriteController::class, 'destroy'])->where('number', ListingNumber::ROUTE_PATTERN)->middleware(['ability:app:write', 'throttle:v1-lists'])->name('favorites.destroy');
             Route::get('history', [HistoryController::class, 'index'])->middleware(['ability:app:read', 'throttle:v1-reads'])->name('history.index');
             Route::delete('history', [HistoryController::class, 'destroy'])->middleware(['ability:app:write', 'throttle:v1-lists'])->name('history.destroy');
-            Route::put('hidden/listings/{number}', [HiddenListingController::class, 'update'])->whereNumber('number')->middleware(['ability:app:write', 'throttle:v1-lists'])->name('hidden.listings.update');
-            Route::delete('hidden/listings/{number}', [HiddenListingController::class, 'destroy'])->whereNumber('number')->middleware(['ability:app:write', 'throttle:v1-lists'])->name('hidden.listings.destroy');
-            Route::put('listings/{number}/blocked-author', [BlockedAuthorController::class, 'update'])->whereNumber('number')->middleware(['ability:app:write', 'throttle:v1-lists'])->name('listings.blocked-author.update');
-            Route::delete('listings/{number}/blocked-author', [BlockedAuthorController::class, 'destroy'])->whereNumber('number')->middleware(['ability:app:write', 'throttle:v1-lists'])->name('listings.blocked-author.destroy');
+            Route::put('hidden/listings/{number}', [HiddenListingController::class, 'update'])->where('number', ListingNumber::ROUTE_PATTERN)->middleware(['ability:app:write', 'throttle:v1-lists'])->name('hidden.listings.update');
+            Route::delete('hidden/listings/{number}', [HiddenListingController::class, 'destroy'])->where('number', ListingNumber::ROUTE_PATTERN)->middleware(['ability:app:write', 'throttle:v1-lists'])->name('hidden.listings.destroy');
+            Route::put('listings/{number}/blocked-author', [BlockedAuthorController::class, 'update'])->where('number', ListingNumber::ROUTE_PATTERN)->middleware(['ability:app:write', 'throttle:v1-lists'])->name('listings.blocked-author.update');
+            Route::delete('listings/{number}/blocked-author', [BlockedAuthorController::class, 'destroy'])->where('number', ListingNumber::ROUTE_PATTERN)->middleware(['ability:app:write', 'throttle:v1-lists'])->name('listings.blocked-author.destroy');
             Route::get('hidden', [HiddenController::class, 'index'])->middleware(['ability:app:read', 'throttle:v1-reads'])->name('hidden.index');
             Route::delete('hidden/authors/{id}', [HiddenController::class, 'destroyAuthor'])->whereUlid('id')->middleware(['ability:app:write', 'throttle:v1-lists'])->name('hidden.authors.destroy');
             Route::delete('hidden', [HiddenController::class, 'destroy'])->middleware(['ability:app:write', 'throttle:v1-lists'])->name('hidden.destroy');
-            Route::post('listings/{number}/reports', [ReportController::class, 'store'])->whereNumber('number')->middleware(['ability:app:write', 'throttle:v1-reports'])->name('listings.reports.store');
-            Route::delete('listings/{number}/reports', [ReportController::class, 'destroy'])->whereNumber('number')->middleware(['ability:app:write', 'throttle:v1-lists'])->name('listings.reports.destroy');
+            Route::post('listings/{number}/reports', [ReportController::class, 'store'])->where('number', ListingNumber::ROUTE_PATTERN)->middleware(['ability:app:write', 'throttle:v1-reports'])->name('listings.reports.store');
+            Route::delete('listings/{number}/reports', [ReportController::class, 'destroy'])->where('number', ListingNumber::ROUTE_PATTERN)->middleware(['ability:app:write', 'throttle:v1-lists'])->name('listings.reports.destroy');
             Route::post('surveys/found', [FoundSurveyController::class, 'store'])->middleware(['ability:app:write', 'throttle:v1-lists'])->name('surveys.found.store');
             Route::post('surveys/found/where', [FoundSurveyController::class, 'where'])->middleware(['ability:app:write', 'throttle:v1-lists'])->name('surveys.found.where');
 
@@ -162,7 +163,7 @@ Route::prefix('v1')->name('api.v1.')->middleware([SetRequestLocale::class, Answe
 
             // The seeker's request (WP-80, API-054): outside the `listings` group, whose middleware is `app:read`. Under
             // `v1-lists` until WP-85 brings the request limits of its own.
-            Route::post('listings/{number}/contact-request', ListingContactRequestController::class)->whereNumber('number')->middleware(['ability:app:write', 'throttle:v1-lists'])->name('listings.contact-request.store');
+            Route::post('listings/{number}/contact-request', ListingContactRequestController::class)->where('number', ListingNumber::ROUTE_PATTERN)->middleware(['ability:app:write', 'throttle:v1-lists'])->name('listings.contact-request.store');
 
             // Media (master prompt §7); a malformed id answers 404 without a query. The writes count under `uploads` only.
             Route::get('media/{media}', [MediaController::class, 'show'])->whereUlid('media')->middleware('throttle:v1-media')->name('media.show');

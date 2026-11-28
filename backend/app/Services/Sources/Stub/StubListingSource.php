@@ -222,6 +222,15 @@ final class StubListingSource implements ListingSource
         }
     }
 
+    /**
+     * The stub files no author key (WP-42), so no author can be blocked on it and nothing asks for a label (WP-44);
+     * its synthetic `stub.phone` is the contact's, never a label's.
+     */
+    public function authorPhoneLabel(int $number, SourceContext $context): ?string
+    {
+        return null;
+    }
+
     public function contact(int $number, SourceContext $context): ListingContact
     {
         $entry = $this->entry($number, $context);

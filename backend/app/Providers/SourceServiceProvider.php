@@ -6,8 +6,8 @@ use App\Services\Listings\Contracts\ListingExclusion;
 use App\Services\Listings\Contracts\OverlayData;
 use App\Services\Listings\Contracts\OwnerOverlayData;
 use App\Services\Listings\ListingOverlay;
-use App\Services\Listings\NullOverlayData;
 use App\Services\Listings\NullOwnerOverlayData;
+use App\Services\Personal\EloquentOverlayData;
 use App\Services\Sources\Legacy\LegacyFakeServer;
 use App\Services\Sources\SourceConfig;
 use App\Services\Sources\SourceManager;
@@ -40,10 +40,11 @@ class SourceServiceProvider extends ServiceProvider
         // HOMI's per-user part of listing answers (WP-42): the overlay is also what the legacy feed pager leaves out.
         // One instance per request or queued job (`scoped`), shared by the pager and the controller, so the caller's
         // sets are read once per request and never kept across requests by a long-running worker.
-        // Its data has no tables before WP-44 (favourites, hidden, blocked, votes), WP-84 and WP-85 (owner parts).
+        // Its data: HOMI's tables of WP-44 (favourites, views, hidden, blocked, vote marks); the owner parts have no
+        // tables before WP-84 and WP-85.
         $this->app->scoped(ListingOverlay::class);
         $this->app->bind(ListingExclusion::class, ListingOverlay::class);
-        $this->app->bind(OverlayData::class, NullOverlayData::class);
+        $this->app->bind(OverlayData::class, EloquentOverlayData::class);
         $this->app->bind(OwnerOverlayData::class, NullOwnerOverlayData::class);
     }
 

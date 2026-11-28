@@ -144,6 +144,19 @@ it('finds the numbers of authors and the author key of numbers', function (): vo
         ->and(refs()->authorKeysOf([100, 200, 400, 500]))->toBe([100 => 'phone:one', 200 => 'source:two']);
 });
 
+it('finds the newest live numbers of one author, ascending, up to the limit (WP-44, review A F4)', function (): void {
+    foreach ([100, 200, 300, 400, 500] as $number) {
+        ListingRef::factory()->ofAuthor('phone:one')->create(['listing_number' => $number]);
+    }
+    ListingRef::factory()->ofAuthor('phone:one')->gone()->create(['listing_number' => 600]);
+    ListingRef::factory()->ofAuthor('phone:one')->create(['listing_number' => 700, 'merged_into' => 100]);
+    ListingRef::factory()->ofAuthor('source:two', 'source')->create(['listing_number' => 800]);
+
+    expect(refs()->liveNumbersOfAuthor('phone:one', 3))->toBe([300, 400, 500])
+        ->and(refs()->liveNumbersOfAuthor('phone:one', 10))->toBe([100, 200, 300, 400, 500])
+        ->and(refs()->liveNumbersOfAuthor('phone:none', 10))->toBe([]);
+});
+
 it('marks a known number gone, and files nothing for a number it does not know', function (): void {
     ListingRef::factory()->create(['listing_number' => 100777]);
 
@@ -220,3 +233,22 @@ it('files nothing for a preview read', function (): void {
     expect(ListingRef::query()->count())->toBe(0)
         ->and(LegacyListingsHttp::sent('/api/listings/100002'))->toHaveCount(1);
 });
+
+it('files only the merge for a preview legacy answers with another number, single or in a batch', function (string $how): void {
+    LegacyListingsHttp::fake();
+
+    if ($how === 'single') {
+        $this->getJson('/api/v1/listings/100016?preview=1')->assertOk()->assertJsonPath('data.number', 100001);
+    } else {
+        $previews = app(LegacyListingSource::class)->previews([100016, 100002], new SourceContext('ru', 'USD', User::factory()->create()));
+
+        expect($previews[100016]->number)->toBe(100001);
+    }
+
+    $merged = ListingRef::query()->sole();
+
+    expect($merged->listing_number)->toBe(100016)
+        ->and($merged->merged_into)->toBe(100001)
+        ->and($merged->author_key)->toBeNull()
+        ->and($merged->source_channel)->toBeNull();
+})->with(['single', 'batch']);

@@ -11,6 +11,8 @@ use App\Services\Listings\ContactService;
 use App\Services\Listings\LinkGuard;
 use App\Services\Listings\PhoneMasker;
 use App\Services\Listings\TranslationService;
+use App\Services\Personal\AuthorLabel;
+use App\Services\Personal\BlockedAuthorService;
 use App\Services\Sources\Data\ListingTranslation;
 use App\Services\Sources\Legacy\LegacyContact;
 use App\Services\Sources\Legacy\LegacyListingSource;
@@ -37,7 +39,8 @@ use App\Services\Telegram\TelegramClient;
  * `TelegramException`, `ShareService` and `PreparedShare`, and the name `$telegramId` (a caller's Telegram id, which
  * no log line or trace shows); the re-review the name `$params` (the body of a Bot API call: a Telegram id and a
  * listing's text). `TelegramClient::result()`'s `$response` takes an object, so `ShareServiceTest` checks it by what a
- * trace of it would show.
+ * trace of it would show. WP-44 adds the classes of a blocked author's label, `AuthorLabel` and `BlockedAuthorService`,
+ * and the name `$sourceLabel` (an author's label as the source wrote it, before it is masked again).
  * Left out by name: `$number`,
  * `$path`, `$key`, `$city` and the like, which are listing numbers, path templates, field names and codes; and by
  * type: a parameter that takes an object (`SourceManager $sources`). A data object's `fromArray()` takes the
@@ -47,7 +50,7 @@ use App\Services\Telegram\TelegramClient;
 /** The parameter names that hold raw legacy data, an unmasked text or a secret. */
 const SENSITIVE_NAMES = [
     'card', 'legacyCard', 'answer', 'item', 'event', 'point', 'option', 'data', 'raw', 'part', 'value', 'facts', 'sources',
-    'phone', 'text', 'name', 'link', 'url', 'secret', 'token', 'display', 'telegramId', 'params',
+    'phone', 'text', 'name', 'link', 'url', 'secret', 'token', 'display', 'telegramId', 'params', 'sourceLabel',
 ];
 
 /**
@@ -68,6 +71,7 @@ function sensitiveFrameClasses(): array
         LegacyContact::class, ContactService::class, ContactDisclosure::class, CallLinkService::class, CallLink::class,
         CallLinkClaims::class, CallPageController::class, TranslationService::class, TelegramClient::class,
         TelegramException::class, ShareService::class, PreparedShare::class, ListingTranslation::class,
+        AuthorLabel::class, BlockedAuthorService::class,
     ];
 
     return $classes;
@@ -136,6 +140,10 @@ it('finds the translators and the masking classes, and enough frames to mean som
             'TelegramException::scrub($text)',
             'ListingTranslation::fromArray($data)',
             'ListingTranslation::__construct($text)',
+            'AuthorLabel::ofPhone($phone)',
+            'AuthorLabel::phone($sourceLabel)',
+            'AuthorLabel::fromSourceLabel($sourceLabel)',
+            'AuthorLabel::whole($text)',
         )
         ->and($frames)->not->toContain('LegacyListingSource::__construct($sources)');
 });

@@ -6,8 +6,8 @@ use App\Models\User;
 
 /**
  * What the listing overlay needs from HOMI's own data (WP-42, "Overlay"): the per-user marks a legacy answer cannot
- * know under a service key, and the outcomes of HOMI's votes (DEC-48: legacy never learns about them). WP-42 binds
- * `App\Services\Listings\NullOverlayData`; WP-44 binds the real one over its tables.
+ * know under a service key, and the outcomes of HOMI's votes (DEC-48: legacy never learns about them). WP-42 bound a
+ * null implementation; WP-44 binds `App\Services\Personal\EloquentOverlayData` over its tables.
  *
  * The overlay asks the methods without numbers (hidden listings, blocked keys, realtor keys) once per request's
  * context, and the methods that take numbers once per list, with the numbers of that list; an answer lists only

@@ -115,6 +115,25 @@ final readonly class ListingOverlay implements ListingExclusion
         return $removed === 0 ? $map : new MapPoints($kept, $map->total - $removed, $map->withPoint - $removed);
     }
 
+    /**
+     * The items of a personal list (WP-44: favourites, history, hidden listings): HOMI's flags and realtor marks, as on
+     * the `preview=1` card, and never left out — a listing the caller hid stays in his favourites. One read of the
+     * flags for the whole list.
+     *
+     * @param  list<ListingSummary>  $items
+     * @return list<ListingSummary>
+     */
+    public function items(array $items, SourceContext $context): array
+    {
+        if ($items === [] || $this->config->nativeStubs()) {
+            return $items;
+        }
+
+        $marks = $this->marks(array_map(fn (ListingSummary $item): int => $item->number, $items), $context, exclusion: false, flags: true);
+
+        return array_map(fn (ListingSummary $item): ListingSummary => self::marked($item, $marks), $items);
+    }
+
     /** The `preview=1` card: HOMI's flags and realtor mark, never left out. */
     public function preview(ListingSummary $preview, SourceContext $context): ListingSummary
     {

@@ -2244,3 +2244,58 @@ ASSUMPTION_MISMATCH AM-127 (2026-11-27):
 
 Reviews: one security review per stage (stage A: 2 medium, 1 medium-low, 8 low, 2 info; stage B: 1 medium, 6 low, 1 info), then a narrow re-review of the fixes (22 of 23 fixed, 1 partly; 6 low and 1 info more) and a last read of the contact paths (5 low, 1 info; 1 low accepted), the rest fixed with tests (list in the spec's "As built"). Next ids: AM-128, KI-73, DEC-112.
 
+
+## AM. Development track, 2026-11-28 — WP-44
+
+WP-44 (personal lists, reports, surveys) on `feat/wp-44-personal-lists` from `main` (`d3c96aa`, WP-43 merged), taken in
+queue order by the first development session. Applied: the eight personal tables (`favorites`, `hidden_listings`,
+`blocked_authors`, `listing_votes`, `vote_decisions`, `listing_marks`, `author_marks`, `found_answers`) with models,
+factories and enums; `ListingResolver` and the back-fill job `ResolveListingRef`; favourites, history, hidden listings,
+blocked authors, «Скрытое» and `DELETE /hidden` in HOMI's tables; `EloquentOverlayData` in place of the null overlay;
+weighted report votes with per-subject recounts, marks, `vote_decisions`, two Pennant kill switches and
+`votes:detector`; the found survey; the IDOR matrix of every bearer route. The developer decided the voter floor and
+the thresholds (DEC-112, `docs/migration/decisions/2026-11-28-developer-answers.md`). Not applied: the eight migrations
+on the servers (the production track). The integrator's choices are in the specification's "As built".
+
+ASSUMPTION_MISMATCH AM-128 (2026-11-28):
+- **Assumption.** WP-44 "List pages": a number the card source leaves out of a page's previews is a listing it no
+  longer knows, so the page marks it gone in `listing_refs`.
+- **What was found.** The stub driver leaves out every number outside its catalogue: a user sent to the stub by a
+  split rule of `source.listings.card` (ADR-0017), or a rollback of that feature to stub, marked every legacy listing
+  of their lists gone for everyone — writes then asked the source again and other users' blocked-author counts dropped
+  (the security review of stage A, reproduced).
+- **Resolution.** The pager marks nothing gone; only legacy's definite `404` does, inside the source
+  (`rememberGone()`). A number left out for any other reason only shortens the page.
+
+ASSUMPTION_MISMATCH AM-129 (2026-11-28):
+- **Assumption.** `whereNumber('number')` (WP-12 onward) keeps every `{number}` route of `/api/v1` to valid listing
+  numbers, so the controllers can take an `int`.
+- **What was found.** Any run of digits matches: a number beyond the integers reached the controllers as a string and
+  answered `500` on all 13 routes (WP-12, WP-13, WP-43, WP-80 and WP-44), and with native stubs on it reached the stub
+  bodies (`200` / `422`).
+- **Resolution.** Every `{number}` route takes `ListingNumber::ROUTE_PATTERN` (`[1-9][0-9]{0,17}`), so zero, a
+  leading zero or a number beyond the integers is the router's `404 not_found`, ahead of `auth:sanctum`.
+
+ASSUMPTION_MISMATCH AM-130 (2026-11-28):
+- **Assumption.** WP-44 "Reports and votes": a weighted threshold of 3.0 with at most 2.0 per voter means "a single user
+  can never reach them", and that is enough for a mark that changes what everybody sees.
+- **What was found.** Two accounts reach 3.0 (2.0 + 1.0, or 1.5 + 1.5 with a free username and photo), so two accounts
+  hid a listing from every feed or relabelled an author for everybody, with no way to take one mark back; rule 10 of
+  the security reviewer asks for at least three independent signals or a human review (the security review of stage B).
+- **Resolution.** DEC-112: at least three voters for `rented` and `agent` (two for native `fraud`, a floor of 2 in the
+  code) and thresholds `rented` 4.0, `agent` 4.5. The reviewer's further proposals are in the specification's
+  "Handoff" for the product owner.
+
+ASSUMPTION_MISMATCH AM-131 (2026-11-28):
+- **Assumption.** WP-44 "Kill switches": Pennant features of the global scope, default on, switched by
+  `votes:detector` with an audit row, are a kill switch.
+- **What was found.** `pennant:purge` (or `pennant:clear`) deletes a stored "off": the default "on" resolved on the next
+  read, every existing mark applied again at once, and nothing was audited; a direct `Feature::deactivate()` was not
+  audited either (the security review of stage B, reproduced).
+- **Resolution.** A detector's default is its latest non-null audited value in `source_flag_changes` (append-only, it
+  outlives a purge), else on; the listener audits every change of the two features, with the actor `unknown` outside
+  the command. WP-47 must never prune those rows.
+
+Reviews: one security review per stage (stage A: 6 low, 5 info; stage B: 2 medium, 2 low, 5 info), then a narrow
+re-review of the fixes (4 low, 2 info more) and one more fix round; every fix has a test that failed before it, 8 low or
+info items are recorded in the spec's "Handoff". Next ids: AM-132, KI-73, DEC-113.

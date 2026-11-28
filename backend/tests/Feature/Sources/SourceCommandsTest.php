@@ -160,6 +160,14 @@ it('records a purge of the features and ignores features that are not source fea
         ->and($change->new_rule)->toBeNull();
 });
 
+it('records a change through the global scope\'s stored name like one through the global scope (review C, N2)', function (): void {
+    Feature::for('__laravel_global')->activate(FakeCapabilityController::FEATURE, ['everyone' => 'legacy']);
+    Feature::for('__laravel_global')->forget(FakeCapabilityController::FEATURE);
+
+    expect(SourceFlagChange::query()->orderBy('id')->get()->map(fn (SourceFlagChange $row): array => [$row->actor, $row->new_rule])->all())
+        ->toBe([['unknown', ['everyone' => 'legacy']], ['unknown', null]]);
+});
+
 it('ignores a value stored for a single user, which no driver reads', function (): void {
     Feature::for(User::factory()->create())->activate(FakeCapabilityController::FEATURE, ['everyone' => 'legacy']);
 

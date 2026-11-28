@@ -4,6 +4,7 @@ use App\Enums\SourceDriver;
 use App\Models\User;
 use App\Services\Listings\ContactDisclosure;
 use App\Services\Listings\TranslationService;
+use App\Services\Personal\EloquentOverlayData;
 use Illuminate\Redis\Connections\Connection;
 use Illuminate\Redis\Events\CommandExecuted;
 use Illuminate\Support\Facades\Cache;
@@ -122,6 +123,8 @@ it('keeps no cache event on a translation, contact or listing card key, even wit
         Cache::get('legacy:v1:listings:preview:100001:uz:UZS');
         Cache::forget('legacy:v1:listings:card:100001:ru:USD');
         Cache::put('legacy:v1:listings:count:ru:abc', 7, 60);
+        // WP-44: the realtor keys of HOMI's votes are author keys.
+        Cache::put(EloquentOverlayData::REALTOR_KEYS, ['phone:'.str_repeat('a', 32)], 60);
 
         Telescope::store(app(EntriesRepository::class));
     } finally {
@@ -132,6 +135,6 @@ it('keeps no cache event on a translation, contact or listing card key, even wit
     $keys = DB::table('telescope_entries')->where('type', 'cache')->pluck('content')->map(fn (string $content): string => (string) (json_decode($content, true)['key'] ?? ''))->unique()->values()->all();
 
     expect($keys)->toContain('legacy:v1:listings:count:ru:abc')
-        ->and(array_values(array_filter($keys, fn (string $key): bool => preg_match('/translation:|listings:(?:contact|card|preview):|^contact:/', $key) === 1)))->toBe([])
+        ->and(array_values(array_filter($keys, fn (string $key): bool => preg_match('/translation:|listings:(?:contact|card|preview):|^contact:|^personal:realtor/', $key) === 1)))->toBe([])
         ->and(DB::table('telescope_entries')->pluck('content')->implode("\n"))->not->toContain('Ijaraga')->not->toContain('eyJpdiI6')->not->toContain('100001":true');
 });

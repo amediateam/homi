@@ -443,7 +443,7 @@ fixed finding has a test that failed before its fix; the integrator re-ran every
 
 ## Handoff
 
-In review (#133, env keys #132). The development track needs nothing more for this package after the merge.
+Merged in #133 (env keys #132) on 2026-11-27. The development track needs nothing more for this package.
 
 **For the production track, in this order** (no `source.*` flag changes; the defaults stay `stub` until WP-48; with
 `SOURCES_NATIVE_STUBS` unset the services already run on the stub driver on staging and production):

@@ -9,6 +9,7 @@ use App\Http\OpenApi\RelativeServer;
 use App\Models\User;
 use App\Services\Access\RateLimits;
 use App\Services\Identity\TelegramInitDataVerifier;
+use App\Services\Personal\VoteDetectors;
 use App\Services\Sources\SourceContext;
 use Carbon\CarbonImmutable;
 use Dedoc\Scramble\Scramble;
@@ -25,6 +26,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Intervention\Image\ImageManager;
+use Laravel\Pennant\Feature;
 use Symfony\Component\HttpFoundation\Response;
 
 class AppServiceProvider extends ServiceProvider
@@ -36,6 +38,9 @@ class AppServiceProvider extends ServiceProvider
     {
         // GD is the image driver (app.uz convention); Imagick is also installed if ever needed.
         $this->app->singleton(ImageManager::class, fn (): ImageManager => new ImageManager(new GdDriver));
+
+        // One instance, so `RecordSourceFlagChange` sees that `votes:detector` is writing (WP-44).
+        $this->app->singleton(VoteDetectors::class);
 
         // Built on each resolution, so the token and the window are read from the configuration of the moment.
         $this->app->bind(TelegramInitDataVerifier::class, fn (Application $app): TelegramInitDataVerifier => new TelegramInitDataVerifier(
@@ -60,6 +65,18 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->configureRateLimiting();
         $this->configureApiDocs();
+        $this->configureVoteDetectors();
+    }
+
+    /**
+     * The kill switches of HOMI's vote detectors (WP-44, SEC-REQ-045): on until `votes:detector` stores `false` in
+     * Pennant's global scope; while no value is stored — never switched, or purged — the latest value of their audit
+     * rows, else on (`VoteDetectors::defaultValue()`), so `pennant:purge` never turns a detector back on.
+     */
+    protected function configureVoteDetectors(): void
+    {
+        Feature::define(VoteDetectors::RENTED, fn (): bool => VoteDetectors::defaultValue(VoteDetectors::RENTED));
+        Feature::define(VoteDetectors::REALTOR, fn (): bool => VoteDetectors::defaultValue(VoteDetectors::REALTOR));
     }
 
     /**
