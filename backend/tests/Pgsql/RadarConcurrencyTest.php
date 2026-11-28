@@ -84,6 +84,7 @@ it('makes exactly the tenth radar when twenty creates run at once at nine active
     $answers = concurrently(radarCreateRaceTasks($user->id, array_map(radarRaceFilters(...), range(50, 69))));
 
     $outcomes = array_count_values(array_map(fn (array $answer): string => $answer[0] === 'ok' ? $answer[2] : $answer[1], $answers));
+    ksort($outcomes);
 
     expect($outcomes)->toBe(['created' => 1, 'radar_limit' => 19])
         ->and($user->radars()->where('active', true)->count())->toBe(10)
