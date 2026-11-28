@@ -53,7 +53,9 @@ use Throwable;
  *    backstop: an insert that loses re-reads the winner (`createOrFirst`, inside a savepoint on PostgreSQL).
  * 4. The limit: `radar.max` radars switched on (`radar.limit_scope` `active`; `total` counts every radar). Creating or
  *    switching on beyond it is `RadarLimit`; pause, mode and delete are never limited, and lowering the limit keeps the
- *    radars a user has.
+ *    radars a user has. A new radar (not a twin, which writes no row) is also refused with `RadarLimit` once the user
+ *    has `radar.max_total` radars, switched on and paused together (DEC-113; its message names the total); resume,
+ *    replace, mode, relax and delete are never checked against it, and radars above a lowered cap are kept.
  * 5. The write. After the transaction the starter (`StarterSelector`): `forCreate` for a new radar, `forResume` for a
  *    radar switched on (`reactivated` too), `forUpdate` for an active radar's new filters, `forRelax` after a relax;
  *    then, after the transaction (and any transaction around it) commits, `RadarSaved` with the starter's numbers, or
@@ -98,6 +100,7 @@ final readonly class RadarService
             $twin = $user->radars()->where('filters_hash', $hash)->first();
 
             if ($twin === null) {
+                $this->ensureBelowTotal($user);
                 $this->ensureBelowLimit($user, null);
                 $radar = $user->radars()->createOrFirst(['filters_hash' => $hash], [
                     ...Radar::filterAttributes($filters),
@@ -389,6 +392,19 @@ final readonly class RadarService
 
         if ($radars->count() >= $max) {
             throw new RadarLimit($max);
+        }
+    }
+
+    /**
+     * The total cap of step 4 (DEC-113): a new row is refused once the user has `radar.max_total` radars, switched on
+     * and paused together. Only `create` of a new radar asks; a twin writes no row.
+     */
+    private function ensureBelowTotal(User $user): void
+    {
+        $max = Config::integer('radar.max_total');
+
+        if ($user->radars()->count() >= $max) {
+            throw RadarLimit::total($max);
         }
     }
 

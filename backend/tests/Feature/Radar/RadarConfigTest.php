@@ -57,9 +57,10 @@ it('has every key of the design with its type', function (): void {
     $config = require config_path('radar.php');
 
     expect(array_keys($config))->toBe([
-        'max', 'creation_enabled', 'limit_scope', 'require_chat', 'starter_enabled', 'starter_window_days', 'starter_max',
+        'max', 'max_total', 'creation_enabled', 'limit_scope', 'require_chat', 'starter_enabled', 'starter_window_days', 'starter_max',
         'options_max', 'preview_ttl', 'preview_budget_ms', 'preview_max_rounds', 'author_hide_rules', 'found_cooldown_days',
     ])
+        ->and($config['max_total'])->toBe(50)
         ->and($config['limit_scope'])->toBe('active')
         ->and($config['starter_window_days'])->toBe(3)
         ->and($config['starter_max'])->toBe(20)

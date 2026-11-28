@@ -7,6 +7,9 @@
 | - `max` (RADAR_MAX): how many radars a user may have switched on (`limit_scope`); `GET /reference` reports it as
 |   `limits.radars`. A positive whole number; blank or anything else means 10. Lowering it keeps the radars a user
 |   has and refuses only new activations.
+| - `max_total`: how many radars a user may have at all, switched on and paused together (DEC-113, no env key). A new
+|   radar beyond it answers `409 radar_limit`; a twin that is answered or switched back on writes no row and is not
+|   refused, and lowering it keeps the radars a user has.
 | - `creation_enabled` (RADAR_CREATION_ENABLED): radars cannot be created or changed until the bot can deliver them
 |   (DEC-51). `GET /reference` reports it as `radars_enabled`. Staging and production leave it unset until WP-57; the
 |   local stack and the tests set it to true.
@@ -43,6 +46,7 @@ $max = $value('RADAR_MAX', 10);
 
 return [
     'max' => is_int($max) && $max >= 1 ? $max : (is_string($max) && preg_match('/^\s*[1-9]\d{0,3}\s*$/', $max) === 1 ? (int) $max : 10),
+    'max_total' => 50,
     'creation_enabled' => $flag('RADAR_CREATION_ENABLED'),
     'limit_scope' => 'active',
     'require_chat' => $flag('RADAR_REQUIRE_CHAT'),

@@ -4,7 +4,9 @@ use App\Enums\Identity\BotChatState;
 use App\Events\Radar\RadarSaved;
 use App\Models\Radar;
 use App\Models\User;
+use App\Services\Radar\RadarRelaxOptions;
 use App\Services\Sources\Data\FlowEstimate;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Http;
@@ -132,6 +134,52 @@ describe('POST /radars', function (): void {
 
         expect($source->callsOf('feed')[0][2]->locale)->toBe('uz')
             ->and($source->callsOf('feed')[0][2]->user?->id)->toBe($this->user->id);
+    });
+});
+
+describe('the total cap (DEC-113)', function (): void {
+    beforeEach(function (): void {
+        config(['radar.max_total' => 3, 'radar.max' => 10]);
+        $this->paused = Radar::factory()->for($this->user)->filters(['price_max' => 701])->paused()->create();
+        Radar::factory()->for($this->user)->count(2)->create();
+    });
+
+    it('refuses a new radar once the user has radar.max_total radars, paused ones counted, with 409 radar_limit and no row written', function (): void {
+        $before = RadarApi::rowsOf($this->user);
+
+        $this->postJson('/api/v1/radars', RadarApi::body(['price_max' => 799]))->assertStatus(409)
+            ->assertJsonPath('code', 'radar_limit')->assertJsonPath('message', 'You can have at most 3 radars.');
+
+        expect(RadarApi::rowsOf($this->user))->toBe($before);
+    });
+
+    it('still switches a paused twin among them back on, as reactivated', function (): void {
+        $this->postJson('/api/v1/radars', RadarApi::body(['price_max' => 701]))->assertOk()
+            ->assertJsonPath('data.kind', 'reactivated')->assertJsonPath('data.radar.id', $this->paused->id);
+
+        expect(Radar::query()->count())->toBe(3)->and($this->paused->fresh()?->active)->toBeTrue();
+    });
+
+    it('lets a new radar through again after a delete', function (): void {
+        $this->deleteJson("/api/v1/radars/{$this->paused->id}")->assertOk();
+
+        $this->postJson('/api/v1/radars', RadarApi::body(['price_max' => 799]))->assertCreated();
+
+        expect(Radar::query()->count())->toBe(3);
+    });
+
+    it('keeps the radars above a lowered cap and checks no resume, replace, mode or relax against it', function (): void {
+        config(['radar.max_total' => 1]);
+        $active = $this->user->radars()->where('active', true)->firstOrFail();
+        Cache::put(RadarRelaxOptions::key($active), ['price_more' => FilterArrays::defaults(['price_max' => 12_345])], 900);
+
+        $this->patchJson("/api/v1/radars/{$this->paused->id}", ['active' => true])->assertOk()->assertJsonPath('data.radar.active', true);
+        $this->putJson("/api/v1/radars/{$active->id}", RadarApi::body(['price_max' => 798]))->assertOk()->assertJsonPath('data.kind', 'updated');
+        $this->patchJson("/api/v1/radars/{$active->id}", ['mode' => 'digest'])->assertOk();
+        Cache::put(RadarRelaxOptions::key($active), ['price_more' => FilterArrays::defaults(['price_max' => 12_345])], 900);
+        $this->postJson("/api/v1/radars/{$active->id}/relax", ['code' => 'price_more'])->assertOk()->assertJsonPath('data.radar.filters.price_max', 12_345);
+
+        expect(Radar::query()->count())->toBe(3);
     });
 });
 
