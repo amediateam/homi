@@ -37,11 +37,12 @@ use Throwable;
  * 1. The chat (`ChatReachability`): with `radar.require_chat` on, `create`, `update`, `setActive(true)` and `relax`
  *    answer `NoChat` while the bot cannot write to the user — read from the loaded user, before any lock, source call
  *    or write, so the client's single repeat after the user grants access writes exactly one radar (LB-API-013).
- *    Pause, mode and delete are never checked. `relax` then resolves its code (`RadarRelaxOptions::filtersFor()`: the
- *    remembered set, else one source round; `422` on `code` otherwise) outside the lock, for a radar of the user only.
+ *    Pause, mode and delete are never checked.
  * 2. The lock: one per user for the transaction — `pg_advisory_xact_lock(hashtext('radar:' || <user id>))` on
  *    PostgreSQL, `Cache::lock("radar:<user id>", 5)->block(3)` elsewhere. Inside it the radar is read again through
- *    the user's radars (a radar of another user, or one deleted meanwhile, is `ModelNotFoundException`, as unknown).
+ *    the user's radars (one deleted meanwhile is `ModelNotFoundException`, as unknown); `relax` resolves its code
+ *    against that copy (`RadarRelaxOptions::filtersFor()`: the remembered set, else one source round under the lock;
+ *    `422` on `code` otherwise).
  * 3. The twin: the canonical hash of the filters (`posted_days`, key order and list order ignored) among the user's
  *    radars. `create`: an active twin is `existing` and nothing is written; a paused one is switched on as
  *    `reactivated` and stores the body's filters (a new `posted_days` with them, DEV-005), the new `entry` and
@@ -59,7 +60,7 @@ use Throwable;
  * 6. The options (`RadarRelaxOptions::offer()`): a create (`created`, `reactivated`) or a replace that stored new
  *    filters, whose starter is empty, carries the source's ways to widen the radar and the `relaxed` hints — one flow
  *    call after the transaction, outside the lock; `existing`, an unchanged replace, a relax, a switch and a mode
- *    change carry none. New filters, a relax and a delete forget the radar's remembered set.
+ *    change carry none. New filters and a relax forget the radar's remembered set inside the lock, a delete after it.
  *
  * `update` replaces the filters and keeps `active`; `setActive(false)` sets `paused_at`. The locale and currency of a
  * starter and of the options are the write's, else the user's settings, else `ru` and `USD`. Whatever fails after the
@@ -147,7 +148,10 @@ final readonly class RadarService
     /**
      * Widens the radar by a code its options offered (`RadarRelaxOptions::filtersFor()`; any other code is `422` on
      * `code`) by the rules of `update`, the code stored as `relax_code`; the answer carries the new starter
-     * (`forRelax`). Two relaxes in a row relax twice, each from the then-current filters.
+     * (`forRelax`). The code is resolved under the user's lock against the radar as stored then, not against the copy
+     * given, so two relaxes in a row — or overlapping, or one from a copy loaded before another write — relax twice,
+     * each from the then-current filters. A remembered set costs a cache read; only when it is missing is it computed
+     * again, and that source round runs under the lock.
      */
     public function relax(User $user, Radar $radar, string $code, ?string $locale = null, ?string $currency = null): RadarMutation
     {
@@ -156,7 +160,7 @@ final readonly class RadarService
         $this->ensureChat($user);
 
         $context = $this->context($user, $locale, $currency);
-        [$current, $written] = $this->replaced($user, $radar, $this->options->filtersFor($radar, $code, $context), $code);
+        [$current, $written] = $this->replaced($user, $radar, fn (Radar $stored): SearchFilters => $this->options->filtersFor($stored, $code, $context), $code);
         $starter = $this->replacedStarter($current, $written, fn (): Starter => $this->starters->forRelax($user, $current, $context->locale, $context->currency));
 
         return $this->announced($user, new RadarMutation($current, RadarMutationKind::Updated, $starter), written: $written);
@@ -229,15 +233,20 @@ final readonly class RadarService
 
     /**
      * The replace of `update` and `relax` under the lock (steps 2 and 3): the radar as stored now and whether new
-     * filters were written. A write forgets the radar's remembered options.
+     * filters were written. `$next` is the new filters, or (for `relax`) how to compute them from the radar as stored
+     * under the lock. A write forgets the radar's remembered options inside the lock, before it commits, so a relax
+     * waiting for the lock never reads a set offered for the filters replaced; a cache failure there is reported and
+     * keeps the write.
      *
+     * @param  SearchFilters|Closure(Radar): SearchFilters  $next
      * @return array{0: Radar, 1: bool}
      */
-    private function replaced(User $user, Radar $radar, SearchFilters $filters, ?string $relaxCode): array
+    private function replaced(User $user, Radar $radar, SearchFilters|Closure $next, ?string $relaxCode): array
     {
-        /** @var array{0: Radar, 1: bool} $result */
-        $result = $this->locked($user, function () use ($user, $radar, $filters, $relaxCode): array {
+        /** @var array{0: Radar, 1: bool} */
+        return $this->locked($user, function () use ($user, $radar, $next, $relaxCode): array {
             $current = $this->stored($user, $radar);
+            $filters = $next instanceof Closure ? $next($current) : $next;
             $hash = $filters->canonicalHash();
 
             if ($hash === $current->filters_hash && $filters->toArray() === $current->searchFilters()->toArray()) {
@@ -254,14 +263,10 @@ final readonly class RadarService
                 throw new RadarDuplicate(previous: $e);
             }
 
+            $this->forgetOptions($current);
+
             return [$current, true];
         });
-
-        if ($result[1]) {
-            $this->forgetOptions($result[0]);
-        }
-
-        return $result;
     }
 
     /**

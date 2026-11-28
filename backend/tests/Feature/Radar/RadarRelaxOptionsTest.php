@@ -283,6 +283,37 @@ describe('relax', function (): void {
         expect($radar->fresh()?->filters['price_max'])->toBe(1100);
     });
 
+    it('relaxes from the radar as stored, also when given a copy loaded before another relax committed', function (): void {
+        $this->source->flow = fn (SearchFilters $filters): FlowEstimate => new FlowEstimate(0, 7, [
+            relaxOption('price_more', ['price_max' => (int) $filters->priceMax + 200], 3),
+        ]);
+        $radar = relaxRadar($this->user, ['price_max' => 700]);
+        $stale = Radar::query()->findOrFail($radar->id);
+
+        $this->service->relax($this->user, $radar, 'price_more');
+        $second = $this->service->relax($this->user, $stale, 'price_more');
+
+        expect($radar->fresh()?->filters['price_max'])->toBe(1100)
+            ->and($second->radar->filters['price_max'])->toBe(1100)
+            ->and(array_map(fn (array $call): ?int => $call[1]->priceMax, $this->source->callsOf('flow')))->toBe([700, 900]);
+    });
+
+    it('forgets the remembered set before the new filters commit, so a relax waiting for the lock never reads it', function (): void {
+        $radar = relaxRadar($this->user);
+        $remembered = null;
+        DB::listen(function (QueryExecuted $query) use ($radar, &$remembered): void {
+            if (str_starts_with($query->sql, 'update "radars"')) {
+                DB::afterCommit(function () use ($radar, &$remembered): void {
+                    $remembered = Cache::has(RadarRelaxOptions::key($radar));
+                });
+            }
+        });
+
+        $this->service->relax($this->user, $radar, 'price_more');
+
+        expect($remembered)->toBeFalse();
+    });
+
     it('refuses the filters of another radar of the user with RadarDuplicate and changes nothing', function (): void {
         Radar::factory()->for($this->user)->filters(['price_max' => 900])->paused()->create();
         $radar = relaxRadar($this->user);

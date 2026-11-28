@@ -26,11 +26,13 @@ use Illuminate\Validation\ValidationException;
  *   `radar:<id>:options` (`key()`). Without an option, `relaxed` is one hint of the radar's own flow when `week > 0`:
  *   «≈N в день» from one a day (N rounded), else «N за неделю» (BR-APP-044, `lang/*\/radar.php`), in the context's
  *   locale; otherwise it is empty.
- * - `filtersFor()`, for `RadarService::relax()`: the filters of a remembered code, or of a code of a set computed again
- *   when the remembered one has expired (and remembered again), normalised once more for a radar (`forRadar`); any
- *   other code, or one whose filters the reference no longer accepts, is `422` on `code`.
- * - `forget()`: the radar's filters changed or it was deleted, so its set no longer applies — the next relax computes
- *   one from the then-current filters (two quick relaxes relax twice).
+ * - `filtersFor()`, for `RadarService::relax()`, which calls it under the user's lock with the radar as stored: the
+ *   filters of a remembered code, or of a code of a set computed again from that radar when the remembered one has
+ *   expired (and remembered again; this source round runs under the lock), normalised once more for a radar
+ *   (`forRadar`); any other code, or one whose filters the reference no longer accepts, is `422` on `code`.
+ * - `forget()`: the radar's filters changed (forgotten inside the lock, before the write commits) or it was deleted,
+ *   so its set no longer applies — the next relax computes one from the then-current filters (two quick relaxes relax
+ *   twice).
  *
  * A source failure is the caller's to handle (`SourceUnavailable`); nothing is remembered then. The cache key holds the
  * radar id only (WP-47's erasure registry lists it); the set holds filters, never an author key.
