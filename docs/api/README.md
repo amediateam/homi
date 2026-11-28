@@ -376,6 +376,19 @@ user, listing and reason; a mark for everybody («сдано» hides the listing
 label off the author) needs at least three distinct voters and a weighted sum (DEC-112, proposals in
 `config/votes.php`), and each detector has a kill switch (`php artisan votes:detector`).
 
+The radars are HOMI's own data on every driver since WP-45 (while `SOURCES_NATIVE_STUBS` is on they answer the WP-13
+fixtures and store nothing). While radars are switched off (`radars_enabled: false`, DEC-51) `GET /radars` answers
+`[]` and the four writes `403 radars_disabled`; `DELETE` works. A write checks, in this order, the switch, `no_chat`
+(create, replace, switch on and relax, while the bot's chat is required), then the twin and the limit: `POST` of a
+search the caller already has answers `200` with `kind: existing` (active, nothing written) or `kind: reactivated`
+(paused, switched on), and `201` with `kind: created` otherwise; «the same search» ignores `posted_days`; the limit
+counts the radars switched on, and lowering it keeps the existing ones. `starter` is how many listings the write sends
+at once (0 while the starter is off); `options` (at most 5) are offered only when it is 0, and `relaxed` is then one
+hint of the radar's flow or empty — both always arrays. `POST /radars/{id}/relax` takes the `code` of an option the
+radar offered (`422` on `code` otherwise) and widens the radar from its current filters. `include=previews` adds each
+radar's five newest listings, count and flow, shared by users with the same search for two minutes; `preview` is
+`null` where the source failed or the list's 4-second budget ran out, and the list itself never fails because of it.
+
 ## Keeping the contract current
 
 | Change | Then run | CI fails when skipped |

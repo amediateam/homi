@@ -2298,4 +2298,14 @@ ASSUMPTION_MISMATCH AM-131 (2026-11-28):
 
 Reviews: one security review per stage (stage A: 6 low, 5 info; stage B: 2 medium, 2 low, 5 info), then a narrow
 re-review of the fixes (4 low, 2 info more) and one more fix round; every fix has a test that failed before it, 8 low or
-info items are recorded in the spec's "Handoff". Next ids: AM-132, KI-73, DEC-113.
+info items are recorded in the spec's "Handoff". Next ids then: AM-132, KI-73, DEC-113.
+
+ASSUMPTION_MISMATCH AM-132 (2026-11-28, WP-45):
+- **Assumption.** WP-45 "Previews": the shared part of a radar preview (the first feed page, the count and the flow)
+  is cached "per hash, locale and currency", the hash being the radar's `filters_hash`.
+- **What was found.** `filters_hash` leaves `posted_days` out (BR-APP-012: "the same search" ignores the window), but
+  the feed, the count and the flow of the stored filters depend on it: two users' radars of one hash with windows of 7
+  and 30 days would have shared one entry, and the second would have shown the first one's listings and count.
+- **Resolution.** The key is `radar:previews:v1:<drivers>:<filters_hash>:<posted_days>:<locale>:<currency>` (and the
+  stub scenario when set); a test pins two rounds for the two windows. The radars' unique key stays
+  (`user_id`, `filters_hash`).

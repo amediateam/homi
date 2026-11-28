@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | C |
-| Status | TODO |
+| Status | REVIEW |
 | Depends on | WP-42, WP-44 |
 | Size | about 2 400 changed lines, L |
 | Behaviour reference | WP-13 (the shapes — unchanged here); `25` §5 (radars); `08` §1.8 and the rows of API-018 … API-023; `02` BR-API-086; `03` §4 (BR-APP-012, BR-APP-041, BR-APP-042, BR-APP-044, BR-APP-047, BR-APP-048, BR-APP-063, BR-APP-073); `15` §3.1 rows 1–3, §3.4 rows 1, 2 and 6, §3.6 rows 2 and 3; `16` SEC-REQ-014, SEC-REQ-015, SEC-REQ-017; tasks `tasks/backend/KV-BE-100-radar-service-core.md`, `KV-BE-101-…`, `KV-BE-102-radar-starter-and-options.md`, `KV-BE-103-…`, `KV-BE-104-…`, `KV-BE-105-…`, `KV-BE-106-radar-hide-rules.md` (rules, limits, edge cases — not their routes, serializers or SQL predicates) |
@@ -280,6 +280,93 @@ filters); a daily-rent radar gets daily options because the source computes them
       eleventh radar — is run on the local stack now (`backend/.env.example` has the switch on) and inside Telegram
       on staging and production in WP-57, right after it switches radars on.
 
+## As built
+
+The package is built as designed, with these points decided in the code (rule 6). Each one corrects or completes the
+design above; the AM row is in `docs/ai/reports/phase-3-notes.md` §AM. No developer decision was needed.
+
+**Tables, models and configuration**
+
+- Exactly two migrations, `2026_11_28_013015_create_radars_table` and `2026_11_28_013016_create_radar_hide_rules_table`,
+  both additive and empty. Radar ids are upper-case ULIDs; `{id}` is upper-cased before the lookup.
+- `config/radar.php` reads `RADAR_MAX`, `RADAR_CREATION_ENABLED`, `RADAR_REQUIRE_CHAT` and `RADAR_STARTER_ENABLED`
+  with a blank value as the safe default: a blank `RADAR_MAX` is 10 (it read as 0), a blank, spaced or `no`
+  `RADAR_CREATION_ENABLED` is off (it read as on).
+- The two service namespaces stay apart: `App\Services\Radar` holds the service and its helpers, `App\Services\Radars`
+  the WP-13 answer objects (`Radar`, `RadarMutation`, `RadarChange`, `RadarPreview`), which gain `fromModel()` and
+  `fromService()`.
+
+**`RadarService`**
+
+- Order of every write but delete: `RadarsDisabled` (no query, no lock, no source call), then `NoChat` from the loaded
+  user (create, update, switch on, relax; not pause, mode or delete), then the per-user lock —
+  `pg_advisory_xact_lock(hashtext('radar:' || <user id>))` on PostgreSQL, `Cache::lock("radar:<user id>", 5)->block(3)`
+  elsewhere — inside which the radar is read again through the user's radars and the twin and the active-radar limit are
+  read; `createOrFirst` re-reads a concurrent insert that won the unique key.
+- `RadarSaved` and `RadarDeleted` carry ids, kind and starter numbers, implement `ShouldDispatchAfterCommit`, and are
+  not dispatched for a write that changed nothing or for a mode change.
+- The starter and the relax options are read after the transaction. A source failure there keeps the write, with an
+  empty starter or no options, and logs only the radar id and kind.
+
+**Starter, options and hide rules**
+
+- `StarterSelector` reads one page of 20 in a new context with the user (the write's locale and currency, else his
+  settings) and runs HOMI's overlay on every driver; each listing a hide rule holds back adds 1 to `hidden_count`,
+  counted after the overlay and the delivered set.
+- `RadarRelaxOptions` remembers the offered set (code → filters, as arrays) under `radar:<id>:options`; a filters change
+  or a delete forgets it, so two quick relaxes relax twice. A code whose filters the reference no longer accepts is
+  `422` on `code` like an unknown one.
+- A channel rule is stored without `@`, in lower case; `addFromListing()` takes the target `listing_refs` files for the
+  listing's survivor.
+
+**Previews (`RadarPreviews`)**
+
+- The shared part is asked in a context without a user (`foreground`, since a person waits), so legacy's pager leaves
+  out no caller's listings and no item carries a caller's flags; the caller's overlay and the radar's hide rules (all
+  radars' rules in one query) run per user, then the first five are kept.
+- The cache key is `radar:previews:v1:<feed>-<count>-<flow drivers>:<filters_hash>:<posted_days>:<locale>:<currency>`
+  (and the stub scenario when set): `filters_hash` leaves `posted_days` out, but the feed, count and flow depend on it
+  (AM-132). The entry holds arrays only through the new `ListingSummary::toArray()` (with `toArray()` on `PriceInfo`,
+  `GeoPoint` and `SourceRef`), the exact inverse of `fromArray()`, checked over the whole stub catalogue; an entry of
+  another shape is a miss, and a failure is never cached. There is no fill lock: the feed page costs what `GET
+  /listings` costs on every visit, and the legacy count and flow are single-flight in the driver's own cache (WP-42).
+- A read never moves `hidden_count`: only a starter counts what the rules hold back.
+- The budget is measured on the application clock and checked before each source round; after a failure or once it is
+  spent, every remaining radar that is not cached gets `preview: null`. Any error of a round is caught there (a
+  `SourceUnavailable` silently, any other reported).
+
+**Controllers and authorisation**
+
+- A radar is read through `$request->user()->radars()->findOrFail()`, then checked with
+  `Gate::inspect($ability, $radar)->authorize()`: `Gate::authorize()` would make the OpenAPI export document a `403`
+  these routes never answer. `docs/api/openapi.json` is unchanged by the package.
+- The six radar routes have real rows in `IdorMatrixTest`, and the matrix compares the `radars` table of the owner
+  too (a blocked user stores no radar).
+- The 31st radar write of a user in a minute is `429 rate_limited` on the radar routes themselves (`v1-radars`, shared
+  with the settings writes).
+
 ## Handoff
 
-Empty.
+In review. The development track needs nothing more for this package after the merge; WP-46 (matching and delivery
+planning) is next in queue order.
+
+**For the production track** (no nginx change, no `source.*` flag change):
+
+1. **Approve the two migrations** `2026_11_28_013015` and `2026_11_28_013016`: the new tables `radars` and
+   `radar_hide_rules`, additive and empty; they run with the deploy (`php artisan migrate --force`), before the code
+   serves.
+2. **Server env** (the separate env PR adds the keys to `backend/.env.example` and the environments page): leave
+   `RADAR_MAX` blank (default 10); set `RADAR_REQUIRE_CHAT=false` and `RADAR_STARTER_ENABLED=false` now — both are
+   switched to `true` with the bot's radar wizard (WP-54). `RADAR_CREATION_ENABLED` stays **unset** on staging and
+   production until WP-57 (DEC-51): until then the list is `[]`, the four writes answer `403 radars_disabled`, and
+   `DELETE` works.
+3. **Cache keys** (Redis): `radar:<id>:options` (15 minutes), `radar:previews:v1:…` (`radar.preview_ttl`, 120 s),
+   `found:asked:<user id>` (24 hours), and the lock `radar:<user id>` outside PostgreSQL.
+
+**For the next packages:**
+- **WP-46** implements `DeliveredSet` (bound to `NullDeliveredSet` now) and matches with `HideRuleSet::excludes()`;
+  it listens to `RadarSaved` and `RadarDeleted`.
+- **WP-47** registers for erasure `radars` (its rules cascade) and the cache keys `radar:<id>:options` and
+  `found:asked:<user id>`.
+- **WP-53 … WP-55** call the same `RadarService`, `RadarHideRuleService::addFromListing()` and `FoundAskPolicy`; the
+  policy's abilities are `view`, `update` and `delete`.
