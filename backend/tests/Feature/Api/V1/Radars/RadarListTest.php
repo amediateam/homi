@@ -1,7 +1,10 @@
 <?php
 
+use App\Exceptions\Sources\SourceUnavailable;
+use App\Models\HiddenListing;
 use App\Models\Radar;
 use App\Models\User;
+use App\Services\Sources\Data\FlowEstimate;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Testing\TestResponse;
 use Tests\Support\ContractShapes;
@@ -76,4 +79,33 @@ it('answers [] while radars are switched off, without a radar query or a source 
 
 it('refuses an include other than previews', function (): void {
     $this->getJson('/api/v1/radars?include=everything')->assertUnprocessable()->assertJsonValidationErrors(['include']);
+});
+
+it('adds each radar\'s preview with include=previews: five items, the count and the flow, in the contract shape', function (): void {
+    $source = FakeListingSource::bind()->withItems([100001 => [], 100002 => [], 100003 => [], 100004 => [], 100005 => [], 100006 => []]);
+    $source->count = 42;
+    $source->flow = new FlowEstimate(9, 7, []);
+    $radar = Radar::factory()->for($this->user)->filters(['price_max' => 700])->create();
+    HiddenListing::factory()->for($this->user)->create(['listing_number' => 100001]);
+
+    $response = $this->getJson('/api/v1/radars?include=previews')->assertOk()->assertJsonPath('meta.source', 'native');
+
+    JsonShape::assertSame(['success' => 'bool', 'data' => ['*' => [...ContractShapes::RADAR, 'preview' => ContractShapes::RADAR_PREVIEW]], 'meta' => ['source' => 'string']], JsonShape::of($response->json()));
+    expect($response->json('data.0.id'))->toBe($radar->id)
+        ->and(array_column($response->json('data.0.preview.items'), 'number'))->toBe([100002, 100003, 100004, 100005, 100006])
+        ->and($response->json('data.0.preview.count'))->toBe(42)
+        ->and($response->json('data.0.preview.flow'))->toBe(['week' => 9, 'days' => 7]);
+});
+
+it('answers the list with preview null when the source fails, and never fails the list', function (): void {
+    $source = FakeListingSource::bind()->withItems([100001 => []]);
+    $source->count = 1;
+    $source->flow = new FlowEstimate(1, 7, []);
+    $source->failure = new SourceUnavailable;
+    Radar::factory()->for($this->user)->count(2)->sequence(['created_at' => now()->subMinute()], ['created_at' => now()])->create();
+
+    $response = $this->getJson('/api/v1/radars?include=previews')->assertOk();
+
+    expect(array_column($response->json('data'), 'preview'))->toBe([null, null])
+        ->and(count($source->callsOf('feed')))->toBe(1);
 });

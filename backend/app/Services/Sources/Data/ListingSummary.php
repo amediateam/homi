@@ -112,6 +112,45 @@ final readonly class ListingSummary
     }
 
     /**
+     * The v1 array `fromArray()` reads back into an equal preview: scalars and arrays only, for a cache that refuses
+     * objects (AM-120; the radar previews of WP-45). The texts are already masked, and masking again changes nothing.
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(): array
+    {
+        return [
+            'number' => $this->number,
+            'origin' => $this->origin->value,
+            'deal' => $this->deal?->value,
+            'type' => $this->type?->value,
+            'title' => $this->title,
+            'price' => $this->price?->toArray(),
+            'rooms' => $this->rooms,
+            'area_total' => $this->areaTotal,
+            'floor' => $this->floor,
+            'floors_total' => $this->floorsTotal,
+            'district' => $this->districtName === null ? null : ['code' => $this->districtCode, 'name' => $this->districtName],
+            'place' => $this->place,
+            'landmark' => $this->landmark,
+            'metro' => $this->metroName === null ? null : ['name' => $this->metroName, 'km' => $this->metroKm],
+            'center_km' => $this->centerKm,
+            'location' => $this->location?->toArray(),
+            'photos' => ['preview' => $this->photosPreview, 'count' => $this->photosCount, 'cover' => $this->photosCover],
+            'has_video' => $this->hasVideo,
+            'pets_ok' => $this->petsOk,
+            'is_owner' => $this->isOwner,
+            'owner_verified' => $this->ownerVerified,
+            'posted' => ['label' => $this->postedLabel, 'when' => $this->postedWhen, 'at' => $this->postedAt],
+            'status_text' => $this->statusText,
+            'market' => ['label' => $this->marketLabel, 'median_delta' => $this->medianDelta, 'tone' => $this->marketTone],
+            'favorite' => $this->favorite,
+            'viewed' => $this->viewed,
+            'source_ref' => $this->sourceRef?->toArray(),
+        ];
+    }
+
+    /**
      * The same preview with HOMI's per-user flags (the overlay of `25` §4.5): a favourites list marks every item a
      * favourite, the history every item viewed.
      */

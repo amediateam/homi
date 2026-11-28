@@ -18,6 +18,7 @@ use App\Models\User;
 use App\Services\Radar\FoundAskPolicy;
 use App\Services\Radar\RadarCreateContext;
 use App\Services\Radar\RadarHideRuleService;
+use App\Services\Radar\RadarPreviews;
 use App\Services\Radar\RadarService;
 use App\Services\Radars\Radar;
 use App\Services\Radars\RadarChange;
@@ -46,20 +47,29 @@ class RadarController extends ApiController
         private readonly RadarService $radars,
         private readonly RadarHideRuleService $hideRules,
         private readonly FoundAskPolicy $found,
+        private readonly RadarPreviews $previews,
     ) {}
 
-    /** `GET /radars`: the radars in creation order; `include=previews` adds each radar's preview. */
+    /**
+     * `GET /radars`: the radars in creation order; `include=previews` adds each radar's preview (`RadarPreviews`: one
+     * source round per filter set, shared by users for two minutes; `null` where it could not be computed, never a
+     * failed list).
+     */
     public function index(ListRadarsRequest $request): JsonResponse
     {
         if (! Config::boolean('radar.creation_enabled')) {
             return $this->sourced(RadarResource::collection([]), SourceDriver::Native);
         }
 
-        $previews = $request->wantsPreviews();
-        $radars = $this->signedInUser($request)->radars()->orderBy('created_at')->orderBy('id')->get()
-            ->map(fn (RadarModel $radar): Radar => $previews ? Radar::fromModel($radar)->withPreview(null) : Radar::fromModel($radar));
+        $user = $this->signedInUser($request);
+        /** @var list<RadarModel> $models */
+        $models = $user->radars()->orderBy('created_at')->orderBy('id')->get()->all();
+        $previews = $request->wantsPreviews() ? $this->previews->forRadars($user, $models, SourceContext::fromRequest($request)) : null;
+        $radars = array_map(fn (RadarModel $radar): Radar => $previews === null
+            ? Radar::fromModel($radar)
+            : Radar::fromModel($radar)->withPreview($previews[(string) $radar->getKey()] ?? null), $models);
 
-        return $this->sourced(RadarResource::collection($radars->all()), SourceDriver::Native);
+        return $this->sourced(RadarResource::collection($radars), SourceDriver::Native);
     }
 
     /**

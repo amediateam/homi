@@ -75,6 +75,23 @@ final readonly class RadarHideRuleService
         return HideRuleSet::of($radar->hideRules()->get());
     }
 
+    /**
+     * The rules of several radars in one query (the list's previews).
+     *
+     * @param  list<string>  $radarIds
+     * @return array<string, HideRuleSet> by radar id; a radar without rules has an empty set
+     */
+    public function rulesForMany(array $radarIds): array
+    {
+        if ($radarIds === []) {
+            return [];
+        }
+
+        $rules = RadarHideRule::query()->whereIn('radar_id', $radarIds)->get()->groupBy('radar_id');
+
+        return array_combine($radarIds, array_map(fn (string $id): HideRuleSet => HideRuleSet::of($rules->get($id, [])), $radarIds));
+    }
+
     /** @param  list<string>  $radarIds */
     private function store(array $radarIds, HideRuleKind $kind, string $target): bool
     {
