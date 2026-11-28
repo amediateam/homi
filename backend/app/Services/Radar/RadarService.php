@@ -46,10 +46,11 @@ use Throwable;
  *    `422` on `code` otherwise).
  * 3. The twin: the canonical hash of the filters (`posted_days`, key order and list order ignored) among the user's
  *    radars. `create`: an active twin is `existing` and nothing is written; a paused one is switched on as
- *    `reactivated` and stores the body's filters (a new `posted_days` with them, DEV-005), the new `entry` and
- *    `relax_code`. `update` and `relax`: another radar's hash is `RadarDuplicate`; filters equal to the stored ones
- *    write nothing, while its own hash with other filters — a new `posted_days`, another order of a list or of the
- *    polygon's vertices — is stored as received, a write like any other. The unique (`user_id`, `filters_hash`) is the
+ *    `reactivated`, keeps the new `entry` and `relax_code`, and stores the body's filters when they are not the
+ *    stored search (`unchanged()`). `update` and `relax`: another radar's hash is `RadarDuplicate`; the stored search
+ *    writes nothing — the same hash, the same `posted_days` and the same polygon as drawn (another order of a list is
+ *    the same search) — while its own hash with another `posted_days` (DEV-005) or another vertex order of the polygon
+ *    (another area) is stored as received, a write like any other. The unique (`user_id`, `filters_hash`) is the
  *    backstop: an insert that loses re-reads the winner (`createOrFirst`, inside a savepoint on PostgreSQL).
  * 4. The limit: `radar.max` radars switched on (`radar.limit_scope` `active`; `total` counts every radar). Creating or
  *    switching on beyond it is `RadarLimit`; pause, mode and delete are never limited, and lowering the limit keeps the
@@ -120,7 +121,13 @@ final readonly class RadarService
             }
 
             $this->ensureBelowLimit($user, $twin);
-            $twin->forceFill([...Radar::filterAttributes($filters), 'active' => true, 'paused_at' => null, 'entry' => $context->entry, 'relax_code' => $context->relaxed])->save();
+            $twin->forceFill([
+                ...(self::unchanged($twin, $filters) ? [] : Radar::filterAttributes($filters)),
+                'active' => true,
+                'paused_at' => null,
+                'entry' => $context->entry,
+                'relax_code' => $context->relaxed,
+            ])->save();
 
             return [$twin, RadarMutationKind::Reactivated];
         });
@@ -137,8 +144,8 @@ final readonly class RadarService
 
     /**
      * Replaces the filters of the radar and keeps whether it is on; `$relaxed` is stored as `relax_code` (statistics
-     * only). Filters of another radar's search are `RadarDuplicate`; filters equal to the stored ones write nothing,
-     * and the same search with another `posted_days` is stored as received.
+     * only). Filters of another radar's search are `RadarDuplicate`; the stored search writes nothing (`unchanged()`),
+     * and the same hash with another `posted_days` or another vertex order of the polygon is stored as received.
      */
     public function update(User $user, Radar $radar, SearchFilters $filters, ?string $relaxed, ?string $locale = null, ?string $currency = null): RadarMutation
     {
@@ -281,7 +288,7 @@ final readonly class RadarService
             $filters = $next instanceof Closure ? $next($current) : $next;
             $hash = $filters->canonicalHash();
 
-            if ($hash === $current->filters_hash && $filters->toArray() === $current->searchFilters()->toArray()) {
+            if (self::unchanged($current, $filters)) {
                 return [$current, false];
             }
 
@@ -299,6 +306,22 @@ final readonly class RadarService
 
             return [$current, true];
         });
+    }
+
+    /**
+     * Whether the filters are the radar's search as stored: the same canonical hash, the same `posted_days` (kept as
+     * received, DEV-005) and the same polygon as drawn (`SearchFilters::polygonDigest()`, vertex order kept). Another
+     * order of `types`, `districts` or another list is the same search; another vertex order is another area.
+     */
+    private static function unchanged(Radar $radar, SearchFilters $filters): bool
+    {
+        if ($filters->canonicalHash() !== $radar->filters_hash) {
+            return false;
+        }
+
+        $stored = $radar->searchFilters();
+
+        return $filters->postedDays === $stored->postedDays && $filters->polygonDigest() === $stored->polygonDigest();
     }
 
     /**

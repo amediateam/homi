@@ -161,6 +161,18 @@ final readonly class SearchFilters
     }
 
     /**
+     * The polygon as drawn, its vertices in order: SHA-1 of their JSON, or `none` without a polygon. `canonicalHash()`
+     * sorts the vertices, so two different areas with the same vertices share a hash; this tells them apart (the radar
+     * previews' cache key, and whether a radar's replace changes its area, WP-45).
+     */
+    public function polygonDigest(): string
+    {
+        $polygon = $this->toArray()['polygon'];
+
+        return $polygon === null ? 'none' : sha1(json_encode($polygon, JSON_THROW_ON_ERROR));
+    }
+
+    /**
      * @template T of \BackedEnum
      *
      * @param  class-string<T>  $enum

@@ -36,7 +36,7 @@ use Throwable;
  *    `radar:previews:v1:<drivers>:<filters_hash>:<posted_days>:<polygon>:<locale>:<currency>` and shared by every
  *    user with the same search (RK-25). The key carries what `filters_hash` leaves out but the source reads:
  *    `posted_days` (two radars of one hash with other windows find other listings) and the polygon as drawn
- *    (`<polygon>` is the SHA-1 of its vertices in order, or `none`; the hash sorts them). The stub scenario (`X-Stub-Scenario`) is never part of the key, as in
+ *    (`<polygon>` is `SearchFilters::polygonDigest()`: the SHA-1 of its vertices in order, or `none`; the hash sorts them). The stub scenario (`X-Stub-Scenario`) is never part of the key, as in
  *    `TranslationService` and `ShareService`: when none of the three drivers is `stub` the shared part is asked
  *    without it, so a client cannot defeat the cache by changing the header; when one is `stub` and a scenario is set,
  *    the cache is neither read nor written and the stub answers the scenario. The entry holds arrays only
@@ -150,7 +150,7 @@ final readonly class RadarPreviews
             $round->feed->driver->value.'-'.$round->count->driver->value.'-'.$round->flow->driver->value,
             $radar->filters_hash,
             $filters->postedDays === null ? 'all' : (string) $filters->postedDays,
-            self::polygonDigest($filters),
+            $filters->polygonDigest(),
             $context->locale,
             $context->currency,
         ]);
@@ -218,17 +218,6 @@ final readonly class RadarPreviews
         }
 
         return new RadarPreview($kept, $found['count'], $found['week'], $found['days']);
-    }
-
-    /**
-     * The polygon as drawn, its vertices in order: `canonicalHash()` sorts them (WP-12, mirrored by `@homi/search`), so
-     * two different areas with the same vertices share a hash, but not a preview.
-     */
-    private static function polygonDigest(SearchFilters $filters): string
-    {
-        $polygon = $filters->toArray()['polygon'];
-
-        return $polygon === null ? 'none' : sha1(json_encode($polygon, JSON_THROW_ON_ERROR));
     }
 
     /**

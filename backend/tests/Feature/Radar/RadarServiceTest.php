@@ -267,6 +267,16 @@ describe('create', function (): void {
         expect($this->service->create($this->user, radarFilters(), radarContext())->radar->id)->toBe($first->radar->id);
     });
 
+    it('keeps the stored filters of a paused twin it switches back on when the body only reorders a list', function (): void {
+        $paused = Radar::factory()->for($this->user)->filters(['districts' => ['yunusobod', 'mirobod']])->paused()->create();
+
+        $mutation = $this->service->create($this->user, radarFilters(['districts' => ['mirobod', 'yunusobod']]), radarContext('return'));
+
+        expect($mutation->kind)->toBe(RadarMutationKind::Reactivated)
+            ->and($paused->fresh()?->filters['districts'])->toBe(['yunusobod', 'mirobod'])
+            ->and($paused->fresh()?->only(['active', 'entry']))->toBe(['active' => true, 'entry' => 'return']);
+    });
+
     it('stores the body\'s filters on a paused twin it switches back on, a new posted_days with them', function (): void {
         $paused = Radar::factory()->for($this->user)->filters(['price_max' => 700, 'posted_days' => 3])->paused()->create();
         $filters = radarFilters(['price_max' => 700, 'posted_days' => 7]);
@@ -417,6 +427,36 @@ describe('update', function (): void {
             ->and($source->callsOf('feed'))->toHaveCount(1);
         Event::assertDispatchedTimes(RadarSaved::class, 1);
         Event::assertDispatched(RadarSaved::class, fn (RadarSaved $event): bool => $event->kind === RadarMutationKind::Updated && $event->starterNumbers === [100001]);
+    });
+
+    it('writes and announces nothing for a replace that only reorders a list, the same search', function (): void {
+        Event::fake([RadarSaved::class]);
+        $radar = Radar::factory()->for($this->user)->filters(['districts' => ['yunusobod', 'mirobod'], 'posted_days' => 3])->create();
+
+        [$statements] = radarStatements(function () use ($radar, &$mutation): void {
+            $mutation = $this->service->update($this->user, $radar, radarFilters(['districts' => ['mirobod', 'yunusobod'], 'posted_days' => 3]), 'price_more');
+        });
+
+        expect($mutation->kind)->toBe(RadarMutationKind::Updated)
+            ->and($mutation->changed)->toBeFalse()
+            ->and(radarWrites($statements))->toBe([])
+            ->and($radar->fresh()?->filters['districts'])->toBe(['yunusobod', 'mirobod']);
+        Event::assertNotDispatched(RadarSaved::class);
+    });
+
+    it('stores a replace that reorders the polygon\'s vertices: another area of the same hash', function (): void {
+        Event::fake([RadarSaved::class]);
+        $square = [[41.30, 69.20], [41.30, 69.30], [41.35, 69.30], [41.35, 69.20]];
+        $bowtie = [[41.30, 69.20], [41.35, 69.30], [41.30, 69.30], [41.35, 69.20]];
+        $radar = Radar::factory()->for($this->user)->filters(['polygon' => $square])->create();
+        $filters = radarFilters(['polygon' => $bowtie]);
+
+        $mutation = $this->service->update($this->user, $radar, $filters, null);
+
+        expect($filters->canonicalHash())->toBe($radar->filters_hash)
+            ->and($mutation->changed)->toBeTrue()
+            ->and($radar->fresh()?->filters['polygon'])->toBe($filters->toArray()['polygon']);
+        Event::assertDispatchedTimes(RadarSaved::class, 1);
     });
 
     it('writes nothing for the filters it has and answers updated with an empty starter', function (): void {
