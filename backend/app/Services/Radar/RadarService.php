@@ -10,6 +10,7 @@ use App\Exceptions\Radar\NoChat;
 use App\Exceptions\Radar\RadarDuplicate;
 use App\Exceptions\Radar\RadarLimit;
 use App\Exceptions\Radar\RadarsDisabled;
+use App\Exceptions\Sources\SourceUnavailable;
 use App\Models\Radar;
 use App\Models\User;
 use App\Services\Search\SearchFilters;
@@ -19,6 +20,7 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Every change of a radar, for the API and the bot alike (WP-45; tasks `KV-BE-100`, `KV-BE-103`, `KV-BE-104`). Each
@@ -42,7 +44,9 @@ use Illuminate\Support\Facades\DB;
  * 4. The limit: `radar.max` radars switched on (`radar.limit_scope` `active`; `total` counts every radar). Creating or
  *    switching on beyond it is `RadarLimit`; pause, mode and delete are never limited, and lowering the limit keeps the
  *    radars a user has.
- * 5. The write, then, after the transaction (and any transaction around it) commits, `RadarSaved` or `RadarDeleted`.
+ * 5. The write. After the transaction the starter (`StarterSelector`): `forCreate` for a new radar, `forResume` for a
+ *    radar switched on (`reactivated` too), `forUpdate` for an active radar's new filters; then, after the
+ *    transaction (and any transaction around it) commits, `RadarSaved` with the starter's numbers, or `RadarDeleted`.
  *    Nothing is announced for a write that changed nothing or for a mode change.
  *
  * `update` replaces the filters and keeps `active`; `setActive(false)` sets `paused_at`. No filters text and no
@@ -55,7 +59,7 @@ final readonly class RadarService
 
     private const int LOCK_WAIT_SECONDS = 3;
 
-    public function __construct(private ChatReachability $chat) {}
+    public function __construct(private ChatReachability $chat, private StarterSelector $starters) {}
 
     /**
      * Creates a radar for the filters, or answers the user's radar of the same search: `existing` while it is on,
@@ -96,8 +100,11 @@ final readonly class RadarService
             return [$twin, RadarMutationKind::Reactivated];
         });
         [$radar, $kind] = $result;
+        $starter = $this->starter($radar, $kind, fn (): Starter => $kind === RadarMutationKind::Created
+            ? $this->starters->forCreate($user, $radar, $context->locale, $context->currency)
+            : $this->starters->forResume($user, $radar, $context->locale, $context->currency));
 
-        return $this->announced($user, new RadarMutation($radar, $kind, Starter::none()), written: $kind !== RadarMutationKind::Existing);
+        return $this->announced($user, new RadarMutation($radar, $kind, $starter), written: $kind !== RadarMutationKind::Existing);
     }
 
     /**
@@ -131,8 +138,11 @@ final readonly class RadarService
             return [$current, true];
         });
         [$current, $written] = $result;
+        $starter = $written && $current->active
+            ? $this->starter($current, RadarMutationKind::Updated, fn (): Starter => $this->starters->forUpdate($user, $current))
+            : Starter::none();
 
-        return $this->announced($user, new RadarMutation($current, RadarMutationKind::Updated, Starter::none()), written: $written);
+        return $this->announced($user, new RadarMutation($current, RadarMutationKind::Updated, $starter), written: $written);
     }
 
     /** Switches the radar on (`resumed`, within the limit and after the chat check) or pauses it (`paused`). */
@@ -162,8 +172,11 @@ final readonly class RadarService
         });
         [$current, $written] = $result;
         $kind = $active ? RadarMutationKind::Resumed : RadarMutationKind::Paused;
+        $starter = $written && $active
+            ? $this->starter($current, $kind, fn (): Starter => $this->starters->forResume($user, $current))
+            : Starter::none();
 
-        return $this->announced($user, new RadarMutation($current, $kind, Starter::none()), written: $written);
+        return $this->announced($user, new RadarMutation($current, $kind, $starter), written: $written);
     }
 
     /** Switches between sending each listing at once and the digest; never limited, never checks the chat. */
@@ -256,6 +269,29 @@ final readonly class RadarService
         }
 
         return Cache::lock("radar:{$user->id}", self::LOCK_SECONDS)->block(self::LOCK_WAIT_SECONDS, $transaction);
+    }
+
+    /**
+     * The starter of a committed write (step 5 of the class): `existing`, a pause, a mode change, an unchanged search
+     * and a paused radar's new filters send nothing (`Starter::none()`, no source call). Read after the transaction,
+     * outside the lock; when the source cannot answer, the write stands and the starter is empty — the radar's id and
+     * the kind are logged, never its filters.
+     *
+     * @param  Closure(): Starter  $select
+     */
+    private function starter(Radar $radar, RadarMutationKind $kind, Closure $select): Starter
+    {
+        if ($kind === RadarMutationKind::Existing) {
+            return Starter::none();
+        }
+
+        try {
+            return $select();
+        } catch (SourceUnavailable) {
+            Log::warning('Radar starter unavailable; the write is kept with an empty starter.', ['radar' => (string) $radar->getKey(), 'kind' => $kind->value]);
+
+            return Starter::none();
+        }
     }
 
     /** The mutation, announced by `RadarSaved` after the commit when it wrote something. */

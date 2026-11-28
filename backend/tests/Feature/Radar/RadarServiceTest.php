@@ -9,6 +9,8 @@ use App\Exceptions\Radar\NoChat;
 use App\Exceptions\Radar\RadarDuplicate;
 use App\Exceptions\Radar\RadarLimit;
 use App\Exceptions\Radar\RadarsDisabled;
+use App\Exceptions\Sources\SourceUnavailable;
+use App\Models\ListingView;
 use App\Models\Radar;
 use App\Models\RadarHideRule;
 use App\Models\User;
@@ -23,6 +25,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Tests\Support\FakeListingSource;
 use Tests\Support\FilterArrays;
 
@@ -522,4 +525,68 @@ it('serialises one user\'s writes behind a cache lock on SQLite and an advisory 
 
     expect(fn () => $this->service->setMode($this->user, $radar, RadarMode::Digest))->toThrow(LockTimeoutException::class)
         ->and($radar->fresh()?->mode)->toBe(RadarMode::Instant);
+});
+
+describe('the starter', function (): void {
+    beforeEach(function (): void {
+        config(['radar.starter_enabled' => true]);
+        $this->source = FakeListingSource::bind()->withItems([100001 => [], 100002 => [], 100003 => []]);
+        ListingView::factory()->for($this->user)->create(['listing_number' => 100002]);
+        $this->service = app(RadarService::class);
+        Event::fake([RadarSaved::class]);
+    });
+
+    it('sends the new radar\'s listings after a create, in the write\'s language and currency', function (): void {
+        $mutation = $this->service->create($this->user, radarFilters(['price_max' => 700]), new RadarCreateContext(entry: 'filters', locale: 'en', currency: 'UZS'));
+
+        expect($mutation->starter->numbers)->toBe([100001, 100002, 100003])
+            ->and($mutation->starter->count)->toBe(3)
+            ->and([$this->source->calls[0][2]->locale, $this->source->calls[0][2]->currency])->toBe(['en', 'UZS']);
+        Event::assertDispatched(RadarSaved::class, fn (RadarSaved $event): bool => $event->starterNumbers === [100001, 100002, 100003]);
+    });
+
+    it('sends only the unseen listings when a radar is switched back on, also as a paused twin', function (): void {
+        $radar = Radar::factory()->for($this->user)->filters(['price_max' => 700])->paused()->create();
+
+        expect($this->service->create($this->user, radarFilters(['price_max' => 700]), radarContext())->starter->numbers)->toBe([100001, 100003]);
+
+        $this->service->setActive($this->user, $radar, false);
+
+        expect($this->service->setActive($this->user, $radar, true)->starter->numbers)->toBe([100001, 100003]);
+    });
+
+    it('sends what the new filters find to an active radar and nothing to a paused one', function (): void {
+        $active = Radar::factory()->for($this->user)->create();
+        $paused = Radar::factory()->for($this->user)->paused()->create();
+
+        expect($this->service->update($this->user, $active, radarFilters(['price_max' => 900]), null)->starter->numbers)->toBe([100001, 100002, 100003])
+            ->and($this->source->calls)->toHaveCount(1)
+            ->and($this->service->update($this->user, $paused, radarFilters(['price_max' => 901]), null)->starter->numbers)->toBe([])
+            ->and($this->source->calls)->toHaveCount(1);
+    });
+
+    it('asks no source for a write that sends nothing', function (): void {
+        $radar = Radar::factory()->for($this->user)->filters(['price_max' => 700])->create();
+
+        $this->service->create($this->user, radarFilters(['price_max' => 700]), radarContext());
+        $this->service->update($this->user, $radar, radarFilters(['price_max' => 700]), null);
+        $this->service->setActive($this->user, $radar, true);
+        $this->service->setMode($this->user, $radar, RadarMode::Digest);
+        $this->service->setActive($this->user, $radar, false);
+
+        expect($this->source->calls)->toBe([]);
+    });
+
+    it('keeps the write and answers an empty starter when the source fails, logging no filters', function (): void {
+        $this->source->failure = new SourceUnavailable;
+        Log::spy();
+
+        $mutation = $this->service->create($this->user, radarFilters(['price_max' => 777]), radarContext());
+
+        expect($mutation->kind)->toBe(RadarMutationKind::Created)
+            ->and($mutation->starter->count)->toBe(0)
+            ->and(Radar::query()->count())->toBe(1);
+        Event::assertDispatched(RadarSaved::class, fn (RadarSaved $event): bool => $event->starterNumbers === []);
+        Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message, array $context): bool => $context === ['radar' => $mutation->radar->id, 'kind' => 'created'] && ! str_contains($message, '777'));
+    });
 });
