@@ -185,7 +185,7 @@ it('reports the survivor of a merged number, and withdraws it through the alias'
         ->and(HiddenListing::query()->count())->toBe(0);
 });
 
-it('shows the listing again when «Уже сдано» is withdrawn through an alias that no card read has filed', function (): void {
+it('shows the listing again when «Уже сдано» is withdrawn through an alias that listing_refs does not know', function (): void {
     LegacyListingsHttp::fake();
     Feature::globally()->activate('source.listings.card', ['everyone' => 'legacy']);
 
@@ -193,7 +193,9 @@ it('shows the listing again when «Уже сдано» is withdrawn through an a
 
     expect(ListingVote::query()->sole()->listing_number)->toBe(100001)
         ->and(HiddenListing::query()->sole()->listing_number)->toBe(100001)
-        ->and(ListingRef::query()->find(100016))->toBeNull();
+        ->and(ListingRef::query()->find(100016)?->merged_into)->toBe(100001);
+
+    ListingRef::query()->whereKey(100016)->delete();
 
     $this->deleteJson('/api/v1/listings/100016/reports')->assertNoContent();
 
@@ -261,7 +263,7 @@ it('withdraws a rented report cast through an alias once its listing is merged a
     'by the last survivor' => 100014,
 ]);
 
-it('withdraws a rented report stored under a number merged into the survivor the source gives for an unfiled alias (review C, N1)', function (): void {
+it('withdraws a rented report stored under a number merged into the survivor the source gives for an alias asked for the first time (review C, N1)', function (): void {
     LegacyListingsHttp::fake();
     Feature::globally()->activate('source.listings.card', ['everyone' => 'legacy']);
     ListingRef::factory()->create(['listing_number' => 100001]);
@@ -271,7 +273,7 @@ it('withdraws a rented report stored under a number merged into the survivor the
 
     $this->deleteJson('/api/v1/listings/100016/reports')->assertNoContent();
 
-    expect(ListingRef::query()->find(100016))->toBeNull()
+    expect(ListingRef::query()->find(100016)?->merged_into)->toBe(100001)
         ->and(ListingVote::query()->sole()->withdrawn_at)->not->toBeNull()
         ->and(HiddenListing::query()->count())->toBe(0);
 });
