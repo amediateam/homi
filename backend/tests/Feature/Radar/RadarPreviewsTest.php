@@ -150,6 +150,22 @@ it('keys the shared part by posted_days, which the radar hash leaves out, and by
         ->and(array_map(fn (array $call): ?int => $call[1]->filters->postedDays, $this->source->callsOf('feed')))->toBe([7, 30, 7, 7]);
 });
 
+it('keys the shared part by the polygon as drawn: the same vertices in another order are another search area', function (): void {
+    $other = User::factory()->create();
+    $square = [[41.30, 69.20], [41.30, 69.30], [41.35, 69.30], [41.35, 69.20]];
+    $bowtie = [[41.30, 69.20], [41.35, 69.30], [41.30, 69.30], [41.35, 69.20]];
+    $mine = Radar::factory()->for($this->user)->filters(['polygon' => $square])->create();
+    $theirs = Radar::factory()->for($other)->filters(['polygon' => $bowtie])->create();
+    expect($mine->filters_hash)->toBe($theirs->filters_hash);
+
+    previewsOf($this->user);
+    previewsOf($other);
+    previewsOf($this->user);
+
+    expect(sourceRounds($this->source))->toBe([2, 2, 2])
+        ->and(array_map(fn (array $call): ?array => $call[1]->filters->toArray()['polygon'], $this->source->callsOf('feed')))->toBe([$mine->filters['polygon'], $theirs->filters['polygon']]);
+});
+
 it('leaves the stub scenario out of the shared part when no driver is the stub: other scenarios are served from one round', function (): void {
     $legacy = (new FakeListingSource)->withItems([100001 => [], 100002 => []]);
     $legacy->count = 2;
@@ -242,7 +258,7 @@ it('stops asking the source once the budget is spent and answers null for the re
 it('caches arrays only under the documented key, and reads an entry of another shape as a miss', function (): void {
     $radar = Radar::factory()->for($this->user)->filters(['price_max' => 700, 'posted_days' => 7])->create();
     previewsOf($this->user);
-    $key = "radar:previews:v1:stub-stub-stub:{$radar->filters_hash}:7:ru:USD";
+    $key = "radar:previews:v1:stub-stub-stub:{$radar->filters_hash}:7:none:ru:USD";
     $entry = Cache::get($key);
     array_walk_recursive($entry, fn (mixed $value) => expect(is_object($value))->toBeFalse());
 
