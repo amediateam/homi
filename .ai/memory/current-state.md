@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-27 (WP-43 contact, translation, share on `feat/wp-43-contact-translation-share`, env keys on `chore/wp-43-env-keys`; WP-42 merged as #131 `e2c6361`, env #130 `e8f05d9`; DEC-111)
+updated: 2026-11-28 (WP-44 personal lists, reports, surveys on `feat/wp-44-personal-lists`; WP-43 merged as #133 `d3c96aa`, env #132 `86a1a95`; DEC-112)
 source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-plan.md, docs/ai/reports/production-notes.md, docs/architecture/decisions/, HANDOFF.md §6, `make dev-check`, `make ci-backend`, `make ai-hooks-test` output
 ---
 
@@ -114,7 +114,7 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
   - **Tests:** `php artisan test --compact` → 2 731 tests, 2 714 passed, 17 skipped (the Pgsql suite); on PostgreSQL
     2 731 passed; the Pgsql suite 17 passed (on `e804673`, the integrator's run).
 
-- **WP-43 (branch `feat/wp-43-contact-translation-share`; not merged at the time of writing, not deployed):**
+- **WP-43 (merged as #133 `d3c96aa`, env keys #132 `86a1a95`; not deployed — the call page's nginx location comes first):**
   - **`POST …/contact`** through `ContactService` (`hasContact` → quota → contact): with a phone, HOMI's signed call link
     to `GET /call/{token}` (`routes/pages.php`, views `call/*`, texts in the new `backend/lang/`, DEC-111); with only the
     operator's call link, that link on an allowed host. The phone of a legacy card lives only in an encrypted cache
@@ -126,6 +126,24 @@ source-of-truth: git log, docs/ai/reports/phase-2.md, docs/ai/reports/phase-4-pl
   - While `sources.native_stubs` is on, the three answer their fixtures as before.
   - **Tests:** `php artisan test --compact` → 3 071 tests, 3 051 passed, 20 skipped; on PostgreSQL 3 071 passed; the Pgsql
     suite 20 passed (on `9cfb247`, the integrator's run).
+
+- **WP-44 (branch `feat/wp-44-personal-lists`; not merged at the time of writing, not deployed — its eight migrations
+  run before the code):**
+  - **Eight tables** `favorites`, `hidden_listings`, `blocked_authors`, `listing_votes`, `vote_decisions`,
+    `listing_marks`, `author_marks`, `found_answers` with models and factories; `EloquentOverlayData` is bound in place
+    of `NullOverlayData` (deleted).
+  - **Lists and blocks** in HOMI's tables (`App\Services\Personal`): favourites and history paged by 20 with a cursor,
+    hidden listings, blocked authors (`AuthorLabel`, at most two digits of a phone; `404` on the stub driver), «Скрытое»
+    and `DELETE /hidden`; `ListingResolver` resolves a write and `ResolveListingRef` (queue `default`) back-fills channel
+    and post. Legacy files the merge a preview answers.
+  - **Votes:** `VoteService` with weights, per-subject recounts under a mark-row lock, `vote_decisions`, thresholds and
+    voter floors of DEC-112 (`config/votes.php`, proposals); kill switches `votes.rented-detector` /
+    `votes.realtor-detector` (`php artisan votes:detector`, audited in `source_flag_changes`, kept off across a purge).
+    The found survey; `IdorMatrixTest` over the 59 bearer routes.
+  - Every `{number}` route of `/api/v1` takes `ListingNumber::ROUTE_PATTERN` (1–18 digits, no leading zero).
+  - While `sources.native_stubs` is on, the 16 routes answer their WP-13 fixtures and no query touches the eight tables.
+  - **Tests:** `php artisan test --compact` → 3 634 tests, 3 608 passed, 26 skipped; on PostgreSQL 3 634 passed; the Pgsql
+    suite 26 passed (on `28b52b5`, the integrator's run).
 
 ## Frontend (`frontend/`)
 - pnpm 11.24 workspace, Node 26, Next 16.4.5 × 3 apps on dev ports 3000/3001/3002, TypeScript ^6. `pnpm -r lint` and `pnpm -r typecheck` exit 0 (3 apps + 8 packages; on `fb4a2b2` of WP-23, merged in #68, and on `5fd06c9` of WP-24, merged in #71, where the packages are linted with the app's rules since #70).

@@ -3,7 +3,7 @@
 | Field | Value |
 | ----- | ----- |
 | Stage | C |
-| Status | TODO |
+| Status | WAITING (merged in #134; the eight migrations on the servers pending; DEC-112) |
 | Depends on | WP-40 (and, by queue order, WP-42: its `ListingRefs`, `AuthorKey` and `OverlayData` are used here) |
 | Size | about 2 800 changed lines, L |
 | Behaviour reference | WP-13 (the shapes — unchanged here); `25` §5 (personal lists, reports and surveys); `24` §8.1 (DEC-48); `08` rows of API-011 … API-016 and API-026 … API-033; `02` BR-API-101, Q-API-064; `03` §4 (BR-APP-036, BR-APP-037, BR-APP-039, BR-APP-040, BR-APP-049, BR-APP-053, BR-APP-067); `15` §3.1 (the IDOR matrix), §3.4, §3.6; `16` SEC-REQ-014, SEC-REQ-015, SEC-REQ-045; tasks `tasks/backend/KV-BE-038-favourites.md`, `KV-BE-039-view-history.md`, `KV-BE-040-hidden-listings.md`, `KV-BE-041-blocked-authors.md`, `KV-BE-042-hidden-management.md`, `KV-BE-043-votes-reports.md`, `KV-BE-044-found-survey.md` (rules, limits, edge cases, tests — not their routes or serializers) |
@@ -299,6 +299,225 @@ without an author accepts `agent` and has no author effect.
       report with each detail, and the «Скрытое» page behave as in the functional checklists of the saved and
       listing screens, and survive a relaunch.
 
+## As built
+
+The package is built as designed, with these points decided in the code (rule 6). Each one corrects or completes the
+design above; the AM rows are in `docs/ai/reports/phase-3-notes.md` §AM, the developer's decision DEC-112 in
+`docs/migration/decisions/2026-11-28-developer-answers.md`. Every weight, threshold and the `agent_marked` default are
+proposals of `config/votes.php` until the product owner confirms them.
+
+**Tables and models**
+
+- Exactly eight migrations, `2026_11_27_200110` … `200119` (`favorites`, `hidden_listings`, `blocked_authors`,
+  `listing_votes`, `vote_decisions`, `listing_marks`, `author_marks`, `found_answers`), all additive and empty.
+- `listing_marks.rented_at`, `author_marks.realtor_marked_at` and `author_marks.source` are nullable: a row with no time
+  is the per-subject lock of the recount (see "Votes"). `created_at` has no default; every `insertOrIgnore` sets it.
+- Blocked-author ids are upper-case ULIDs (`newUniqueId()`), and `{id}` is upper-cased before the lookup.
+- `user_id` is not mass-assignable on any personal model: writes go through the owner's relation or an explicit
+  `insertOrIgnore` array.
+
+**Resolving a listing**
+
+- `ListingResolver` owns "known, not gone, survivor" (corrects step 1 of "Resolving a listing for a write"):
+  `ListingRefs::pointer()` is unchanged and answers the asked number for unknown, gone and merged numbers alike; the
+  resolver follows `merged_into` at most 8 hops, loop-safe (`100016` → `100001`). Its only other caller is the job.
+- `ListingPointer` gains `filed` (default `true`). The back-fill job is queued by `ListingResolver::backfill()` after
+  the write, not inside `resolve()` — with the tests' `sync` queue it would run before the insert. The job files nothing
+  in `listing_refs` itself, so the stub driver files no rows.
+- Deletes never ask the source. `unset`, `unhide`, `unhideReported` and the withdrawal act on
+  `ListingResolver::numbersOf()`: the asked number and the pointer's number, their survivors in `listing_refs`, and
+  every number of **the caller's own rows** in that table that `listing_refs` files as merged into one of those
+  survivors (one query per table, the chain followed in PHP by `survivors()`, at most 8 hops), ascending and
+  deduplicated — so a row stored before a later merge, one hop or two, leaves by the number the list shows (review C,
+  N1, N4). `unblockByListing()` keeps the asked number and its survivor: a block is keyed by the author, and an entry
+  always leaves by its id.
+- **Legacy files the merge a preview answers** (corrects WP-42's "a preview files nothing"): when legacy answers another
+  number for a preview (`readCard()`, `fetchPreviews()`), the merge goes into `listing_refs` like a full card's
+  (`markMerged()`), nothing else (no author, no source reference). The lists read only previews, so without it a row
+  listed as its survivor could not leave by that survivor until someone opened the old number's full card. The stub
+  driver files nothing.
+
+**Lists**
+
+- New helpers `PersonalCursor` (`n1.` + base64url of a JSON key) and `PersonalListPager`; `ListingOverlay::items()`
+  gives the flags and realtor marks of list items and never excludes one.
+- **Only the source marks a listing gone** (corrects "a number the source no longer knows is marked gone in
+  `listing_refs`" of "List pages"): the pager leaves out a number the previews omit but never calls `markGone()`; legacy
+  marks its own definite `404`s (`rememberGone()`). Any other miss answers `503 source_unavailable` (DEC-110). On the
+  stub driver a list of legacy numbers therefore loses nothing globally (review A, F1: a split rule or a rollback of
+  `source.listings.card` to stub had marked every listing in every list gone).
+- History pages by the composite keyset (`last_viewed_at`, `id`), the cursor carries `[unix seconds, id]`; favourites
+  carry `[id]`. `PersonalCursor::decode()` checks each position against its range — a row id 1 … `PHP_INT_MAX`, a time 0
+  … 253 402 300 799 (9999-12-31 23:59:59 UTC) — and a cursor outside them does not decode, so the list ends quietly
+  (review A, F2: `[PHP_INT_MAX, 1]` answered `500` on both engines, `[99999999999999, 1]` on PostgreSQL).
+- Favourites force `favorite: true` and take `viewed` from the overlay; history forces `viewed: true` and takes
+  `favorite` from the overlay.
+
+**Hidden listings and blocked authors**
+
+- `ListingSource::authorPhoneLabel()` (new, both drivers) is the read that has the phone in memory: legacy reads the
+  encrypted contact entry of WP-43 (`contactEntry()`), turns it into `AuthorLabel::ofPhone()` and returns only the
+  masked form — no quota, no `ContactDisclosed`, no call link. The stub driver returns `null` and files no author key,
+  so a block answers `404 not_found` on the stub driver until WP-48.
+- `AuthorLabel` has `ofPhone()`, `phone(?masked, ?sourceLabel)` and `source()`; the fallback re-masks the source's
+  label, reduced to digits, `+`, `*` and spaces, else `+998 ** *** ** **`. A channel handle keeps its digits
+  (`@ijara_998901234567` is public and shown in the card's sources).
+- `BlockResult.count` is the card's author count when that call read the card, else the live count, so a repeat keeps
+  id, kind and label but may answer another `count` (KV-BE-041 says "same body").
+- `BlockResult.listing_numbers` holds the author's **live** numbers only (neither gone nor merged): the 500 highest
+  (`ListingRefs::liveNumbersOfAuthor()`; legacy and HOMI number upwards, so an author's native numbers come first),
+  ascending, plus the asked number and its survivor — at most 502 (corrects "`ListingRefs::numbersOfAuthors()` plus the
+  listing asked for"; review A, F4: a channel with 5 000 filed rows answered 35 KB, gone and merged numbers included).
+  `count` stays uncapped; the overlay hides the rest of the author's listings. `numbersOfAuthors()` keeps its behaviour
+  and its test, with no caller left in `app/`.
+- `removeEntry()` takes the model; the owner lookup and `BlockedAuthorPolicy` run in `HiddenController` through
+  `Gate::inspect()->authorize()` (`Gate::authorize()` would add a `403` to the OpenAPI document).
+- Hidden listings sort by `id desc`, capped at 200; authors by `created_at desc, id desc`. A merged duplicate shows
+  once, as its survivor. A hidden listing the source no longer knows is left out of the overview while its row stays
+  (KV-BE-042 says it is listed).
+
+**Overlay**
+
+- `EloquentOverlayData` is bound in `SourceServiceProvider`, where WP-42 bound the null one; `NullOverlayData` is
+  deleted. The realtor keys are cached 60 s as a list of strings under `personal:realtor-author-keys`, which joins
+  Telescope's `SENSITIVE_KEYS`.
+- Both kill switches are read before any query or cache read, so "off" takes effect at once.
+
+**Votes**
+
+- **The recount is serialised per subject**: inside the transaction of `report()` and `withdraw()`, the vote is written,
+  then the subject's mark row is inserted with no time (`insertOrIgnore`) and locked (`lockForUpdate()`), then the tally
+  runs as a new statement. `agent` takes one weight per user (`max`) per author key, so one user's votes on three
+  listings of one author count once.
+- **DEC-112** (corrects step 4's thresholds and adds a voter floor): `thresholds.rented` 4.0, `thresholds.agent` 4.5,
+  `thresholds.fraud` 3.0 (native numbers only); `min_voters` per reason `rented` 3, `agent` 3, `fraud` 2, never below 2
+  in the code (`votes.min_voters` is a map per reason, a single value applies to every reason;
+  `VoteService::minVoters(ReportReason)` reads a value below 2, a missing one or a non-number as 2). Two accounts never
+  mark; three bare accounts (3.0) mark nothing; the smallest crossings are `rented` 4 × 1.0 and `agent` 3 × 1.5 (a
+  username and a photo each).
+- **Directional recount**: a report can only mark, a withdrawal can only unmark.
+- **Detector off**: votes and the voter's own hide are still written; no mark and no decision row are written, and
+  `agent_marked` is `false`; a withdrawal still unmarks; votes cast while off are recounted by the subject's next
+  report.
+- **Native `fraud`**: its crossed state is the subject's latest `vote_decisions` row; the `listing_marks` row is only
+  the lock; it writes the audit row only and has no switch. Native `rented` and `agent` mark like any listing until
+  WP-84 turns them into operator holds.
+- An `agent` report on a listing without a filed author files it first through a card read
+  (`ListingResolver::fileAuthor()`). A repeat of any reason fills a vote's missing `author_key` from `listing_refs` and
+  never overwrites a stored one, so an `agent` vote cast before the author was filed counts from its repeat on (review
+  B, F5; only `agent` counts per author).
+- A report after a withdrawal clears `withdrawn_at` on the first row and keeps its weight and detail.
+- The realtor-keys cache is forgotten after a recount that moves an author's mark.
+- `DELETE …/reports` resolves the listing (`404` / `503`) and builds one number set from the caller's `rented` votes and
+  `report_rented` hidden rows (`numbersOf()` above): `withdraw($user, $pointer, Rented, $aliases)` withdraws the
+  caller's votes on it in ascending order, then locks and recounts each changed subject once, ascending;
+  `HiddenService::unhideReported()` deletes the caller's `report_rented` rows on the same set (review B, F3: an alias no
+  card read had filed left the listing hidden; F4 and review C, N4: a vote stored before a later merge stayed live). The
+  withdrawal and the deletion are two statements.
+- **The switches survive a purge** (review B, F2: `pennant:purge` deleted a stored "off", the default "on" resolved and
+  every mark applied again, unaudited): the default of `votes.rented-detector` and `votes.realtor-detector` is
+  `VoteDetectors::defaultValue()` — the latest non-null `new_rule` of that feature in `source_flag_changes` (by `id`),
+  else on. A purge row holds `NULL` and is skipped. While Pennant stores no value, the first feed request reads
+  `source_flag_changes` once per detector and Pennant then stores the result. `RecordSourceFlagChange` audits the two
+  vote features too: a change outside the command (a direct `activate()` / `deactivate()`, a purge or `pennant:clear`)
+  writes a row with the actor `unknown` and a warning naming the feature only, for the global scope in both of Pennant's
+  forms (the object and the string `__laravel_global`; review C, N2 — this also closes the gap for WP-10's source
+  rules); a detector's update records the boolean Pennant resolves (`$value !== false`), so a `null` `new_rule` only
+  ever means a purge or a forget (review C, N3); the command's own write is skipped through `VoteDetectors::isWriting()`
+  (a singleton). Not audited: a change in the `array` store (no environment uses it), Pennant's driver `set()` and SQL
+  on `features`, which fire no event. `votes:detector` is a command of its own; it writes one `source_flag_changes` row
+  (feature, old and new as booleans, actor, reason, environment) and a notice with the feature, the values and
+  `audit_row` only (review B, F7: it logged the `--by` and `--reason` text).
+
+**Survey**: `where` fills the caller's latest `elsewhere` answer that has no place yet with one conditional `UPDATE`, so
+two taps at once fill it once.
+
+**Routes**: the 13 `{number}` routes of `/api/v1` (WP-12, WP-13, WP-43, WP-80 and this package) take
+`ListingNumber::ROUTE_PATTERN` (`[1-9][0-9]{0,17}`) instead of `whereNumber()`, so a number beyond the integers, zero or
+a leading zero is the router's `404 not_found` before any controller and before `auth:sanctum` (no token plus a bad
+number answers `404`, not `401`); review A, F3: a number beyond the integers answered `500`, and with native stubs on
+such numbers reached the stub bodies (`200` / `422`). Zero-led numbers used to be cast and served.
+`docs/api/openapi.json` is unchanged (Scramble does not read route patterns).
+
+**IDOR matrix**: 59 bearer routes, found by any `Authenticate` middleware (or a subclass) with `sanctum` among its
+guards — `auth:sanctum`, `auth:sanctum,web`, the class-name form, `Authenticate::using()` (review B, F8: an exact string
+match missed all but the first): 28 real, 26 placeholders naming the package that makes them real (radars ×6 → WP-45,
+`events.store` → WP-47, `settings.card-sample` → WP-53, owner ×15 → WP-84, the contact requests ×3 → WP-85), 5 media
+rows that point at named `MediaOwnershipTest` cases. Rows are compared without `source_channel` / `source_post_id`,
+which the job back-fills.
+
+**Native stubs**: while `SOURCES_NATIVE_STUBS` is on, the 16 routes of this package answer their WP-13 bodies from
+`NativeStubs` (moved unchanged), the WP-13 tests run with native stubs on, and `NativeStubsTablesTest` pins that no
+query touches the eight tables over the feed, the map, the card, the preview and every personal route. No fixture is
+deleted.
+
+**Reviews**: one security review per stage by a `security-reviewer` subagent, each with its own probes — stage A: 6 low,
+5 info; stage B: 2 medium (two accounts mark for everybody → DEC-112; the kill switch on a purge), 2 low, 5 info — then
+a narrow re-review of every fix (4 low, 2 info more). Each fix has a test that failed before it, except stage A F8 (a
+doc correction); fixed: stage A F1–F4, F8, F9; stage B F1 (by DEC-112), F2–F5, F7, F8; re-review N1–N5, and the
+re-review's open point on merges `listing_refs` did not know (the preview filing above). Not fixed, recorded in
+"Handoff": stage A F5 (`GET /hidden`'s preview reads), F6 (per-user caps), F7 (the author key in Telescope query
+entries), F10 (the cascade without a recount), F11 (the job's system context); stage B F6 (survey answers per user), F9
+(the realtor-keys cache up to 60 s old); re-review N6 (the audit table as the switch's state).
+
 ## Handoff
 
-Empty.
+In review (#134). The development track needs nothing more for this package after the merge.
+
+**For the production track** (no env key, no nginx change, no `source.*` flag change; the defaults stay `stub` until
+WP-48, and with `SOURCES_NATIVE_STUBS` unset the services already run on the stub driver on staging and production):
+
+1. **Approve the eight migrations** `2026_11_27_200110` … `200119`: the new tables `favorites`, `hidden_listings`,
+   `blocked_authors`, `listing_votes`, `vote_decisions`, `listing_marks`, `author_marks`, `found_answers` — all additive
+   and empty; they run with the deploy (`php artisan migrate --force`), before the code serves.
+2. **Queue:** `ResolveListingRef` jobs arrive on Horizon's `default` queue; the existing supervisor consumes it.
+3. **The vote detectors** are Pennant features of the global scope, `votes.rented-detector` and
+   `votes.realtor-detector`, on until switched: `php artisan votes:detector {rented|realtor} {on|off} --by=<who>
+   --reason=<why>` (one `source_flag_changes` row each; "off" takes effect at once and ignores existing marks). A
+   `pennant:purge` keeps a detector off (its default is the latest audited value), but writes an `unknown` audit row and
+   a warning per detector; prefer `pennant:purge --except-registered` in a runbook. `source_flag_changes` now holds the
+   switch's state: never prune or update the two features' latest rows (WP-47's retention keeps at least the latest row
+   per detector) — pruned and then purged, "off" would turn back on. The table is append-only by convention, not by a
+   trigger, and a write past Pennant's events (its driver's `set()`, SQL on `features`) is not audited. While Pennant
+   stores no value and `source_flag_changes` cannot be read, the feed answers `500` (by design: a caught error would
+   store the fallback).
+4. **Until WP-48** (the stub driver serves the cards): a block answers `404 not_found` for every listing — the staging
+   checklist's "block with undo" needs `source.listings.card` on `legacy`; rows written before then name stub-catalogue
+   numbers.
+
+**For the product owner** (proposals until confirmed; DEC-112 decided the voter floor and the thresholds):
+- `config/votes.php`: weights 1.0 + 0.5 Premium + 0.25 username + 0.25 photo, at most 2.0; thresholds `rented` 4.0,
+  `agent` 4.5, `fraud` 3.0 (native numbers only); voters `rented` 3, `agent` 3, `fraud` 2; `agent_marked` also `true` on
+  an author already marked.
+- The security review's further proposals for detectors that label people (rule 10): a vote counts for everybody only
+  from an account at least 7 days old that opened the card; a circuit breaker that pauses marking after about 20
+  automatic marks an hour; `votes:unmark {listing|author}` with an audit row as the dispute path (SEC-REQ-045); the
+  contributing vote ids and weights on each `vote_decisions` row; a precision check on a labelled set before go-live.
+- Per-user caps on favourites, hidden listings, blocked authors and survey answers (none today; `v1-lists` allows 60
+  writes a minute).
+- `where` of the survey fills the caller's latest `elsewhere` answer that has no place yet, even an older one (the
+  specification's wording); "never an older one" would be a change.
+
+**For the next packages:**
+- **WP-47** registers for erasure `favorites`, `listing_views`, `hidden_listings`, `blocked_authors`, `listing_votes`
+  (delete, then recount the affected marks — today the cascade of a deleted user deletes the votes without a recount, so
+  a mark they crossed stays) and `found_answers`; `vote_decisions`, `listing_marks` and `author_marks` hold no user
+  link. Retention: `listing_votes.detail` nulled after 180 days; `vote_decisions` and `author_marks` kept 3 years (rule
+  10), the lock rows without a time included; never the vote features' rows of `source_flag_changes`.
+- **WP-84**: native `rented` and `agent` crossings still mark like any listing — turn them into operator holds
+  (`votes_rented`, `votes_agent`, `votes_fraud`) and add `VoteThresholdCrossed`; native `fraud` has no kill switch;
+  `authorPhoneLabel()` on the native driver; legacy `previews()` drops native numbers, so owner listings fall out of the
+  personal lists on that driver; the author key appears in Telescope query entries and would appear in a
+  `QueryException` message (`blocked_authors`, `listing_refs`) — WP-84's placeholder-only reporting and query filter
+  must cover them.
+- **WP-53** calls `VoteService::withdraw()` for the bot's undo buttons and adds `activeReasons()`: both must read the
+  caller's votes over the same number set as `DELETE …/reports` (the asked number, its survivors and the caller's own
+  rows merged into them), or a card that shows «Сдано» after a merge cannot be undone.
+- **WP-45** replaces the six radar placeholder rows of `IdorMatrixTest`; WP-47, WP-53, WP-84 and WP-85 theirs.
+- Open, no package yet: `GET /hidden` reads up to 200 previews per cold locale or currency (page it, or a tighter
+  limiter); a block that reads the card passes legacy's daily limit on as `429` with `reason: daily`;
+  `ResolveListingRef` reads in the system context, so under a per-user rollout it uses the feature's default driver;
+  votes are not re-pointed after a merge or a stronger author key; an `agent` report on a listing without a filed author
+  answers `503` while the source is down; the realtor-keys cache may hold an old list for up to 60 s after an unmark
+  (the designed TTL); SEC-REQ-048's vote-burst counter is not built; `SourceRuleStore` (WP-10) logs the `--by` /
+  `--reason` text of `sources:set`.
